@@ -1,5 +1,5 @@
 // components/CompanyDetail.tsx
-import { useState } from 'react';
+import { JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal, useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Building2, 
@@ -597,7 +597,7 @@ function RelationshipsTab({ company }: { company: Company }) {
         {relationships.customers && relationships.customers.length > 0 && (
           <DetailSection icon={Users} title="Key Customers">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {relationships.customers.slice(0, 9).map((customer, index) => (
+              {relationships.customers.slice(0, 9).map((customer: { similarity_score: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; }, index: Key | null | undefined) => (
                 <div key={index} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                   <div className="font-medium text-gray-900 dark:text-white">
                     {renderRelationshipItem(customer)}
@@ -623,7 +623,7 @@ function RelationshipsTab({ company }: { company: Company }) {
         {relationships.partners && relationships.partners.length > 0 && (
           <DetailSection icon={Shield} title="Business Partners">
             <div className="flex flex-wrap gap-2">
-              {relationships.partners.map((partner, index) => (
+              {relationships.partners.map((partner: any, index: Key | null | undefined) => (
                 <span
                   key={index}
                   className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300"
@@ -639,7 +639,7 @@ function RelationshipsTab({ company }: { company: Company }) {
         {relationships.competitors && relationships.competitors.length > 0 && (
           <DetailSection icon={Target} title="Key Competitors">
             <div className="flex flex-wrap gap-2">
-              {relationships.competitors.map((competitor, index) => (
+              {relationships.competitors.map((competitor: any, index: Key | null | undefined) => (
                 <span
                   key={index}
                   className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300"

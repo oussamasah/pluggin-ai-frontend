@@ -19,7 +19,9 @@ export function useSessionState() {
       try {
         // Load sessions
         const sessionsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sessions`, {
-          headers: { 'x-user-id': userID }
+          headers: {
+            'x-user-id': userID || ''
+          }
         })
         if (sessionsResponse.ok) {
           const sessionsData = await sessionsResponse.json()
@@ -28,7 +30,9 @@ export function useSessionState() {
 
         // Load ICP models
         const modelsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/icp-models`, {
-          headers: { 'x-user-id': userID }
+          headers: {
+            'x-user-id': userID || ''
+          }
         })
         if (modelsResponse.ok) {
           const modelsData = await modelsResponse.json()
@@ -83,9 +87,10 @@ export function useSessionState() {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sessions`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': userID
+          'x-user-id': userID || '', // fallback to empty string if undefined
+          'Content-Type': 'application/json'
         },
+        
         body: JSON.stringify({ name })
       })
 
@@ -136,9 +141,10 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sessions/${sessionId}/query`, {
       method: 'PATCH',
       headers: {
-        'Content-Type': 'application/json',
-        'x-user-id': userID
+        'x-user-id': userID || '', // fallback to empty string if undefined
+        'Content-Type': 'application/json'
       },
+      
       body: JSON.stringify({ query: newQueries })
     });
 
@@ -191,7 +197,11 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sessions/${sessionId}`, {
         method: 'DELETE',
-        headers: { 'x-user-id': userID }
+        headers: {
+          'x-user-id': userID || '', // fallback to empty string if undefined
+          'Content-Type': 'application/json'
+        },
+        
       })
 
       if (!response.ok) throw new Error('Failed to delete session')
@@ -215,9 +225,10 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/icp-models`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': userID 
+          'x-user-id': userID || '', // fallback to empty string if undefined
+          'Content-Type': 'application/json'
         },
+        
         body: JSON.stringify(modelData)
       })
 
@@ -251,7 +262,11 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
   const setPrimaryModel = useCallback(async (modelId: string) => {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/icp-models/${modelId}/primary`, {
-        headers: { 'x-user-id': userID },
+        headers: {
+          'x-user-id': userID || '', // fallback to empty string if undefined
+          'Content-Type': 'application/json'
+        },
+        
         method: 'PATCH'
       })
 
@@ -305,9 +320,10 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/search`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': userID
+          'x-user-id': userID || '', // fallback to empty string if undefined
+          'Content-Type': 'application/json'
         },
+        
         body: JSON.stringify({
           sessionId,
           query,
@@ -361,11 +377,11 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
       
       // Start the refined search
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/search`, {
-        method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': userID
+          'x-user-id': userID || '', // fallback to empty string if undefined
+          'Content-Type': 'application/json'
         },
+        
         body: JSON.stringify({
           sessionId,
           query: finalQuery,
@@ -403,9 +419,10 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/analyze-signals`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': userID
+          'x-user-id': userID || '', // fallback to empty string if undefined
+          'Content-Type': 'application/json'
         },
+        
         body: JSON.stringify({
           sessionId,
           scope,
@@ -419,16 +436,23 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
       
       // Update session with signals analysis
       setSessions(prev => prev.map(session =>
-        session.id === sessionId ? {
-          ...session,
-          searchStatus: {
-            ...session.searchStatus,
-            stage: 'complete',
-            message: 'Signals analysis completed',
-            details: signalsData.analysis
-          }
-        } : session
+        session.id === sessionId
+          ? {
+              ...session,
+              searchStatus: {
+                ...(session.searchStatus ?? {}), // default to empty object if undefined
+                stage: 'complete',
+                message: 'Signals analysis completed',
+                details: signalsData.analysis,
+                progress: session.searchStatus?.progress ?? 0,
+                currentStep: session.searchStatus?.currentStep ?? 0,
+                totalSteps: session.searchStatus?.totalSteps ?? 0,
+                substeps: session.searchStatus?.substeps ?? []
+              }
+            }
+          : session
       ));
+      
       
     } catch (error) {
       console.error('Error analyzing signals:', error);
@@ -442,29 +466,32 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
     try {
       const currentSession = sessions.find(s => s.id === sessionId);
       if (!currentSession) return;
-
+  
+      const companies = currentSession.companies ?? []; // default to empty array
+  
       switch (actionType) {
         case 'export':
-          await exportResults(sessionId, currentSession.companies);
+          await exportResults(sessionId, companies);
           break;
-          
+  
         case 'compare':
-          await compareCompanies(sessionId, currentSession.companies);
+          await compareCompanies(sessionId, companies);
           break;
-          
+  
         case 'analyze':
-          await analyzeResults(sessionId, currentSession.companies);
+          await analyzeResults(sessionId, companies);
           break;
-          
+  
         default:
           console.log('Unknown results action:', actionType);
       }
-      
+  
     } catch (error) {
       console.error('Error handling results action:', error);
       throw error;
     }
   }, [sessions]);
+  
 
   // Helper functions for results actions
   const exportResults = async (sessionId: string, companies: any[]) => {
@@ -491,8 +518,8 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/analyze-comparison`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'x-user-id': userID
+        'x-user-id': userID || '', // fallback to empty string if undefined
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         sessionId,
@@ -507,24 +534,30 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
     
     // Update session with comparison results
     setSessions(prev => prev.map(session =>
-      session.id === sessionId ? {
-        ...session,
-        searchStatus: {
-          ...session.searchStatus,
-          stage: 'complete',
-          message: 'Company comparison completed',
-          details: comparisonData.analysis
-        }
-      } : session
+      session.id === sessionId
+        ? {
+            ...session,
+            searchStatus: {
+              ...(session.searchStatus ?? {}), // default to empty object if undefined
+              stage: 'complete',
+              message: 'Company comparison completed',
+              details: comparisonData.analysis,
+              progress: session.searchStatus?.progress ?? 0,
+              currentStep: session.searchStatus?.currentStep ?? 0,
+              totalSteps: session.searchStatus?.totalSteps ?? 0,
+              substeps: session.searchStatus?.substeps ?? []
+            }
+          }
+        : session
     ));
-  };
+  }
 
   const analyzeResults = async (sessionId: string, companies: any[]) => {
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/analyze-results`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'x-user-id': userID
+        'x-user-id': userID || '', // fallback to empty string if undefined
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         sessionId,
@@ -537,18 +570,24 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
     
     const analysisData = await response.json();
     
-    // Update session with analysis
     setSessions(prev => prev.map(session =>
-      session.id === sessionId ? {
-        ...session,
-        searchStatus: {
-          ...session.searchStatus,
-          stage: 'complete',
-          message: 'Detailed analysis completed',
-          details: analysisData.analysis
-        }
-      } : session
+      session.id === sessionId
+        ? {
+            ...session,
+            searchStatus: {
+              ...(session.searchStatus ?? {}), // default to empty object if undefined
+              stage: 'complete',
+              message: 'Detailed analysis completed',
+              details: analysisData.analysis,
+              progress: session.searchStatus?.progress ?? 0,
+              currentStep: session.searchStatus?.currentStep ?? 0,
+              totalSteps: session.searchStatus?.totalSteps ?? 0,
+              substeps: session.searchStatus?.substeps ?? []
+            }
+          }
+        : session
     ));
+    
   };
 
   // Helper function to merge queries
@@ -557,8 +596,8 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/merge-queries`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': userID
+          'x-user-id': userID || '', // fallback to empty string if undefined
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           previousQuery,

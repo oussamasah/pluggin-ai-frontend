@@ -2,8 +2,8 @@ import React, { useEffect, useRef } from 'react';
 
 const ShaderBackground = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationRef = useRef<number>();
-  const startTimeRef = useRef<number>();
+  const animationRef = useRef<number | null>(null);
+  const startTimeRef = useRef<number | null>(null);
 
   // Vertex shader source code
   const vsSource = `

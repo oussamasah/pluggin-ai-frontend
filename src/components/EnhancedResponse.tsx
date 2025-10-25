@@ -22,6 +22,7 @@ const EnhancedResponse: React.FC<EnhancedResponseProps> = ({
 
   // Enhanced content parsing with better section detection
   const formatContent = (text: string): FormattedSection[] => {
+    
     const fixedText = text
       .replace(/\*\*(\w+):\*\*\s*\*/g, '**$1:**')
       .replace(/\*\*(\w+)\*\*:\s*\*\*/g, '**$1:**')
@@ -34,7 +35,9 @@ const EnhancedResponse: React.FC<EnhancedResponseProps> = ({
     const lines = fixedText.split('\n');
     const formattedContent: FormattedSection[] = [];
     let currentSection: FormattedSection | null = null;
-
+    if (!currentSection) {
+      currentSection = { title: '', content: [], type: 'general' }
+    }
     lines.forEach((line) => {
       const trimmedLine = line.trim();
       
@@ -75,7 +78,7 @@ const EnhancedResponse: React.FC<EnhancedResponseProps> = ({
       }
     });
 
-    if (currentSection && currentSection?.content.length > 0) {
+    if (currentSection != null && currentSection?.content.length > 0) {
       formattedContent.push(currentSection);
     }
 

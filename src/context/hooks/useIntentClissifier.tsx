@@ -2,12 +2,12 @@ import { useCallback } from "react";
 import { useSession } from "../SessionContext";
 import { useSessionState } from "./useSessionState";
 const userID = "550e8400-e29b-41d4-a716-446655440000"
+const { sessions  }=useSessionState()
 
 // In your useSessionState hook or SessionContext
 const refineSearch = useCallback(async (sessionId: string, newQuery: string, previousQuery?: string) => {
     try {
       setIsLoading(true);
-      const { sessions }=useSessionState()
       // Merge with previous query if provided
       const finalQuery = previousQuery ? 
         await mergeQueries(previousQuery, newQuery) : 
@@ -98,23 +98,24 @@ const refineSearch = useCallback(async (sessionId: string, newQuery: string, pre
       setIsLoading(false);
     }
   }, []);
-  
   const handleResultsAction = useCallback(async (sessionId: string, actionType: string) => {
     try {
-      const currentSession = sessions.find((s: { id: string; }) => s.id === sessionId);
+      const currentSession = sessions.find((s: { id: string; companies?: any[] }) => s.id === sessionId);
       if (!currentSession) return;
+  
+      const companies = currentSession.companies || []; // default to empty array
   
       switch (actionType) {
         case 'export':
-          await exportResults(sessionId, currentSession.companies);
+          await exportResults(sessionId, companies);
           break;
           
         case 'compare':
-          await compareCompanies(sessionId, currentSession.companies);
+          await compareCompanies(sessionId, companies);
           break;
           
         case 'analyze':
-          await analyzeResults(sessionId, currentSession.companies);
+          await analyzeResults(sessionId, companies);
           break;
           
         default:
@@ -126,6 +127,7 @@ const refineSearch = useCallback(async (sessionId: string, newQuery: string, pre
       throw error;
     }
   }, [sessions]);
+  
   
   // Helper functions for results actions
   const exportResults = async (sessionId: string, companies: any[]) => {

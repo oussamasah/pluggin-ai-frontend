@@ -1,6 +1,8 @@
 // types/index.ts
 // frontend/types/company.ts
 export interface Company  {
+  business_model: any;
+  location: any;
   company_id: string;            // uuid
   session_id: string;            // uuid
   icp_model_id: string;          // uuid
@@ -124,21 +126,50 @@ export interface SearchSession {
   icpModelId?: string;
 }
 export interface SessionContextType {
+  // Existing state
   sessions: SearchSession[]
   currentSession: SearchSession | null
   icpModels: ICPModel[]
   primaryModel: ICPModel | null
   isConnected: boolean
+  isLoading: boolean
+
+  // Session methods
   setCurrentSession: (sessionId: string) => void
   createNewSession: (name: string) => Promise<void>
-  updateSessionQuery: (sessionId: string, query: string[]) => void
-  startSearch: (sessionId: string, query: string, icpModelId?: string) => Promise<void>
+  updateSessionQuery: (sessionId: string, query: string | string[]) => void
   deleteSession: (sessionId: string) => void
+  startSearch: (sessionId: string, query: string, icpModelId?: string) => Promise<void>
+  refineSearch: (sessionId: string, newQuery: string, previousQuery?: string) => Promise<void>
+  analyzeSignals: (sessionId: string, scope?: string) => Promise<void>
+  handleResultsAction: (sessionId: string, actionType: string) => Promise<void>
+
+  // ICP Model methods
   saveIcpModel: (model: Omit<ICPModel, 'id' | 'createdAt' | 'updatedAt'>) => void
   setPrimaryModel: (modelId: string) => void
   deleteIcpModel: (modelId: string) => void
-  isLoading: boolean
+
+  // ICP Config specific
+  icpConfigConversation: { role: 'user' | 'bot'; content: string }[]
+  isICPConfigLoading: boolean
+  sendICPConfigMessage: (message: string) => Promise<void>
+  currentICPSuggestion: {
+    isComplete: boolean
+    config: {
+      industries?: string[]
+      employeeRange?: string
+      geographies?: string[]
+    }
+    confidence: number
+  } | null
+  applyICPSuggestion: () => void
+
+  // ICP chat controls
+  openICPConfigChat: () => void
+  closeICPConfigChat: () => void
+  isICPConfigChatOpen: boolean
 }
+
 export interface Substep {
   id: string;
   name: string;

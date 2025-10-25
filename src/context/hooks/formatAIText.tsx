@@ -17,7 +17,8 @@ interface Section {
     formatted = formatted.replace(/^\s*-\s+(.*)$/gm, (_, p1) => `<li>${p1}</li>`);
   
     // Wrap consecutive <li> in <ul>
-    formatted = formatted.replace(/(<li>.*<\/li>)/gs, (_, p1) => `<ul>${p1}</ul>`);
+    formatted = formatted.replace(/(<li>[\s\S]*?<\/li>)/g, (_, p1) => `<ul>${p1}</ul>`);
+
   
     // Replace single line breaks with <br> for spacing
     formatted = formatted.replace(/\n/g, "<br>");

@@ -1,20 +1,20 @@
 import { useState, useCallback } from 'react'
-import { AIConversationMessage, ICPConfig, ICPConfigSuggestion } from '@/types'
+import {  ICPConfig } from '@/types'
 
 const userID = "550e8400-e29b-41d4-a716-446655440000"
 
 export function useICPConfig(sessionState: any) {
   const [isICPConfigChatOpen, setIsICPConfigChatOpen] = useState(false)
-  const [icpConfigConversation, setIcpConfigConversation] = useState<AIConversationMessage[]>([])
+  const [icpConfigConversation, setIcpConfigConversation] = useState<any[]>([])
   const [isICPConfigLoading, setIsICPConfigLoading] = useState(false)
-  const [currentICPSuggestion, setCurrentICPSuggestion] = useState<ICPConfigSuggestion>()
+  const [currentICPSuggestion, setCurrentICPSuggestion] = useState<any>()
 
   const openICPConfigChat = useCallback(async () => {
     setIsICPConfigChatOpen(true)
     setIsICPConfigLoading(true)
     
     try {
-      const welcomeMessage: AIConversationMessage = {
+      const welcomeMessage: any = {
         role: 'assistant',
         content: `👋 **ICP Configuration Assistant** 
 
@@ -50,7 +50,7 @@ I'll help you build the perfect Ideal Customer Profile through conversation.`
   const sendICPConfigMessage = useCallback(async (message: string) => {
     if (!message.trim()) return
 
-    const userMessage: AIConversationMessage = { role: 'user', content: message }
+    const userMessage: any = { role: 'user', content: message }
     setIcpConfigConversation(prev => [...prev, userMessage])
     setIsICPConfigLoading(true)
 
@@ -72,14 +72,14 @@ I'll help you build the perfect Ideal Customer Profile through conversation.`
       const data = await response.json()
       if (!data.success) throw new Error(data.error || 'Failed to get response')
 
-      const assistantMessage: AIConversationMessage = { 
+      const assistantMessage: any = { 
         role: 'assistant', 
         content: data.response 
       }
       setIcpConfigConversation(prev => [...prev, assistantMessage])
       
       if (data.suggestion) {
-        const suggestion: ICPConfigSuggestion = {
+        const suggestion: any = {
           config: data.suggestion.config || {},
           reasoning: data.suggestion.reasoning || 'AI-generated configuration',
           confidence: data.suggestion.confidence || 0.8,
@@ -93,7 +93,7 @@ I'll help you build the perfect Ideal Customer Profile through conversation.`
       }
     } catch (error) {
       console.error('Error sending message to ICP config:', error)
-      const errorMessage: AIConversationMessage = {
+      const errorMessage: any = {
         role: 'assistant',
         content: "I apologize, but I'm having trouble processing your request. Please try again."
       }
@@ -138,7 +138,7 @@ I'll help you build the perfect Ideal Customer Profile through conversation.`
       const data = await response.json()
       if (!data.success) throw new Error(data.error || 'Failed to get recommendation')
 
-      const suggestion: ICPConfigSuggestion = {
+      const suggestion: any = {
         config: data.suggestion.config || {},
         reasoning: data.suggestion.reasoning || 'Quick recommendation',
         confidence: data.suggestion.confidence || 0.7,
@@ -150,7 +150,7 @@ I'll help you build the perfect Ideal Customer Profile through conversation.`
       
       setCurrentICPSuggestion(suggestion)
       
-      const message: AIConversationMessage = {
+      const message: any = {
         role: 'assistant',
         content: `Based on your business context, I've generated a quick ICP recommendation.`
       }
@@ -158,7 +158,7 @@ I'll help you build the perfect Ideal Customer Profile through conversation.`
       setIcpConfigConversation(prev => [...prev, message])
     } catch (error) {
       console.error('Error getting quick ICP recommendation:', error)
-      const errorMessage: AIConversationMessage = {
+      const errorMessage: any = {
         role: 'assistant',
         content: "I apologize, but I'm having trouble generating a quick recommendation."
       }

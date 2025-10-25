@@ -50,7 +50,8 @@ export function EnhancedSidebar() {
 
   const filteredSessions = sessions.filter(session =>
     session.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    session.query?.toLowerCase().includes(searchTerm.toLowerCase())
+    session.query?.join(' ').toLowerCase().includes(searchTerm.toLowerCase())
+
   )
 
   const stats = {

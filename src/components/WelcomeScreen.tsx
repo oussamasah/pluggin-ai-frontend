@@ -4,7 +4,6 @@
 import { motion } from 'framer-motion'
 import { Sparkles, Search, Target, Zap, ArrowRight, Users, BarChart3, Building2 } from 'lucide-react'
 import { useSession } from '@/context/SessionContext'
-import { WebGLShader } from './ui/web-gl-shader'
 import { LiquidButton } from './ui/liquid-glass-button'
 
 const features = [
