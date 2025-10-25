@@ -6,7 +6,7 @@ const nextConfig = {
     },
   },
   reactStrictMode: true,
-  experimental: { appDir: true },
-}
+  appDir: true, // <-- moved out of "experimental"
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;
