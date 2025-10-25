@@ -1,12 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   logging: {
-    fetches: {
-      fullUrl: true,
-    },
+    fetches: { fullUrl: true }
   },
   reactStrictMode: true,
-  appDir: true, // <-- moved out of "experimental"
+  // appDir: true, <-- temporarily comment out
 };
 
 module.exports = nextConfig;
