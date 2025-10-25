@@ -4,11 +4,10 @@
 import { useSession } from '@/context/SessionContext'
 import { PremiumChatInterface } from '@/components/PremiumChatInterface'
 import { EnhancedSearchResults } from '@/components/EnhancedSearchResults'
-import { SearchStatusBar } from '@/components/SearchStatusBar'
 import { WelcomeScreen } from '@/components/WelcomeScreen'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useEffect } from 'react'
-import ShaderBackground, { WebGLShader } from '@/components/ui/web-gl-shader'
+import ShaderBackground from '@/components/ui/web-gl-shader'
 
 export default function Home() {
   const { currentSession, sessions, isConnected } = useSession()

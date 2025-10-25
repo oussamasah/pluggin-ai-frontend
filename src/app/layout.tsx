@@ -6,7 +6,6 @@ import './globals.css'
 import { BackendHealthCheck } from '@/components/BackendHealthCheck'
 
 import { ThemeProvider } from '@/context/ThemeContext'
-import { WebGLShader } from '@/components/ui/web-gl-shader'
 export const metadata = {
   title: 'ICP Scout - AI-Powered Company Discovery',
   description: 'Find your ideal customers with AI-powered search and ICP matching',
