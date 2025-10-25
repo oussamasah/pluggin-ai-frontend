@@ -40,6 +40,7 @@ import ShaderBackground from './ui/web-gl-shader'
 import { CompanyDetail } from './CompanyDetail'
 
 interface CompaniesResponse {
+  error: string
   success: boolean;
   companies: Company[];
   pagination: {
@@ -173,7 +174,7 @@ export function CompaniesList() {
           })
         }
       } else {
-        throw new Error(data.error || 'Failed to fetch companies')
+        throw new Error(data?.error || 'Failed to fetch companies')
       }
     } catch (err) {
       console.error('Error fetching companies:', err)
