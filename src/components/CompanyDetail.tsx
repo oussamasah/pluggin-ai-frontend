@@ -257,12 +257,13 @@ function OverviewTab({ company }: { company: Company }) {
               {company.city && (
                 <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                   <MapPin className="w-4 h-4" />
-                  <span>{company.city}, {company.country}</span>
+                  <span>{ company.location.country} {company.location.city!=undefined && " - "+company.location.city }</span>
+
                 </div>
               )}
               {company.country_code && (
                 <div className="text-sm text-gray-500 dark:text-gray-500">
-                  Country Code: {company.country_code}
+                  Country Code: {company.location.country_code}
                 </div>
               )}
             </div>

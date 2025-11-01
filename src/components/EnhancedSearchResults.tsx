@@ -14,6 +14,7 @@ import {
 import { cn } from '@/lib/utils'
 import { Company } from '@/types'
 import { useState } from 'react'
+import { Serializable } from 'child_process'
 
 export function EnhancedSearchResults() {
   const { currentSession } = useSession()
@@ -130,7 +131,7 @@ function CompanyCard({ company, onViewDetails, onSaveCompany, isSaved }: Company
 
   return (
     <div className="bg-black/60 backdrop-blur-xl rounded-xl border border-[#27272a] p-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)] hover:shadow-[0_12px_40px_rgba(0,250,100,0.1)] hover:border-[#00FA64]/30 transition-all duration-300 group">
-      {/* Header */}
+    
       <div className="flex items-start gap-3 mb-4">
         {company.logo_url ? (
           <img
@@ -180,7 +181,7 @@ function CompanyCard({ company, onViewDetails, onSaveCompany, isSaved }: Company
         {/* Location */}
         <div className="flex items-center gap-2 text-xs text-[#A1A1AA] font-light tracking-wide">
           <MapPin className="w-3.5 h-3.5 text-[#00FA64]" />
-          <span>{[company.city, company.country].filter(Boolean).join(', ')}</span>
+          <span>{ company.location.country!=undefined && company?.location?.country} {company.location.city!=undefined && " - "+company.location.city }</span>
         </div>
 
         {/* Employees */}
@@ -229,8 +230,9 @@ function CompanyCard({ company, onViewDetails, onSaveCompany, isSaved }: Company
 
       {/* Scores */}
       <div className="flex gap-3 mb-4">
+        
         {/* ICP Score from scoring_metrics */}
-        {company.scoring_metrics?.fit_score?.score && (
+        {company.scoring_metrics?.fit_score && (
           <ScorePill 
             label="ICP FIT" 
             score={company.scoring_metrics.fit_score.score} 
@@ -242,7 +244,7 @@ function CompanyCard({ company, onViewDetails, onSaveCompany, isSaved }: Company
         )}
 
         {/* Intent Score from scoring_metrics */}
-        {company.scoring_metrics?.intent_score?.score && (
+        {company.scoring_metrics?.intent_score  && (
           <ScorePill 
             label="INTENT" 
             score={company.scoring_metrics.intent_score.score} 
@@ -461,9 +463,9 @@ function CompanyDetailsModal({ company, onClose, onSaveCompany, isSaved }: Compa
                 {/* Location Information */}
                 <Section title="LOCATION" icon={<MapPin className="w-5 h-5" />}>
                   <div className="space-y-3">
-                    <InfoRow label="City" value={company.city} />
-                    <InfoRow label="Country" value={company.country} />
-                    <InfoRow label="Country Code" value={company.country_code} />
+                    <InfoRow label="City" value={company.location.city} />
+                    <InfoRow label="Country" value={company.location.country} />
+                    <InfoRow label="Country Code" value={company.location.country_code} />
                   </div>
                 </Section>
               </div>
@@ -601,7 +603,26 @@ function Section({ title, icon, children }: { title: string; icon: React.ReactNo
     </div>
   )
 }
-
+function formatValueToString(value: Serializable): string {
+  if (typeof value === 'object' && value !== null) {
+      // This handles both objects and arrays
+      try {
+          return JSON.stringify(value);
+      } catch (error) {
+          // Fallback for circular references or other JSON errors
+          return String(value); 
+      }
+  } else if (typeof value === 'string') {
+      // If it's already a string, return it directly
+      return value;
+  } else if (value === null || value === undefined) {
+      // Handle null and undefined explicitly (though String(value) works)
+      return String(value);
+  } else {
+      // For primitives (number, boolean, symbol, bigint)
+      return String(value);
+  }
+}
 function InfoRow({ label, value, isLink = false }: { label: string; value: any; isLink?: boolean }) {
   if (!value) return null;
 
@@ -614,7 +635,7 @@ function InfoRow({ label, value, isLink = false }: { label: string; value: any; 
         </a>
       ) : (
         <span className="text-white font-medium text-sm text-right max-w-[60%] break-words">
-          {value}
+          {formatValueToString(value)}
         </span>
       )}
     </div>

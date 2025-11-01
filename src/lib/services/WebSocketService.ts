@@ -16,7 +16,7 @@ class WebSocketService {
   public isConnected = false;
   private connectionPromise: Promise<void> | null = null;
 
-  constructor(private baseUrl: string = 'wss://'+process.env.NEXT_PUBLIC_WS_URL) {
+  constructor(private baseUrl: string = 'ws://'+process.env.NEXT_PUBLIC_WS_URL) {
     // Development singleton
     if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
       if ((window as any).webSocketServiceInstance) {
