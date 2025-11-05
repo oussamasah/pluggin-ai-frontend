@@ -1,6 +1,7 @@
 // types/index.ts
 // frontend/types/company.ts
 export interface Company  {
+  employees: any[];
   business_model: any;
   location: any;
   company_id: string;            // uuid

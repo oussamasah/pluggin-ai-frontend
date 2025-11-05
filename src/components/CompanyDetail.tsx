@@ -22,7 +22,14 @@ import {
   Edit3,
   Star,
   Download,
-  Share2
+  Share2,
+  User,
+  Briefcase,
+  GraduationCap,
+  Languages,
+  Github,
+  Award,
+  MailCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Company } from '@/types';
@@ -40,6 +47,7 @@ export function CompanyDetail({ company, onClose, onRefresh, onEdit }: CompanyDe
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Building2 },
+    { id: 'employees', label: 'Employees', icon: Users },
     { id: 'financials', label: 'Financials', icon: DollarSign },
     { id: 'technologies', label: 'Technologies', icon: Code },
     { id: 'intent', label: 'Intent Signals', icon: TrendingUp },
@@ -98,6 +106,12 @@ export function CompanyDetail({ company, onClose, onRefresh, onEdit }: CompanyDe
                   <div className="flex items-center gap-1">
                     <Users className="w-4 h-4" />
                     <span>{company.employee_count.toLocaleString()} employees</span>
+                  </div>
+                )}
+                {company.employees && company.employees.length > 0 && (
+                  <div className="flex items-center gap-1 text-[#67F227]">
+                    <User className="w-4 h-4" />
+                    <span>{company.employees.length} profiles loaded</span>
                   </div>
                 )}
               </div>
@@ -198,6 +212,7 @@ export function CompanyDetail({ company, onClose, onRefresh, onEdit }: CompanyDe
         <div className="p-6">
           <AnimatedTabContent activeTab={activeTab}>
             {activeTab === 'overview' && <OverviewTab company={company} />}
+            {activeTab === 'employees' && <EmployeesTab company={company} />}
             {activeTab === 'financials' && <FinancialsTab company={company} />}
             {activeTab === 'technologies' && <TechnologiesTab company={company} />}
             {activeTab === 'intent' && <IntentTab company={company} />}
@@ -224,6 +239,290 @@ function AnimatedTabContent({ activeTab, children }: { activeTab: string; childr
   );
 }
 
+// Add the new EmployeesTab component
+function EmployeesTab({ company }: { company: Company }) {
+  if (!company.employees || company.employees.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          No Employee Data
+        </h3>
+        <p className="text-gray-600 dark:text-gray-400">
+          Employee information not available for this company.
+      
+
+        </p>
+      </div>
+    );
+  }
+
+  const currentEmployees = company.employees.filter(emp => emp.is_working);
+  const decisionMakers = company.employees.filter(emp => emp.is_decision_maker);
+
+  return (
+    <div className="space-y-8">
+      {/* Employee Summary */}
+      <DetailSection icon={Users} title="Employee Summary">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+              {company.employees.length}
+            </div>
+            <div className="text-sm text-green-700 dark:text-green-300">Total Profiles</div>
+          </div>
+          <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+              {currentEmployees.length}
+            </div>
+            <div className="text-sm text-blue-700 dark:text-blue-300">Current Employees</div>
+          </div>
+          <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+              {decisionMakers.length}
+            </div>
+            <div className="text-sm text-purple-700 dark:text-purple-300">Decision Makers</div>
+          </div>
+          <div className="text-center p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+              {Math.round(company.employees.reduce((acc, emp) => acc + (emp.connections_count || 0), 0) / company.employees.length)}
+            </div>
+            <div className="text-sm text-amber-700 dark:text-amber-300">Avg Connections</div>
+          </div>
+        </div>
+      </DetailSection>
+
+      {/* Employee List */}
+      <DetailSection icon={User} title="Employee Profiles">
+        <div className="space-y-4">
+          {company.employees.map((employee, index) => (
+            <EmployeeCard key={employee.id || index} employee={employee} />
+          ))}
+        </div>
+      </DetailSection>
+
+      {/* Departments Breakdown */}
+      {company.employees.some(emp => emp.active_experience_department) && (
+        <DetailSection icon={Building2} title="Departments">
+          <div className="flex flex-wrap gap-2">
+            {Array.from(new Set(company.employees.map(emp => emp.active_experience_department).filter(Boolean))).map((dept, index) => (
+              <span
+                key={index}
+                className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"
+              >
+                {dept} ({company.employees.filter(emp => emp.active_experience_department === dept).length})
+              </span>
+            ))}
+          </div>
+        </DetailSection>
+      )}
+    </div>
+  );
+}
+
+// Employee Card Component
+function EmployeeCard({ employee }: { employee: any }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200/60 dark:border-gray-700/60">
+      <div className="p-4">
+        <div className="flex items-start gap-4">
+          {/* Profile Image */}
+          {employee.picture_url ? (
+            <img
+              src={employee.picture_url}
+              alt={employee.full_name}
+              className="w-12 h-12 rounded-full"
+            />
+          ) : (
+            <div className="w-12 h-12 bg-gradient-to-br from-[#67F227] to-[#A7F205] rounded-full flex items-center justify-center">
+              <User className="w-6 h-6 text-gray-900" />
+            </div>
+          )}
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3 mb-1">
+              <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                {employee.full_name}
+              </h3>
+              {employee.is_decision_maker && (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300">
+                  Decision Maker
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-2">
+              {employee.active_experience_title && (
+                <div className="flex items-center gap-1">
+                  <Briefcase className="w-4 h-4" />
+                  <span>{employee.active_experience_title}</span>
+                </div>
+              )}
+              {employee.active_experience_department && (
+                <span className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-xs">
+                  {employee.active_experience_department}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-500">
+              {employee.connections_count && (
+                <span>{employee.connections_count.toLocaleString()} connections</span>
+              )}
+              {employee.followers_count && (
+                <span>{employee.followers_count.toLocaleString()} followers</span>
+              )}
+              {employee.total_experience_duration_months && (
+                <span>{Math.round(employee.total_experience_duration_months / 12)} years exp</span>
+              )}
+            </div>
+
+            {employee.headline && (
+              <p className="text-sm text-gray-700 dark:text-gray-300 mt-2 line-clamp-2">
+                {employee.headline}
+              </p>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {employee.linkedin_url && (
+              <a
+                href={employee.linkedin_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                title="LinkedIn Profile"
+              >
+                <Linkedin className="w-4 h-4" />
+              </a>
+            )}
+            {employee.github_url && (
+              <a
+                href={employee.github_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 text-gray-400 hover:text-gray-700 transition-colors"
+                title="GitHub Profile"
+              >
+                <Github className="w-4 h-4" />
+              </a>
+            )}
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="p-2 text-gray-400 hover:text-[#67F227] transition-colors"
+            >
+              <ExternalLink className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Expanded Details */}
+      {expanded && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0 }}
+          className="px-4 pb-4 border-t border-gray-200/60 dark:border-gray-700/60"
+        >
+          <div className="pt-4 space-y-4">
+            {/* Contact Information */}
+            {(employee.primary_professional_email || employee.professional_emails) && (
+              <div>
+                <h4 className="font-medium text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                  <MailCheck className="w-4 h-4" />
+                  Contact
+                </h4>
+                <div className="space-y-1">
+                  {employee.primary_professional_email && (
+                    <a
+                      href={`mailto:${employee.primary_professional_email}`}
+                      className="block text-sm text-[#67F227] hover:text-[#A7F205] transition-colors"
+                    >
+                      {employee.primary_professional_email}
+                    </a>
+                  )}
+                  {employee.professional_emails?.map((email: { professional_email: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; }, index: Key | null | undefined) => (
+                    <a
+                      key={index}
+                      href={`mailto:${email.professional_email}`}
+                      className="block text-sm text-gray-600 dark:text-gray-400 hover:text-[#67F227] transition-colors"
+                    >
+                      {email.professional_email}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Skills */}
+            {employee.inferred_skills && employee.inferred_skills.length > 0 && (
+              <div>
+                <h4 className="font-medium text-gray-900 dark:text-white mb-2">Skills</h4>
+                <div className="flex flex-wrap gap-1">
+                  {employee.inferred_skills.slice(0, 10).map((skill: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined, index: Key | null | undefined) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center px-2 py-1 rounded text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                  {employee.inferred_skills.length > 10 && (
+                    <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                      +{employee.inferred_skills.length - 10} more
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Languages */}
+            {employee.languages && employee.languages.length > 0 && (
+              <div>
+                <h4 className="font-medium text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                  <Languages className="w-4 h-4" />
+                  Languages
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {employee.languages.map((lang: { language: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; proficiency: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; }, index: Key | null | undefined) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center px-2 py-1 rounded text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"
+                    >
+                      {lang.language} ({lang.proficiency})
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Education */}
+            {employee.education && employee.education.length > 0 && (
+              <div>
+                <h4 className="font-medium text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                  <GraduationCap className="w-4 h-4" />
+                  Education
+                </h4>
+                <div className="space-y-1">
+                  {employee.education.slice(0, 3).map((edu: { degree: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; institution_name: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; }, index: Key | null | undefined) => (
+                    <div key={index} className="text-sm text-gray-600 dark:text-gray-400">
+                      {edu.degree} - {edu.institution_name}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
+// Update the OverviewTab to include employee summary
 function OverviewTab({ company }: { company: Company }) {
   return (
     <div className="space-y-8">
@@ -236,6 +535,39 @@ function OverviewTab({ company }: { company: Company }) {
         </DetailSection>
       )}
 
+      {/* Employee Summary */}
+      {company.employees && company.employees.length > 0 && (
+        <DetailSection icon={Users} title="Employee Insights">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+              <div className="text-xl font-bold text-green-600 dark:text-green-400">
+                {company.employees.length}
+              </div>
+              <div className="text-sm text-green-700 dark:text-green-300">Profiles</div>
+            </div>
+            <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <div className="text-xl font-bold text-blue-600 dark:text-blue-400">
+                {company.employees.filter(emp => emp.is_decision_maker).length}
+              </div>
+              <div className="text-sm text-blue-700 dark:text-blue-300">Decision Makers</div>
+            </div>
+            <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+              <div className="text-xl font-bold text-purple-600 dark:text-purple-400">
+                {Math.round(company.employees.reduce((acc, emp) => acc + (emp.connections_count || 0), 0) / company.employees.length).toLocaleString()}
+              </div>
+              <div className="text-sm text-purple-700 dark:text-purple-300">Avg Connections</div>
+            </div>
+            <div className="text-center p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+              <div className="text-xl font-bold text-amber-600 dark:text-amber-400">
+                {Array.from(new Set(company.employees.map(emp => emp.active_experience_department).filter(Boolean))).length}
+              </div>
+              <div className="text-sm text-amber-700 dark:text-amber-300">Departments</div>
+            </div>
+          </div>
+        </DetailSection>
+      )}
+
+      {/* Rest of the existing OverviewTab content remains the same */}
       {/* Key Information */}
       <DetailSection icon={Target} title="Key Information">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -258,12 +590,11 @@ function OverviewTab({ company }: { company: Company }) {
                 <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                   <MapPin className="w-4 h-4" />
                   <span>{ company.location.country} {company.location.city!=undefined && " - "+company.location.city }</span>
-
                 </div>
               )}
               {company.country_code && (
                 <div className="text-sm text-gray-500 dark:text-gray-500">
-                  Country Code: {company.location.country_code}
+                  Country Code: {company?.location?.country_code}
                 </div>
               )}
             </div>
@@ -319,6 +650,9 @@ function OverviewTab({ company }: { company: Company }) {
     </div>
   );
 }
+
+// The rest of the existing components (FinancialsTab, TechnologiesTab, IntentTab, RelationshipsTab, etc.) remain the same
+// ... [Keep all the existing tab components and helper components as they are]
 
 function FinancialsTab({ company }: { company: Company }) {
   return (
