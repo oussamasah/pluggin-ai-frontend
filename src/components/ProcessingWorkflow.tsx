@@ -28,9 +28,9 @@ const WORKFLOW_PHASES = [
     title: "Dynamic ICP Discovery",
     stepIds: ['1.1', '1.2', '1.3'],
     steps: [
-      { name: "Generate hypotheses", id: '1.1' },
-      { name: "Market Discovery", id: '1.2' },
-      { name: "Clean and validate data", id: '1.3' }
+      { name: "Generate hypotheses", id: '1.1',status:"Pending" },
+      { name: "Market Discovery", id: '1.2',status:"Pending" },
+      { name: "Clean and validate data", id: '1.3',status:"Pending" }
     ],
     icon: Target
   },
@@ -39,9 +39,9 @@ const WORKFLOW_PHASES = [
     title: "Account Intelligence",
     stepIds: ['2.1', '2.2', '2.3'],
     steps: [
-      { name: "Enrich multi-source data", id: '2.1' },
-      { name: "Score fit", id: '2.2' },
-      { name: "Explain reasoning", id: '2.3' }
+      { name: "Enrich multi-source data", id: '2.1',status:"Pending"  },
+      { name: "Score fit", id: '2.2',status:"Pending"  },
+      { name: "Explain reasoning", id: '2.3',status:"Pending"  }
     ],
     icon: Users
   },
@@ -50,9 +50,9 @@ const WORKFLOW_PHASES = [
     title: "Persona Intelligence",
     stepIds: ['3.1', '3.2', '3.3'],
     steps: [
-      { name: "Identify relevant personas", id: '3.1' },
-      { name: "Map psychographic data", id: '3.2' },
-      { name: "Enrich contact information", id: '3.3' }
+      { name: "Identify relevant personas", id: '3.1' ,status:"Pending" },
+      { name: "Map psychographic data", id: '3.2',status:"Pending"  },
+      { name: "Enrich contact information", id: '3.3',status:"Pending"  }
     ],
     icon: Users
   },
@@ -61,9 +61,9 @@ const WORKFLOW_PHASES = [
     title: "Intent & Timing Intelligence",
     stepIds: ['4.1', '4.2', '4.3'],
     steps: [
-      { name: "Detect buying signals", id: '4.1' },
-      { name: "Score intent", id: '4.2' },
-      { name: "Summarize reasoning", id: '4.3' }
+      { name: "Detect buying signals", id: '4.1',status:"Pending"  },
+      { name: "Score intent", id: '4.2',status:"Pending"  },
+      { name: "Summarize reasoning", id: '4.3',status:"Pending"  }
     ],
     icon: TrendingUp
   }
@@ -94,7 +94,7 @@ export default function ProcessingWorkflow() {
     const updatedPhases = WORKFLOW_PHASES.map(phase => ({
       ...phase,
       steps: phase.steps.map(step => {
-        const backendStep = backendSubsteps.find(s => s.id === step.id);
+        const backendStep = backendSubsteps.find((s:any)=> s.id === step.id);
         return {
           ...step,
           status: backendStep ? mapBackendStatus(backendStep.status) : 'waiting'
@@ -132,16 +132,16 @@ export default function ProcessingWorkflow() {
   };
 
   const getPhaseStatus = (steps: any[]) => {
-    if (steps.every(s => s.status === 'done')) return 'done';
-    if (steps.some(s => s.status === 'processing')) return 'processing';
-    if (steps.some(s => s.status === 'failed')) return 'failed';
+    if (steps.every((s:any)=> s.status === 'done')) return 'done';
+    if (steps.some((s:any)=> s.status === 'processing')) return 'processing';
+    if (steps.some((s:any)=> s.status === 'failed')) return 'failed';
     return 'waiting';
   };
 
   const getProgressPercentage = () => {
     const totalSteps = workflowPhases.reduce((acc, phase) => acc + phase.steps.length, 0);
     const completedSteps = workflowPhases.reduce((acc, phase) => 
-      acc + phase.steps.filter(s => s.status === 'done').length, 0
+      acc + phase.steps.filter((s:any)=> s.status === 'done').length, 0
     );
     return totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
   };
@@ -211,7 +211,7 @@ export default function ProcessingWorkflow() {
                   <div className="flex-1 pt-1">
                     <h3 className="text-sm font-semibold text-gray-900 dark:text-[#EDEDED] mb-1">{phase.title}</h3>
                     <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-[#9CA3AF]">
-                      <span>{phase.steps.filter(s => s.status === 'done').length}/{phase.steps.length} completed</span>
+                      <span>{phase.steps.filter((s:any)=> s.status === 'done').length}/{phase.steps.length} completed</span>
                       {phaseStatus === 'processing' && (
                         <>
                           <ChevronRight className="w-3 h-3" />
@@ -230,7 +230,7 @@ export default function ProcessingWorkflow() {
 
                 {/* Steps - UPDATED STYLING */}
                 <div className="ml-14 space-y-2">
-                  {phase.steps.map((step, stepIndex) => (
+                  {phase.steps.map((step, stepIndex)=> (
                     <motion.div 
                       key={step.id}
                       className={`flex items-center gap-3 group py-2 px-3 -mx-3 rounded-xl transition-all
@@ -279,26 +279,26 @@ export default function ProcessingWorkflow() {
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-[#006239]" />
               <span className="text-gray-600 dark:text-[#9CA3AF]">
-                {workflowPhases.reduce((acc, p) => acc + p.steps.filter(s => s.status === 'done').length, 0)} Done
+                {workflowPhases.reduce((acc, p) => acc + p.steps.filter((s:any)=> s.status === 'done').length, 0)} Done
               </span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-[#006239] animate-pulse" />
               <span className="text-gray-600 dark:text-[#9CA3AF]">
-                {workflowPhases.reduce((acc, p) => acc + p.steps.filter(s => s.status === 'processing').length, 0)} Active
+                {workflowPhases.reduce((acc, p) => acc + p.steps.filter((s:any)=> s.status === 'processing').length, 0)} Active
               </span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-gray-400 dark:bg-[#6A6A6A]" />
               <span className="text-gray-600 dark:text-[#9CA3AF]">
-                {workflowPhases.reduce((acc, p) => acc + p.steps.filter(s => s.status === 'waiting').length, 0)} Pending
+                {workflowPhases.reduce((acc, p) => acc + p.steps.filter((s:any)=> s.status === 'waiting').length, 0)} Pending
               </span>
             </div>
-            {workflowPhases.some(p => p.steps.some(s => s.status === 'failed')) && (
+            {workflowPhases.some(p => p.steps.some((s:any)=> s.status === 'failed')) && (
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-red-500" />
                 <span className="text-gray-600 dark:text-[#9CA3AF]">
-                  {workflowPhases.reduce((acc, p) => acc + p.steps.filter(s => s.status === 'failed').length, 0)} Failed
+                  {workflowPhases.reduce((acc, p) => acc + p.steps.filter((s:any)=> s.status === 'failed').length, 0)} Failed
                 </span>
               </div>
             )}
