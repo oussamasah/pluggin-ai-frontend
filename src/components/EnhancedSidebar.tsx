@@ -1,4 +1,6 @@
-"use client";
+'use client'
+
+import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import { useSession } from '@/context/SessionContext'
 import { useTheme } from '@/context/ThemeContext'
@@ -15,7 +17,10 @@ import {
   ChevronRight,
   Sparkles,
   X,
-  Filter
+  Filter,
+  Crown,
+  Zap,
+  Target
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
@@ -23,6 +28,10 @@ import Link from 'next/link'
 import { ThemeToggle } from './ThemeToggle'
 import { WebGLShaderSidebar } from './ui/web-gl-shader-sidebar'
 import { useRouter } from 'next/navigation'
+
+// --- Color Constants for Plugging AI Brand ---
+const ACCENT_GREEN = '#006239' // The core brand green (used for gradients/logos)
+const ACTIVE_GREEN = '#006239' // The bright green (used for highlights/active text)
 
 export function EnhancedSidebar() {
   const router = useRouter();
@@ -51,9 +60,9 @@ export function EnhancedSidebar() {
   const filteredSessions = sessions.filter(session =>
     session.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     session.query?.join(' ').toLowerCase().includes(searchTerm.toLowerCase())
-
   )
 
+  // Mocked/Derived Stats
   const stats = {
     totalSearches: sessions.length,
     totalCompanies: sessions.reduce((sum, session) => sum + (session.resultsCount || 0), 0),
@@ -61,23 +70,32 @@ export function EnhancedSidebar() {
   }
 
   return (
-    <div className="fixed w-[20%]  h-screen  top-0 left-0 flex flex-col bg-slate-900/80 border-r border-[#27272a] shadow-2xl z-9 overflow-hidden">
-      {/* WebGL Shader Background */}
-
-      
+    <div className={cn(
+      "fixed w-64 md:w-80 h-screen top-0 left-0 flex flex-col shadow-2xl z-50 overflow-hidden border-r",
+      "bg-white dark:bg-[#0F0F0F] border-gray-200 dark:border-[#2A2A2A]"
+    )}>
       {/* Content Container */}
-      <div className=" z-10 flex flex-col h-full">
-        {/* Header */}
-        <div className="p-6 border-b border-[#27272a] bg-black/60 ">
+      <div className="flex flex-col h-full">
+        
+        {/* Header (Branding, Search, Stats) */}
+        <div className="p-4 border-b border-gray-200 dark:border-[#2A2A2A] bg-white dark:bg-[#0F0F0F]">
+            
           {/* Logo & Brand */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-br from-[#00FA64] to-[#00FF80] rounded-xl shadow-[0_0_20px_rgba(0,250,100,0.3)]">
-                <Sparkles className="w-6 h-6 text-black" />
+              <div 
+                className="w-10 h-10 rounded-lg flex items-center justify-center shadow-lg" 
+                style={{ backgroundColor: ACCENT_GREEN }}
+              >
+                <Crown className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-extrabold text-white tracking-tight">ICP SCOUT</h1>
-                <p className="text-[#A1A1AA] text-xs font-light tracking-wide">ENTERPRISE INTELLIGENCE</p>
+                <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-[#EDEDED]">
+                  GTM Intelligence
+                </h1>
+                <p className="text-xs font-light text-gray-600 dark:text-[#9CA3AF]">
+                  Powered by Plugging AI
+                </p>
               </div>
             </div>
             <ThemeToggle />
@@ -85,90 +103,132 @@ export function EnhancedSidebar() {
 
           {/* Search Bar */}
           <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#A1A1AA]" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-[#9CA3AF]" />
             <input
               type="text"
-              placeholder="Search sessions..."
+              placeholder="Search analyses..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-black/40 backdrop-blur-md border border-[#27272a] rounded-xl text-sm text-white placeholder-[#A1A1AA] focus:outline-none focus:ring-2 focus:ring-[#00FA64] focus:border-transparent transition-all duration-500"
+              className={cn(
+                "w-full pl-10 pr-4 py-2 text-sm rounded-xl focus:outline-none transition-all duration-300 shadow-inner border",
+                "bg-gray-50 dark:bg-[#1A1A1A] text-gray-900 dark:text-[#EDEDED] border-gray-200 dark:border-[#2A2A2A]",
+                "focus:ring-2 focus:ring-[#006239] focus:border-transparent focus:ring-offset-0"
+              )}
             />
           </div>
 
           {/* Quick Stats */}
           <div className="grid grid-cols-3 gap-3 mb-4">
-            <div className="text-center p-3 bg-black/40 backdrop-blur-md rounded-xl border border-[#27272a]">
-              <div className="text-sm font-bold text-white">{stats.totalSearches}</div>
-              <div className="text-xs text-[#A1A1AA] font-light">SEARCHES</div>
-            </div>
-            <div className="text-center p-3 bg-black/40 backdrop-blur-md rounded-xl border border-[#27272a]">
-              <div className="text-sm font-bold text-white">{stats.totalCompanies}</div>
-              <div className="text-xs text-[#A1A1AA] font-light">COMPANIES</div>
-            </div>
-            <div className="text-center p-3 bg-black/40 backdrop-blur-md rounded-xl border border-[#27272a]">
-              <div className="text-sm font-bold text-white">{stats.activeSessions}</div>
-              <div className="text-xs text-[#A1A1AA] font-light">ACTIVE</div>
-            </div>
+            {Object.entries(stats).map(([key, value]) => (
+                <div 
+                  key={key} 
+                  className={cn(
+                    "text-center p-2 rounded-lg border",
+                    "bg-gray-50 dark:bg-[#1A1A1A] border-gray-200 dark:border-[#2A2A2A]",
+                    "shadow-sm dark:shadow-none"
+                  )}
+                >
+                  <div className="text-sm font-semibold text-gray-900 dark:text-[#EDEDED]">
+                    {value}
+                  </div>
+                  <div className="text-xs font-light mt-0.5 text-gray-600 dark:text-[#9CA3AF]">
+                    {key.replace(/([A-Z])/g, ' $1').trim()}
+                  </div>
+                </div>
+            ))}
           </div>
 
           {/* New Session Button */}
-          <button
-                 onClick={() => setIsCreating(true)}
-                  className="w-full flex items-center justify-center gap-2 p-4 bg-gradient-to-r from-[#67F227] to-[#A7F205] text-gray-900 py-4 px-6 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:from-[#A7F205] hover:to-[#C3F25C] transition-all duration-300 flex items-center justify-center gap-2"
-                >
-  <Plus className="w-4 h-4 transition-transform group-hover:scale-110" />
-  <span className="tracking-wide">NEW SEARCH</span>
-                  </button>
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setIsCreating(true)}
+            className={cn(
+              "w-full flex items-center justify-center gap-2 p-3 text-white font-semibold rounded-xl shadow-lg transition-all duration-300",
+              "hover:shadow-xl"
+            )}
+            style={{ 
+              backgroundColor: ACTIVE_GREEN,
+              boxShadow: `0 4px 10px rgba(0, 250, 100, ${theme =="dark" ? '0.3' : '0.4'})`
+            }}
+          >
+            <Plus className="w-4 h-4" />
+            <span className="tracking-wide">New Analysis</span>
+          </motion.button>
 
           {/* New Session Input */}
           {isCreating && (
-            <div className="mt-4 p-4 bg-black/60  rounded-xl border border-[#27272a] shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+            <div className={cn(
+              "mt-4 p-4 rounded-xl shadow-xl border",
+              "bg-gray-50 dark:bg-[#1A1A1A] border-gray-200 dark:border-[#2A2A2A]"
+            )}>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-bold text-white tracking-wide">CREATE NEW SEARCH</h3>
+                <h3 className="text-sm font-semibold tracking-wide text-gray-900 dark:text-[#EDEDED]">
+                  Create New Analysis
+                </h3>
                 <button
                   onClick={() => setIsCreating(false)}
-                  className="p-1 hover:bg-[#27272a] rounded-lg transition-colors duration-300"
-                >
-                  <X className="w-4 h-4 text-[#A1A1AA]" />
+                  className={cn(
+                    "p-1 rounded-full transition-colors duration-300",
+                    "hover:bg-gray-200 dark:hover:bg-[#2A2A2A]"
+                  )}>
+                  <X className="w-4 h-4 text-gray-500 dark:text-[#9CA3AF]" />
                 </button>
               </div>
               <input
                 type="text"
                 value={newSessionName}
                 onChange={(e) => setNewSessionName(e.target.value)}
-                placeholder="Enter session name..."
-                className="w-full px-3 py-3 bg-black/40 backdrop-blur-md border border-[#27272a] rounded-lg text-sm text-white placeholder-[#A1A1AA] focus:outline-none focus:ring-2 focus:ring-[#00FA64] focus:border-transparent"
+                placeholder="Name your analysis..."
+                className={cn(
+                  "w-full px-3 py-2 text-sm rounded-lg border focus:outline-none transition-all duration-300",
+                  "bg-white dark:bg-[#0F0F0F] text-gray-900 dark:text-[#EDEDED] border-gray-200 dark:border-[#2A2A2A]",
+                  "focus:ring-1 focus:ring-[#006239] focus:border-transparent"
+                )}
                 autoFocus
                 onKeyPress={(e) => e.key === 'Enter' && handleCreateSession()}
               />
               <div className="flex gap-2 mt-3">
                 <button
                   onClick={handleCreateSession}
-                  className="flex-1 bg-[#00FA64] text-black py-2 rounded-lg text-sm font-bold hover:bg-[#00FF80] transition-colors duration-300"
+                  className={cn(
+                    "flex-1 text-white py-2 text-sm font-semibold rounded-lg transition-colors duration-300",
+                    "hover:bg-green-600"
+                  )}
+                  style={{ backgroundColor: ACCENT_GREEN }}
                 >
-                  CREATE
+                  Create
                 </button>
                 <button
                   onClick={() => setIsCreating(false)}
-                  className="flex-1 bg-[#27272a] text-[#A1A1AA] py-2 rounded-lg text-sm font-medium hover:bg-[#363636] transition-colors duration-300"
+                  className={cn(
+                    "flex-1 py-2 text-sm font-medium rounded-lg transition-colors duration-300",
+                    "bg-gray-200 dark:bg-[#2A2A2A] text-gray-700 dark:text-[#9CA3AF]",
+                    "hover:bg-gray-300 dark:hover:bg-[#3A3A3A]"
+                  )}
                 >
-                  CANCEL
+                  Cancel
                 </button>
               </div>
             </div>
           )}
         </div>
-
+        
         {/* Sessions List Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#27272a] bg-black/60 ">
+        <div className={cn(
+          "flex items-center justify-between px-6 py-3 border-b",
+          "bg-white dark:bg-[#0F0F0F] border-gray-200 dark:border-[#2A2A2A]"
+        )}>
           <div className="flex items-center gap-2">
-            <MessageSquare className="w-4 h-4 text-[#00FA64]" />
-            <span className="text-xs font-bold text-white uppercase tracking-wider">
-              RECENT SEARCHES
+            <Target className="w-4 h-4 text-[#006239]" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-[#9CA3AF]">
+              Recent Analyses
             </span>
           </div>
           {sessions.length > 0 && (
-            <button className="p-1.5 text-[#A1A1AA] hover:text-white transition-colors duration-300">
+            <button className={cn(
+              "p-1.5 rounded-md transition-colors duration-300",
+              "text-gray-500 dark:text-[#9CA3AF] hover:bg-gray-100 dark:hover:bg-[#1A1A1A]"
+            )}>
               <Filter className="w-4 h-4" />
             </button>
           )}
@@ -177,96 +237,140 @@ export function EnhancedSidebar() {
         {/* Sessions List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {filteredSessions.map((session) => (
-            <div
+            <motion.div
               key={session.id}
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
               onClick={() => {
                 setCurrentSession(session.id);
-                router.push("/"); // 👈 Navigate to home
+                router.push("/");
               }}
               className={cn(
-                "group p-4 rounded-xl cursor-pointer transition-all duration-500 border backdrop-blur-md",
+                "group p-4 cursor-pointer transition-all duration-300 rounded-xl border",
                 currentSession?.id === session.id
-                  ? 'bg-[#00FA64]/10 border-[#00FA64] shadow-[0_0_20px_rgba(0,250,100,0.2)]'
-                  : 'bg-black/40 border-[#27272a] hover:border-[#00FA64]/40 hover:bg-[#00FA64]/5 shadow-[0_4px_16px_rgba(0,0,0,0.3)] hover:shadow-[0_8px_32px_rgba(0,250,100,0.1)]'
+                  ? "bg-[#006239] text-white border-transparent shadow-xl"
+                  : cn(
+                      "bg-gray-50 dark:bg-[#1E1E1E] text-gray-900 dark:text-[#EDEDED]",
+                      "border-gray-200 dark:border-[#2A2A2A] hover:shadow-md"
+                    )
               )}
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-white text-sm mb-1 tracking-wide truncate">
+                  <h3 className={cn(
+                    "font-semibold text-sm mb-1 tracking-wide truncate",
+                    currentSession?.id === session.id ? "text-white" : "text-gray-900 dark:text-[#EDEDED]"
+                  )}>
                     {session.name}
                   </h3>
-                  <p className="text-[#A1A1AA] text-xs truncate mb-2 font-light">
+                  <p className={cn(
+                    "text-xs truncate mb-2 font-light",
+                    currentSession?.id === session.id ? "text-white/80" : "text-gray-600 dark:text-[#9CA3AF]"
+                  )}>
                     {session.query || 'No query yet'}
                   </p>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-[#A1A1AA] font-light">
+                    <span className={cn(
+                      "text-xs font-light",
+                      currentSession?.id === session.id ? "text-white/70" : "text-gray-500 dark:text-[#9CA3AF]"
+                    )}>
                       {formatDistanceToNow(session.createdAt, { addSuffix: true })}
                     </span>
                     {session.resultsCount > 0 && (
                       <>
-                        <span className="w-1 h-1 bg-[#00FA64] rounded-full" />
-                        <span className="bg-[#00FA64]/20 text-[#00FA64] text-xs px-2 py-1 rounded-full font-medium">
-                          {session.resultsCount} FOUND
+                        <span className={cn(
+                          "w-1 h-1 rounded-full",
+                          currentSession?.id === session.id ? "bg-white" : "bg-[#006239]"
+                        )} />
+                        <span className={cn(
+                          "text-xs px-2 py-0.5 font-medium rounded-full",
+                          currentSession?.id === session.id 
+                            ? "text-white border border-white/50" 
+                            : "text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20"
+                        )}>
+                          {session.resultsCount} found
                         </span>
                       </>
                     )}
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ml-2">
+                {/* Action Buttons */}
+                <div className={cn(
+                  "flex items-center gap-1 ml-2 transition-opacity duration-300",
+                  currentSession?.id === session.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                )}>
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
                       deleteSession(session.id)
                     }}
-                    className="p-1.5 text-[#A1A1AA] hover:bg-red-500/20 hover:text-red-400 rounded-lg transition-all duration-300"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    className={cn(
+                      "p-1 rounded-full transition-all duration-300",
+                      currentSession?.id === session.id 
+                        ? "hover:bg-red-600" 
+                        : "hover:bg-red-50 dark:hover:bg-red-900/20"
+                    )}>
+                    <Trash2 className={cn(
+                      "w-3.5 h-3.5",
+                      currentSession?.id === session.id 
+                        ? "text-white" 
+                        : "text-gray-400 hover:text-red-500"
+                    )} />
                   </button>
-                  <ChevronRight className="w-4 h-4 text-[#00FA64] ml-1" />
+                  <ChevronRight className={cn(
+                    "w-4 h-4 ml-1",
+                    currentSession?.id === session.id ? "text-white" : "text-gray-400"
+                  )} />
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
 
           {filteredSessions.length === 0 && (
-            <div className="text-center py-12 backdrop-blur-md">
-              <div className="w-16 h-16 bg-[#00FA64]/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[#00FA64]/20">
-                <Search className="w-6 h-6 text-[#00FA64]" />
+            <div className="text-center py-12">
+              <div className={cn(
+                "w-12 h-12 flex items-center justify-center mx-auto mb-4 rounded-full border",
+                "bg-gray-50 dark:bg-[#1A1A1A] border-gray-200 dark:border-[#2A2A2A]"
+              )}>
+                <Search className="w-5 h-5 text-gray-500 dark:text-[#9CA3AF]" />
               </div>
-              <p className="text-[#A1A1AA] text-sm mb-1 font-light">
-                {searchTerm ? 'No matching searches found' : 'No searches yet'}
+              <p className="text-sm mb-1 font-light text-gray-600 dark:text-[#9CA3AF]">
+                {searchTerm ? 'No matching analyses found' : 'No analyses yet'}
               </p>
-              <p className="text-xs text-[#666666] font-light">
-                {searchTerm ? 'Try adjusting your search terms' : 'Create your first search to get started'}
+              <p className="text-xs font-light text-gray-500 dark:text-[#6B7280]">
+                {searchTerm ? 'Try adjusting your search terms' : 'Create your first analysis to begin'}
               </p>
             </div>
           )}
         </div>
 
         {/* Navigation Footer */}
-        <div className="p-4 border-t border-[#27272a] space-y-2 bg-black/60 ">
-
-             <Link href="/companies" className="block">
+        <div className={cn(
+          "p-4 space-y-1 border-t",
+          "bg-white dark:bg-[#0F0F0F] border-gray-200 dark:border-[#2A2A2A]"
+        )}>
+          <Link href="/companies" className="block">
             <NavButton 
               icon={Building2} 
-              label="COMPANY DATABASE" 
+              label="Company Database" 
             />
           </Link>
           <NavButton 
             icon={Users} 
-            label="PROSPECTS" 
+            label="Prospects" 
             onClick={() => {/* Add navigation */}}
           />
           <NavButton 
             icon={BarChart3} 
-            label="ANALYTICS" 
+            label="Analytics" 
             onClick={() => {/* Add navigation */}}
           />
           <Link href="/icp-configuration" className="block">
             <NavButton 
               icon={Settings} 
-              label="ICP CONFIGURATION" 
+              label="Configuration" 
             />
           </Link>
         </div>
@@ -275,6 +379,7 @@ export function EnhancedSidebar() {
   )
 }
 
+// Enhanced NavButton component
 function NavButton({ 
   icon: Icon, 
   label, 
@@ -285,23 +390,34 @@ function NavButton({
   label: string
   active?: boolean
 } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+    
   return (
     <button
       className={cn(
-        "w-full flex items-center gap-3 p-3 rounded-xl text-sm font-medium transition-all duration-500 group backdrop-blur-md",
+        "w-full flex items-center gap-3 p-3 text-sm font-medium transition-all duration-300 rounded-xl border",
+        "group hover:shadow-md",
         active
-          ? 'bg-[#00FA64]/10 text-[#00FA64] border border-[#00FA64]/30 shadow-[0_0_20px_rgba(0,250,100,0.2)]'
-          : 'text-[#A1A1AA] hover:text-white hover:bg-white/5 hover:border hover:border-[#00FA64]/20'
+          ? cn(
+              "font-semibold border-[#006239]",
+              "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300"
+            )
+          : cn(
+              "border-transparent text-gray-600 dark:text-[#9CA3AF]",
+              "hover:border-gray-300 dark:hover:border-[#2A2A2A]",
+              "hover:bg-gray-50 dark:hover:bg-[#1A1A1A]"
+            )
       )}
       {...props}
     >
       <Icon className={cn(
-        "w-4 h-4 transition-colors duration-500",
+        "w-4 h-4 transition-colors duration-300",
         active 
-          ? "text-[#00FA64]" 
-          : "text-[#A1A1AA] group-hover:text-[#00FA64]"
+          ? "text-[#006239] dark:text-[#006239]" 
+          : "text-gray-400 dark:text-gray-500 group-hover:text-[#006239] dark:group-hover:text-[#006239]"
       )} />
-      <span className="tracking-wide font-medium">{label}</span>
+      <span className="tracking-wide font-medium">
+        {label}
+      </span>
     </button>
   )
 }

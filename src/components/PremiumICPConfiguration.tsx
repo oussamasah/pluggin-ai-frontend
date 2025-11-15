@@ -6,15 +6,11 @@ import { useSession } from '@/context/SessionContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Plus, 
-  Settings, 
   Star, 
   Trash2, 
   Edit3, 
   Copy,
-  Download,
-  Upload,
   ChevronRight,
-  Sparkles,
   Target,
   Building2,
   MapPin,
@@ -26,20 +22,25 @@ import {
   X,
   Filter,
   Sliders,
-  ArrowLeft
+  ArrowLeft,
+  Crown,
+  Database,
+  Sparkles,
+  PlusCircle
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ICPModel, ICPConfig } from '@/types'
 import { format } from 'date-fns'
 import { ICPConfigForm } from './ICPConfigForm'
 import Link from 'next/link'
-import ShaderBackground from './ui/web-gl-shader'
 import { ICPConfigChat } from './ICPConfigChat'
 
+// Brand Colors
+const ACCENT_GREEN = '#006239'
+const ACTIVE_GREEN = '#006239'
+
 export function PremiumICPConfiguration() {
-  const { icpModels, primaryModel, saveIcpModel, setPrimaryModel, deleteIcpModel   ,
-    openICPConfigChat,
-    isICPConfigChatOpen } = useSession()
+  const { icpModels, primaryModel, saveIcpModel, setPrimaryModel, deleteIcpModel } = useSession()
   const [selectedModel, setSelectedModel] = useState<ICPModel | null>(null)
   const [showConfigForm, setShowConfigForm] = useState(false)
   const [editingModel, setEditingModel] = useState<ICPModel | null>(null)
@@ -50,7 +51,7 @@ export function PremiumICPConfiguration() {
     setEditingModel(null)
   }
 
-  const handleEditModel = (model: ICPModel) => {
+  const handleEditModel = (model: ICPModel|null) => {
     setEditingModel(model)
     setShowConfigForm(true)
   }
@@ -65,47 +66,37 @@ export function PremiumICPConfiguration() {
   }
 
   return (
-    <div className="h-full flex bg-black/80">
-         <ShaderBackground />
-
-      {/* Models Sidebar */}
-      <div className="w-80  bg-slate-900/80 border-r border-gray-200/60  flex flex-col">
+    <div className="relative flex bg-white dark:bg-[#0F0F0F]">
+      {/* Models Sidebar - UPDATED STYLING */}
+      <div className="w-80 bg-white dark:bg-[#0F0F0F] border-r border-gray-200 dark:border-[#2A2A2A] flex flex-col">
         {/* Header */}
-        <div className="p-6 border-b border-gray-200/60 dark:border-gray-700/60">
+        <div className="p-6 border-b border-gray-200 dark:border-[#2A2A2A]">
           <div className="flex items-center gap-3 mb-4">
             <Link 
               href="/"
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-[#2A2A2A] transition-colors flex items-center gap-2 text-gray-600 dark:text-[#9CA3AF] hover:text-gray-900 dark:hover:text-[#EDEDED] rounded-xl"
             >
               <ArrowLeft className="w-4 h-4" />
             </Link>
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-br from-[#67F227] to-[#A7F205] rounded-xl">
-                <Target className="w-6 h-6 text-gray-900" />
+              <div className="w-10 h-10 bg-[#006239] rounded-xl flex items-center justify-center">
+                <Target className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-[#67F227] to-[#A7F205] bg-clip-text text-transparent">
-                  ICP Trainer
-                </h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Manage your ideal customer profiles</p>
+                <h1 className="text-lg font-semibold text-gray-900 dark:text-[#EDEDED]">ICP Models</h1>
+                <p className="text-sm text-gray-600 dark:text-[#9CA3AF]">Manage customer profiles</p>
               </div>
             </div>
           </div>
-
-          <button
-            onClick={() => {
-              setEditingModel(null)
-              setShowConfigForm(true)
-            }}
-            className="w-full mt-4 flex items-center justify-center gap-2 p-3 bg-gradient-to-r from-[#67F227] to-[#A7F205] text-gray-900 rounded-xl hover:from-[#A7F205] hover:to-[#C3F25C] transition-all duration-200 shadow-sm hover:shadow-md"
-          >
-            <Plus className="w-4 h-4" />
-            <span className="font-medium">New ICP Model</span>
-          </button>
+          <div className="flex gap-3 items-center justify-end cursor-pointer" onClick={(e)=>handleEditModel(null)}>
+        <PlusCircle className="text-sm text-[#006239]" ></PlusCircle>
+        <span className='text-sm text-[#006239]'>Add new ICP</span>
+        </div>
         </div>
 
         {/* Models List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
+
           <AnimatePresence>
             {icpModels.map((model, index) => (
               <motion.div
@@ -114,20 +105,20 @@ export function PremiumICPConfiguration() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
                 className={cn(
-                  "group p-4 rounded-xl border cursor-pointer transition-all duration-200",
+                  "group p-4 border cursor-pointer transition-all duration-200 rounded-2xl",
                   selectedModel?.id === model.id
-                    ? "bg-green-50 dark:bg-green-900/20 border-[#67F227] dark:border-[#67F227] shadow-sm"
+                    ? "bg-[#006239]/10 border-[#006239]"
                     : model.isPrimary
-                    ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 shadow-sm"
-                    : "bg-white dark:bg-gray-800 border-gray-200/60 dark:border-gray-700/60 hover:border-[#67F227] dark:hover:border-[#67F227] hover:shadow-sm"
+                    ? "bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700"
+                    : "bg-white dark:bg-[#1A1A1A] border-gray-300 dark:border-[#2A2A2A] hover:border-[#006239]"
                 )}
                 onClick={() => setSelectedModel(model)}
               >
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm">{model.name}</h3>
+                    <h3 className="font-medium text-gray-900 dark:text-[#EDEDED] text-sm">{model.name}</h3>
                     {model.isPrimary && (
-                      <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                      <Star className="w-4 h-4 text-amber-500 dark:text-amber-400 fill-amber-500 dark:fill-amber-400" />
                     )}
                   </div>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -136,7 +127,7 @@ export function PremiumICPConfiguration() {
                         e.stopPropagation()
                         handleDuplicateModel(model)
                       }}
-                      className="p-1 text-gray-400 hover:text-[#67F227] transition-colors"
+                      className="p-1 text-gray-400 dark:text-[#9CA3AF] hover:text-[#006239] transition-colors rounded-lg"
                       title="Duplicate"
                     >
                       <Copy className="w-3 h-3" />
@@ -146,7 +137,7 @@ export function PremiumICPConfiguration() {
                         e.stopPropagation()
                         handleEditModel(model)
                       }}
-                      className="p-1 text-gray-400 hover:text-[#67F227] transition-colors"
+                      className="p-1 text-gray-400 dark:text-[#9CA3AF] hover:text-[#006239] transition-colors rounded-lg"
                       title="Edit"
                     >
                       <Edit3 className="w-3 h-3" />
@@ -154,23 +145,23 @@ export function PremiumICPConfiguration() {
                   </div>
                 </div>
 
-                <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                <div className="space-y-1 text-xs text-gray-600 dark:text-[#9CA3AF]">
                   <div className="flex items-center gap-1">
-                    <Building2 className="w-3 h-3" />
+                    <Building2 className="w-3 h-3 text-[#006239]" />
                     <span>{model.config.industries.length} industries</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Users className="w-3 h-3" />
+                    <Users className="w-3 h-3 text-[#006239]" />
                     <span>{model.config.employeeRange}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <DollarSign className="w-3 h-3" />
+                    <DollarSign className="w-3 h-3 text-[#006239]" />
                     <span>{model.config.acvRange}</span>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between mt-3">
-                  <span className="text-xs text-gray-400 dark:text-gray-500">
+                  <span className="text-xs text-gray-500 dark:text-[#6A6A6A]">
                     {format(model.updatedAt, 'MMM d, yyyy')}
                   </span>
                   {!model.isPrimary && (
@@ -179,7 +170,7 @@ export function PremiumICPConfiguration() {
                         e.stopPropagation()
                         setPrimaryModel(model.id)
                       }}
-                      className="text-xs text-gray-400 hover:text-amber-600 transition-colors"
+                      className="text-xs text-gray-400 dark:text-[#9CA3AF] hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
                     >
                       Set primary
                     </button>
@@ -193,36 +184,30 @@ export function PremiumICPConfiguration() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-center py-12"
+              className="text-center py-8"
             >
-              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Target className="w-8 h-8 text-gray-400" />
+              <div className="w-12 h-12 bg-gray-100 dark:bg-[#2A2A2A] rounded-xl flex items-center justify-center mx-auto mb-3">
+                <Target className="w-6 h-6 text-gray-400 dark:text-[#6A6A6A]" />
               </div>
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">No ICP Models</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Create your first ICP model to get started</p>
-              <button
-                onClick={() => setShowConfigForm(true)}
-                className="bg-[#67F227] text-gray-900 px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#A7F205] transition-colors"
-              >
-                Create Model
-              </button>
+              <h3 className="font-semibold text-gray-900 dark:text-[#EDEDED] mb-1 text-sm">No ICP Models</h3>
+              <p className="text-xs text-gray-600 dark:text-[#9CA3AF]">Use the chat to create your first model</p>
             </motion.div>
           )}
         </div>
 
-        {/* Primary Model Badge */}
+        {/* Primary Model Badge - UPDATED STYLING */}
         {primaryModel && (
-          <div className="p-4 border-t border-gray-200/60 dark:border-gray-700/60 bg-amber-50/50 dark:bg-amber-900/20">
+          <div className="p-4 border-t border-gray-200 dark:border-[#2A2A2A] bg-amber-50 dark:bg-amber-900/20">
             <div className="flex items-center gap-2 text-sm">
-              <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-              <span className="font-medium text-amber-900 dark:text-amber-100">Primary Model</span>
+              <Star className="w-4 h-4 text-amber-500 dark:text-amber-400 fill-amber-500 dark:fill-amber-400" />
+              <span className="font-medium text-amber-900 dark:text-amber-300">Primary Model</span>
             </div>
-            <p className="text-xs text-amber-700 dark:text-amber-300 truncate mt-1">{primaryModel.name}</p>
+            <p className="text-xs text-amber-700 dark:text-amber-400 truncate mt-1">{primaryModel.name}</p>
           </div>
         )}
       </div>
 
-      {/* Main Content */}
+      {/* Main Content - Always show chat interface */}
       <div className="flex-1 flex flex-col">
         <AnimatePresence mode="wait">
           {selectedModel ? (
@@ -242,31 +227,13 @@ export function PremiumICPConfiguration() {
             </motion.div>
           ) : (
             <motion.div
-              key="empty-state"
+              key="chat-interface"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="h-screen"
+              className="h-full"
             >
-              {/* <div className="text-center max-w-md">
-                <div className="w-20 h-20 bg-gradient-to-br from-green-100 dark:from-green-900/20 to-green-50 dark:to-green-800/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                  <Sliders className="w-10 h-10 text-[#67F227]" />
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
-                  Configure Your Ideal Customer Profile
-                </h2>
-                <p className="text-gray-600 dark:text-gray-400 mb-6">
-                  Select an ICP model from the sidebar to view and edit its configuration, 
-                  or create a new model to define your perfect customer criteria.
-                </p>
-                <button
-                  onClick={() => setShowConfigForm(true)}
-                  className="bg-gradient-to-r from-[#67F227] to-[#A7F205] text-gray-900 px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:from-[#A7F205] hover:to-[#C3F25C] transition-all duration-300"
-                >
-                  Create New Model
-                </button>
-              </div> */}
-                <ICPConfigChat />
+              <ICPConfigChat />
             </motion.div>
           )}
         </AnimatePresence>
@@ -301,16 +268,16 @@ function ICPModelDetail({
   onSetPrimary: (id: string) => void
 }) {
   return (
-    <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="p-6 border-b border-gray-200/60 dark:border-gray-700/60 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm">
+    <div className="h-full flex flex-col bg-white dark:bg-[#0F0F0F]">
+      {/* Header - UPDATED STYLING */}
+      <div className="p-6 border-b border-gray-200 dark:border-[#2A2A2A] bg-white dark:bg-[#0F0F0F]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{model.name}</h1>
+              <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#EDEDED]">{model.name}</h1>
               {model.isPrimary && (
-                <span className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2 py-1 rounded-full text-sm font-medium flex items-center gap-1">
-                  <Star className="w-3 h-3 fill-amber-500" />
+                <span className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-3 py-1 text-sm font-medium flex items-center gap-1 rounded-xl border border-amber-200 dark:border-amber-800">
+                  <Star className="w-3 h-3 fill-amber-500 dark:fill-amber-400" />
                   Primary
                 </span>
               )}
@@ -320,7 +287,7 @@ function ICPModelDetail({
             {!model.isPrimary && (
               <button
                 onClick={() => onSetPrimary(model.id)}
-                className="flex items-center gap-2 px-3 py-2 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors text-sm font-medium"
+                className="flex items-center gap-2 px-4 py-2 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors text-sm font-medium rounded-xl border border-amber-200 dark:border-amber-800"
               >
                 <Star className="w-4 h-4" />
                 Set Primary
@@ -328,7 +295,7 @@ function ICPModelDetail({
             )}
             <button
               onClick={() => onEdit(model)}
-              className="flex items-center gap-2 px-3 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors text-sm font-medium"
+              className="flex items-center gap-2 px-4 py-2 bg-[#006239]/10 text-[#006239] hover:bg-[#006239]/20 transition-colors text-sm font-medium rounded-xl border border-[#006239]/20"
             >
               <Edit3 className="w-4 h-4" />
               Edit
@@ -339,22 +306,21 @@ function ICPModelDetail({
                   onDelete(model.id)
                 }
               }}
-              className="flex items-center gap-2 px-3 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors text-sm font-medium"
+              className="flex items-center gap-2 px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors text-sm font-medium rounded-xl border border-red-200 dark:border-red-800"
             >
               <Trash2 className="w-4 h-4" />
               Delete
             </button>
           </div>
         </div>
-        <p className="text-gray-600 dark:text-gray-400 mt-2">
+        <p className="text-gray-600 dark:text-[#9CA3AF] mt-2">
           Last updated {format(model.updatedAt, 'MMMM d, yyyy')}
         </p>
       </div>
 
-      {/* Configuration Preview */}
-      <div className="flex-1 overflow-y-auto max-h-[700px]   p-6">
-       
-        <div className="max-w-4xl mx-auto space-y-8 ">
+      {/* Configuration Preview - UPDATED STYLING */}
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="max-w-4xl mx-auto space-y-8">
           {/* Company Profile */}
           <ConfigSection 
             icon={Building2}
@@ -422,16 +388,16 @@ function ICPModelDetail({
           >
             <div className="space-y-4">
               {model.config.scoringWeights && Object.entries(model.config.scoringWeights)?.map(([category, weight]) => (
-                <div key={category} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <span className="font-medium text-gray-700 dark:text-gray-300 capitalize">{category}</span>
+                <div key={category} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#1A1A1A] rounded-2xl border border-gray-200 dark:border-[#2A2A2A]">
+                  <span className="font-medium text-gray-700 dark:text-[#EDEDED] capitalize">{category}</span>
                   <div className="flex items-center gap-3">
-                    <div className="w-32 bg-white dark:bg-gray-700 rounded-full h-2">
+                    <div className="bg-white dark:bg-[#2A2A2A] rounded-full h-2">
                       <div 
-                        className="bg-[#67F227] h-2 rounded-full transition-all duration-300"
+                        className="bg-[#006239] h-2 rounded-full transition-all duration-300"
                         style={{ width: `${(weight / 10) * 100}%` }}
                       />
                     </div>
-                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400 w-8">{weight}/10</span>
+                    <span className="text-sm font-medium text-gray-600 dark:text-[#9CA3AF] w-8">{weight}/10</span>
                   </div>
                 </div>
               ))}
@@ -458,15 +424,15 @@ function ConfigSection({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 shadow-sm"
+      className="bg-white dark:bg-[#1A1A1A] border border-gray-300 dark:border-[#2A2A2A] p-6 rounded-2xl"
     >
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
-          <Icon className="w-5 h-5 text-[#67F227]" />
+        <div className="w-10 h-10 bg-[#006239]/10 flex items-center justify-center border border-[#006239]/20 rounded-xl">
+          <Icon className="w-5 h-5 text-[#006239]" />
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400">{description}</p>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-[#EDEDED]">{title}</h3>
+          <p className="text-sm text-gray-600 dark:text-[#9CA3AF]">{description}</p>
         </div>
       </div>
       {children}
@@ -485,24 +451,24 @@ function ConfigField({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{label}</label>
+      <label className="block text-sm font-medium text-gray-700 dark:text-[#9CA3AF] mb-2">{label}</label>
       {type === 'chips' ? (
         <div className="flex flex-wrap gap-2">
           {Array.isArray(value) && value.length > 0 ? (
             value.map((item, index) => (
               <span
                 key={index}
-                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300"
+                className="inline-flex items-center px-2.5 py-0.5 text-xs font-medium bg-[#006239]/10 text-[#006239] border border-[#006239]/20 rounded-lg"
               >
                 {item}
               </span>
             ))
           ) : (
-            <span className="text-sm text-gray-500 dark:text-gray-400 italic">None specified</span>
+            <span className="text-sm text-gray-500 dark:text-[#6A6A6A] italic">None specified</span>
           )}
         </div>
       ) : (
-        <p className="text-sm text-gray-900 dark:text-white">{value || <span className="text-gray-500 dark:text-gray-400 italic">Not specified</span>}</p>
+        <p className="text-sm text-gray-900 dark:text-[#EDEDED]">{value || <span className="text-gray-500 dark:text-[#6A6A6A] italic">Not specified</span>}</p>
       )}
     </div>
   )

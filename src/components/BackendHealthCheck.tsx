@@ -42,7 +42,7 @@ export function BackendHealthCheck() {
   return (
     <div className={cn(
       "flex items-center gap-2 text-sm",
-      isHealthy ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+      isHealthy ? "text-green-600 dark:text-[#006239]" : "text-red-600 dark:text-red-400"
     )}>
       {isHealthy ? (
         <>

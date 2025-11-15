@@ -8,6 +8,7 @@ import { WelcomeScreen } from '@/components/WelcomeScreen'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useEffect } from 'react'
 import ShaderBackground from '@/components/ui/web-gl-shader'
+import PremiumLogoBackground from '@/components/ui/PremiumLogoBackground'
 
 export default function Home() {
   const { currentSession, sessions, isConnected } = useSession()
@@ -25,10 +26,8 @@ export default function Home() {
   }, [currentSession, sessions, isConnected]);
   return (
     <div className="flex-1 flex flex-col ">
-         <ShaderBackground />
-      
-      {/* Search Status Bar */}
-      
+        
+          
 
       <div className=" flex-1 flex">
         {/* Main Chat Area */}
@@ -66,7 +65,7 @@ export default function Home() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
-              className="w-96 border-l  bg-black/20"
+              className="w-100 border-l  border-gray-200 dark:border-[#2A2A2A]"
             >
               <EnhancedSearchResults />
             </motion.div>

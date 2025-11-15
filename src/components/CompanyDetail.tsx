@@ -1,6 +1,5 @@
-// components/CompanyDetail.tsx
 import { JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Building2, 
   MapPin, 
@@ -16,24 +15,32 @@ import {
   Globe,
   Linkedin,
   Twitter,
-  Facebook,
-  Instagram,
+  Github,
   ExternalLink,
   Edit3,
   Star,
   Download,
-  Share2,
-  User,
+  X,
+  Crown,
+  BarChart3,
+  Database,
   Briefcase,
   GraduationCap,
   Languages,
-  Github,
+  MailCheck,
+  User,
   Award,
-  MailCheck
+  ChevronRight,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Company } from '@/types';
 import { format } from 'date-fns';
+
+// Brand Colors
+const ACCENT_GREEN = '#006239'
+const ACTIVE_GREEN = '#006239'
 
 interface CompanyDetailProps {
   company: Company;
@@ -55,61 +62,61 @@ export function CompanyDetail({ company, onClose, onRefresh, onEdit }: CompanyDe
   ];
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col bg-white dark:bg-[#0F0F0F]">
       {/* Header */}
-      <div className="p-6 border-b border-gray-200/60 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm">
+      <div className="p-6 border-b border-gray-200 dark:border-[#2A2A2A] bg-white dark:bg-[#0F0F0F]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             {company.logo_url ? (
               <img 
                 src={company.logo_url} 
                 alt={company.name}
-                className="w-16 h-16 rounded-2xl border"
+                className="w-16 h-16 rounded-2xl border border-gray-300 dark:border-[#3A3A3A]"
               />
             ) : (
-              <div className="w-16 h-16 bg-gradient-to-br from-[#67F227] to-[#A7F205] rounded-2xl flex items-center justify-center">
-                <Building2 className="w-8 h-8 text-gray-900" />
+              <div className="w-16 h-16 bg-[#006239] rounded-2xl flex items-center justify-center">
+                <Building2 className="w-8 h-8 text-white" />
               </div>
             )}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white truncate">
+                <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#EDEDED] truncate">
                   {company.name}
                 </h1>
                 {company.scoring_metrics?.fit_score?.score && (
                   <div className={cn(
-                    "px-3 py-1 rounded-full text-sm font-medium",
+                    "px-3 py-1 text-sm font-medium rounded-xl",
                     company.scoring_metrics.fit_score.score >= 80
-                      ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                      ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300"
                       : company.scoring_metrics.fit_score.score >= 60
-                      ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
-                      : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                      ? "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300"
+                      : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300"
                   )}>
                     {company.scoring_metrics.fit_score.score}% Fit Score
                   </div>
                 )}
               </div>
-              <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+              <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-[#9CA3AF]">
                 {company.domain && (
                   <div className="flex items-center gap-1">
-                    <Globe className="w-4 h-4" />
+                    <Globe className="w-4 h-4 text-[#006239]" />
                     <span>{company.domain}</span>
                   </div>
                 )}
                 {company.country && (
                   <div className="flex items-center gap-1">
-                    <MapPin className="w-4 h-4" />
+                    <MapPin className="w-4 h-4 text-[#006239]" />
                     <span>{company.country}</span>
                   </div>
                 )}
                 {company.employee_count && (
                   <div className="flex items-center gap-1">
-                    <Users className="w-4 h-4" />
+                    <Users className="w-4 h-4 text-[#006239]" />
                     <span>{company.employee_count.toLocaleString()} employees</span>
                   </div>
                 )}
                 {company.employees && company.employees.length > 0 && (
-                  <div className="flex items-center gap-1 text-[#67F227]">
+                  <div className="flex items-center gap-1 text-[#006239]">
                     <User className="w-4 h-4" />
                     <span>{company.employees.length} profiles loaded</span>
                   </div>
@@ -121,7 +128,7 @@ export function CompanyDetail({ company, onClose, onRefresh, onEdit }: CompanyDe
             {onEdit && (
               <button
                 onClick={() => onEdit(company)}
-                className="p-2 text-gray-400 hover:text-[#67F227] transition-colors"
+                className="p-2 text-gray-400 dark:text-[#9CA3AF] hover:text-[#006239] transition-colors hover:bg-gray-100 dark:hover:bg-[#2A2A2A] rounded-xl"
                 title="Edit Company"
               >
                 <Edit3 className="w-5 h-5" />
@@ -129,28 +136,28 @@ export function CompanyDetail({ company, onClose, onRefresh, onEdit }: CompanyDe
             )}
             <button
               onClick={onRefresh}
-              className="p-2 text-gray-400 hover:text-[#67F227] transition-colors"
+              className="p-2 text-gray-400 dark:text-[#9CA3AF] hover:text-[#006239] transition-colors hover:bg-gray-100 dark:hover:bg-[#2A2A2A] rounded-xl"
               title="Refresh"
             >
               <Download className="w-5 h-5" />
             </button>
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              className="p-2 text-gray-400 dark:text-[#9CA3AF] hover:text-gray-600 dark:hover:text-[#EDEDED] transition-colors hover:bg-gray-100 dark:hover:bg-[#2A2A2A] rounded-xl"
             >
-              <ExternalLink className="w-5 h-5" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
         {/* Social Links */}
-        <div className="flex items-center gap-4 mt-4">
+        <div className="flex items-center gap-3 mt-4">
           {company.website && (
             <a
               href={company.website.startsWith('http') ? company.website : `https://${company.website}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg text-sm hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+              className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-[#2A2A2A] text-gray-700 dark:text-[#9CA3AF] text-sm hover:bg-gray-100 dark:hover:bg-[#3A3A3A] transition-colors border border-gray-300 dark:border-[#3A3A3A] rounded-xl"
             >
               <Globe className="w-4 h-4" />
               Website
@@ -161,7 +168,7 @@ export function CompanyDetail({ company, onClose, onRefresh, onEdit }: CompanyDe
               href={company.linkedin_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg text-sm hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+              className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-[#2A2A2A] text-gray-700 dark:text-[#9CA3AF] text-sm hover:bg-gray-100 dark:hover:bg-[#3A3A3A] transition-colors border border-gray-300 dark:border-[#3A3A3A] rounded-xl"
             >
               <Linkedin className="w-4 h-4" />
               LinkedIn
@@ -172,7 +179,7 @@ export function CompanyDetail({ company, onClose, onRefresh, onEdit }: CompanyDe
               href={company.twitter_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-3 py-1 bg-blue-400/10 text-blue-600 dark:text-blue-400 rounded-lg text-sm hover:bg-blue-400/20 transition-colors"
+              className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-[#2A2A2A] text-gray-700 dark:text-[#9CA3AF] text-sm hover:bg-gray-100 dark:hover:bg-[#3A3A3A] transition-colors border border-gray-300 dark:border-[#3A3A3A] rounded-xl"
             >
               <Twitter className="w-4 h-4" />
               Twitter
@@ -182,7 +189,7 @@ export function CompanyDetail({ company, onClose, onRefresh, onEdit }: CompanyDe
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200/60 bg-white/50 dark:bg-gray-800/50">
+      <div className="border-b border-gray-200 dark:border-[#2A2A2A] bg-white dark:bg-[#0F0F0F]">
         <div className="px-6">
           <div className="flex space-x-8">
             {tabs.map((tab) => {
@@ -194,8 +201,8 @@ export function CompanyDetail({ company, onClose, onRefresh, onEdit }: CompanyDe
                   className={cn(
                     "flex items-center gap-2 py-4 border-b-2 text-sm font-medium transition-colors",
                     activeTab === tab.id
-                      ? "border-[#67F227] text-[#67F227]"
-                      : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                      ? "border-[#006239] text-[#006239]"
+                      : "border-transparent text-gray-500 dark:text-[#9CA3AF] hover:text-gray-700 dark:hover:text-[#EDEDED]"
                   )}
                 >
                   <Icon className="w-4 h-4" />
@@ -244,14 +251,12 @@ function EmployeesTab({ company }: { company: Company }) {
   if (!company.employees || company.employees.length === 0) {
     return (
       <div className="text-center py-12">
-        <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+        <Users className="w-12 h-12 text-gray-400 dark:text-[#6A6A6A] mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-[#EDEDED] mb-2">
           No Employee Data
         </h3>
-        <p className="text-gray-600 dark:text-gray-400">
+        <p className="text-gray-600 dark:text-[#9CA3AF]">
           Employee information not available for this company.
-      
-
         </p>
       </div>
     );
@@ -265,30 +270,26 @@ function EmployeesTab({ company }: { company: Company }) {
       {/* Employee Summary */}
       <DetailSection icon={Users} title="Employee Summary">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-              {company.employees.length}
-            </div>
-            <div className="text-sm text-green-700 dark:text-green-300">Total Profiles</div>
-          </div>
-          <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-              {currentEmployees.length}
-            </div>
-            <div className="text-sm text-blue-700 dark:text-blue-300">Current Employees</div>
-          </div>
-          <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-              {decisionMakers.length}
-            </div>
-            <div className="text-sm text-purple-700 dark:text-purple-300">Decision Makers</div>
-          </div>
-          <div className="text-center p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-              {Math.round(company.employees.reduce((acc, emp) => acc + (emp.connections_count || 0), 0) / company.employees.length)}
-            </div>
-            <div className="text-sm text-amber-700 dark:text-amber-300">Avg Connections</div>
-          </div>
+          <StatCard
+            value={company.employees.length.toString()}
+            label="Total Profiles"
+            color="green"
+          />
+          <StatCard
+            value={currentEmployees.length.toString()}
+            label="Current Employees"
+            color="blue"
+          />
+          <StatCard
+            value={decisionMakers.length.toString()}
+            label="Decision Makers"
+            color="purple"
+          />
+          <StatCard
+            value={Math.round(company.employees.reduce((acc, emp) => acc + (emp.connections_count || 0), 0) / company.employees.length).toString()}
+            label="Avg Connections"
+            color="orange"
+          />
         </div>
       </DetailSection>
 
@@ -308,7 +309,7 @@ function EmployeesTab({ company }: { company: Company }) {
             {Array.from(new Set(company.employees.map(emp => emp.active_experience_department).filter(Boolean))).map((dept, index) => (
               <span
                 key={index}
-                className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"
+                className="inline-flex items-center px-3 py-1 text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg"
               >
                 {dept} ({company.employees.filter(emp => emp.active_experience_department === dept).length})
               </span>
@@ -325,7 +326,7 @@ function EmployeeCard({ employee }: { employee: any }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200/60 dark:border-gray-700/60">
+    <div className="bg-gray-50 dark:bg-[#1A1A1A] border border-gray-300 dark:border-[#2A2A2A] rounded-2xl overflow-hidden">
       <div className="p-4">
         <div className="flex items-start gap-4">
           {/* Profile Image */}
@@ -333,41 +334,41 @@ function EmployeeCard({ employee }: { employee: any }) {
             <img
               src={employee.picture_url}
               alt={employee.full_name}
-              className="w-12 h-12 rounded-full"
+              className="w-12 h-12 rounded-xl border border-gray-300 dark:border-[#3A3A3A]"
             />
           ) : (
-            <div className="w-12 h-12 bg-gradient-to-br from-[#67F227] to-[#A7F205] rounded-full flex items-center justify-center">
-              <User className="w-6 h-6 text-gray-900" />
+            <div className="w-12 h-12 bg-[#006239] rounded-xl flex items-center justify-center">
+              <User className="w-6 h-6 text-white" />
             </div>
           )}
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1">
-              <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+              <h3 className="font-medium text-gray-900 dark:text-[#EDEDED] truncate">
                 {employee.full_name}
               </h3>
               {employee.is_decision_maker && (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300">
+                <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800 rounded-lg">
                   Decision Maker
                 </span>
               )}
             </div>
 
-            <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-2">
+            <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-[#9CA3AF] mb-2">
               {employee.active_experience_title && (
                 <div className="flex items-center gap-1">
-                  <Briefcase className="w-4 h-4" />
+                  <Briefcase className="w-4 h-4 text-[#006239]" />
                   <span>{employee.active_experience_title}</span>
                 </div>
               )}
               {employee.active_experience_department && (
-                <span className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-xs">
+                <span className="bg-gray-200 dark:bg-[#2A2A2A] px-2 py-1 text-xs rounded-lg text-gray-700 dark:text-[#9CA3AF]">
                   {employee.active_experience_department}
                 </span>
               )}
             </div>
 
-            <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-500">
+            <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-[#6A6A6A]">
               {employee.connections_count && (
                 <span>{employee.connections_count.toLocaleString()} connections</span>
               )}
@@ -380,7 +381,7 @@ function EmployeeCard({ employee }: { employee: any }) {
             </div>
 
             {employee.headline && (
-              <p className="text-sm text-gray-700 dark:text-gray-300 mt-2 line-clamp-2">
+              <p className="text-sm text-gray-700 dark:text-[#9CA3AF] mt-2 line-clamp-2">
                 {employee.headline}
               </p>
             )}
@@ -392,7 +393,7 @@ function EmployeeCard({ employee }: { employee: any }) {
                 href={employee.linkedin_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                className="p-2 text-gray-400 dark:text-[#9CA3AF] hover:text-[#006239] transition-colors hover:bg-gray-100 dark:hover:bg-[#2A2A2A] rounded-xl"
                 title="LinkedIn Profile"
               >
                 <Linkedin className="w-4 h-4" />
@@ -403,7 +404,7 @@ function EmployeeCard({ employee }: { employee: any }) {
                 href={employee.github_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-2 text-gray-400 hover:text-gray-700 transition-colors"
+                className="p-2 text-gray-400 dark:text-[#9CA3AF] hover:text-[#006239] transition-colors hover:bg-gray-100 dark:hover:bg-[#2A2A2A] rounded-xl"
                 title="GitHub Profile"
               >
                 <Github className="w-4 h-4" />
@@ -411,113 +412,115 @@ function EmployeeCard({ employee }: { employee: any }) {
             )}
             <button
               onClick={() => setExpanded(!expanded)}
-              className="p-2 text-gray-400 hover:text-[#67F227] transition-colors"
+              className="p-2 text-gray-400 dark:text-[#9CA3AF] hover:text-[#006239] transition-colors hover:bg-gray-100 dark:hover:bg-[#2A2A2A] rounded-xl"
             >
-              <ExternalLink className="w-4 h-4" />
+              {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
           </div>
         </div>
       </div>
 
       {/* Expanded Details */}
-      {expanded && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          exit={{ opacity: 0, height: 0 }}
-          className="px-4 pb-4 border-t border-gray-200/60 dark:border-gray-700/60"
-        >
-          <div className="pt-4 space-y-4">
-            {/* Contact Information */}
-            {(employee.primary_professional_email || employee.professional_emails) && (
-              <div>
-                <h4 className="font-medium text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                  <MailCheck className="w-4 h-4" />
-                  Contact
-                </h4>
-                <div className="space-y-1">
-                  {employee.primary_professional_email && (
-                    <a
-                      href={`mailto:${employee.primary_professional_email}`}
-                      className="block text-sm text-[#67F227] hover:text-[#A7F205] transition-colors"
-                    >
-                      {employee.primary_professional_email}
-                    </a>
-                  )}
-                  {employee.professional_emails?.map((email: { professional_email: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; }, index: Key | null | undefined) => (
-                    <a
-                      key={index}
-                      href={`mailto:${email.professional_email}`}
-                      className="block text-sm text-gray-600 dark:text-gray-400 hover:text-[#67F227] transition-colors"
-                    >
-                      {email.professional_email}
-                    </a>
-                  ))}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="px-4 pb-4 border-t border-gray-300 dark:border-[#2A2A2A]"
+          >
+            <div className="pt-4 space-y-4">
+              {/* Contact Information */}
+              {(employee.primary_professional_email || employee.professional_emails) && (
+                <div>
+                  <h4 className="font-medium text-gray-900 dark:text-[#EDEDED] mb-2 flex items-center gap-2">
+                    <MailCheck className="w-4 h-4 text-[#006239]" />
+                    Contact
+                  </h4>
+                  <div className="space-y-1">
+                    {employee.primary_professional_email && (
+                      <a
+                        href={`mailto:${employee.primary_professional_email}`}
+                        className="block text-sm text-[#006239] hover:text-[#006239] transition-colors"
+                      >
+                        {employee.primary_professional_email}
+                      </a>
+                    )}
+                    {employee.professional_emails?.map((email: { professional_email: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; }, index: Key | null | undefined) => (
+                      <a
+                        key={index}
+                        href={`mailto:${email.professional_email}`}
+                        className="block text-sm text-gray-600 dark:text-[#9CA3AF] hover:text-[#006239] transition-colors"
+                      >
+                        {email.professional_email}
+                      </a>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Skills */}
-            {employee.inferred_skills && employee.inferred_skills.length > 0 && (
-              <div>
-                <h4 className="font-medium text-gray-900 dark:text-white mb-2">Skills</h4>
-                <div className="flex flex-wrap gap-1">
-                  {employee.inferred_skills.slice(0, 10).map((skill: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined, index: Key | null | undefined) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center px-2 py-1 rounded text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300"
-                    >
-                      {skill}
-                    </span>
-                  ))}
-                  {employee.inferred_skills.length > 10 && (
-                    <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
-                      +{employee.inferred_skills.length - 10} more
-                    </span>
-                  )}
+              {/* Skills */}
+              {employee.inferred_skills && employee.inferred_skills.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-gray-900 dark:text-[#EDEDED] mb-2">Skills</h4>
+                  <div className="flex flex-wrap gap-1">
+                    {employee.inferred_skills.slice(0, 10).map((skill: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined, index: Key | null | undefined) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center px-2 py-1 text-xs bg-[#006239]/10 text-[#006239] border border-[#006239]/20 rounded-lg"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                    {employee.inferred_skills.length > 10 && (
+                      <span className="inline-flex items-center px-2 py-1 text-xs bg-gray-100 dark:bg-[#2A2A2A] text-gray-600 dark:text-[#9CA3AF] rounded-lg">
+                        +{employee.inferred_skills.length - 10} more
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Languages */}
-            {employee.languages && employee.languages.length > 0 && (
-              <div>
-                <h4 className="font-medium text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                  <Languages className="w-4 h-4" />
-                  Languages
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {employee.languages.map((lang: { language: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; proficiency: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; }, index: Key | null | undefined) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center px-2 py-1 rounded text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"
-                    >
-                      {lang.language} ({lang.proficiency})
-                    </span>
-                  ))}
+              {/* Languages */}
+              {employee.languages && employee.languages.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-gray-900 dark:text-[#EDEDED] mb-2 flex items-center gap-2">
+                    <Languages className="w-4 h-4 text-[#006239]" />
+                    Languages
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {employee.languages.map((lang: { language: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; proficiency: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; }, index: Key | null | undefined) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg"
+                      >
+                        {lang.language} ({lang.proficiency})
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Education */}
-            {employee.education && employee.education.length > 0 && (
-              <div>
-                <h4 className="font-medium text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                  <GraduationCap className="w-4 h-4" />
-                  Education
-                </h4>
-                <div className="space-y-1">
-                  {employee.education.slice(0, 3).map((edu: { degree: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; institution_name: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; }, index: Key | null | undefined) => (
-                    <div key={index} className="text-sm text-gray-600 dark:text-gray-400">
-                      {edu.degree} - {edu.institution_name}
-                    </div>
-                  ))}
+              {/* Education */}
+              {employee.education && employee.education.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-gray-900 dark:text-[#EDEDED] mb-2 flex items-center gap-2">
+                    <GraduationCap className="w-4 h-4 text-[#006239]" />
+                    Education
+                  </h4>
+                  <div className="space-y-1">
+                    {employee.education.slice(0, 3).map((edu: { degree: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; institution_name: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; }, index: Key | null | undefined) => (
+                      <div key={index} className="text-sm text-gray-600 dark:text-[#9CA3AF]">
+                        {edu.degree} - {edu.institution_name}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        </motion.div>
-      )}
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -529,7 +532,7 @@ function OverviewTab({ company }: { company: Company }) {
       {/* Company Description */}
       {company.description && (
         <DetailSection icon={Building2} title="Company Description">
-          <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+          <p className="text-gray-700 dark:text-[#9CA3AF] leading-relaxed">
             {company.description}
           </p>
         </DetailSection>
@@ -539,35 +542,30 @@ function OverviewTab({ company }: { company: Company }) {
       {company.employees && company.employees.length > 0 && (
         <DetailSection icon={Users} title="Employee Insights">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-              <div className="text-xl font-bold text-green-600 dark:text-green-400">
-                {company.employees.length}
-              </div>
-              <div className="text-sm text-green-700 dark:text-green-300">Profiles</div>
-            </div>
-            <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <div className="text-xl font-bold text-blue-600 dark:text-blue-400">
-                {company.employees.filter(emp => emp.is_decision_maker).length}
-              </div>
-              <div className="text-sm text-blue-700 dark:text-blue-300">Decision Makers</div>
-            </div>
-            <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-              <div className="text-xl font-bold text-purple-600 dark:text-purple-400">
-                {Math.round(company.employees.reduce((acc, emp) => acc + (emp.connections_count || 0), 0) / company.employees.length).toLocaleString()}
-              </div>
-              <div className="text-sm text-purple-700 dark:text-purple-300">Avg Connections</div>
-            </div>
-            <div className="text-center p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-              <div className="text-xl font-bold text-amber-600 dark:text-amber-400">
-                {Array.from(new Set(company.employees.map(emp => emp.active_experience_department).filter(Boolean))).length}
-              </div>
-              <div className="text-sm text-amber-700 dark:text-amber-300">Departments</div>
-            </div>
+            <StatCard
+              value={company.employees.length.toString()}
+              label="Profiles"
+              color="green"
+            />
+            <StatCard
+              value={company.employees.filter(emp => emp.is_decision_maker).length.toString()}
+              label="Decision Makers"
+              color="blue"
+            />
+            <StatCard
+              value={Math.round(company.employees.reduce((acc, emp) => acc + (emp.connections_count || 0), 0) / company.employees.length).toLocaleString()}
+              label="Avg Connections"
+              color="purple"
+            />
+            <StatCard
+              value={Array.from(new Set(company.employees.map(emp => emp.active_experience_department).filter(Boolean))).length.toString()}
+              label="Departments"
+              color="orange"
+            />
           </div>
         </DetailSection>
       )}
 
-      {/* Rest of the existing OverviewTab content remains the same */}
       {/* Key Information */}
       <DetailSection icon={Target} title="Key Information">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -584,16 +582,16 @@ function OverviewTab({ company }: { company: Company }) {
       <DetailSection icon={MapPin} title="Location & Contact">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <h4 className="font-medium text-gray-900 dark:text-white mb-3">Location</h4>
+            <h4 className="font-medium text-gray-900 dark:text-[#EDEDED] mb-3">Location</h4>
             <div className="space-y-2">
               {company.city && (
-                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                  <MapPin className="w-4 h-4" />
-                  <span>{ company.location.country} {company.location.city!=undefined && " - "+company.location.city }</span>
+                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-[#9CA3AF]">
+                  <MapPin className="w-4 h-4 text-[#006239]" />
+                  <span>{ company.location?.country} {company.location?.city && " - "+company.location.city }</span>
                 </div>
               )}
               {company.country_code && (
-                <div className="text-sm text-gray-500 dark:text-gray-500">
+                <div className="text-sm text-gray-500 dark:text-[#6A6A6A]">
                   Country Code: {company?.location?.country_code}
                 </div>
               )}
@@ -601,12 +599,12 @@ function OverviewTab({ company }: { company: Company }) {
           </div>
           
           <div>
-            <h4 className="font-medium text-gray-900 dark:text-white mb-3">Contact Information</h4>
+            <h4 className="font-medium text-gray-900 dark:text-[#EDEDED] mb-3">Contact Information</h4>
             <div className="space-y-2">
               {company.contact_email && (
                 <a
                   href={`mailto:${company.contact_email}`}
-                  className="flex items-center gap-2 text-sm text-[#67F227] hover:text-[#A7F205] transition-colors"
+                  className="flex items-center gap-2 text-sm text-[#006239] hover:text-[#006239] transition-colors"
                 >
                   <Mail className="w-4 h-4" />
                   {company.contact_email}
@@ -615,7 +613,7 @@ function OverviewTab({ company }: { company: Company }) {
               {company.contact_phone && (
                 <a
                   href={`tel:${company.contact_phone}`}
-                  className="flex items-center gap-2 text-sm text-[#67F227] hover:text-[#A7F205] transition-colors"
+                  className="flex items-center gap-2 text-sm text-[#006239] hover:text-[#006239] transition-colors"
                 >
                   <Phone className="w-4 h-4" />
                   {company.contact_phone}
@@ -651,10 +649,17 @@ function OverviewTab({ company }: { company: Company }) {
   );
 }
 
-// The rest of the existing components (FinancialsTab, TechnologiesTab, IntentTab, RelationshipsTab, etc.) remain the same
-// ... [Keep all the existing tab components and helper components as they are]
-
 function FinancialsTab({ company }: { company: Company }) {
+  // Format currency function to match CompaniesList
+  const formatCurrency = (amount: number, currency: string = 'USD'): string => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount || 0);
+  };
+
   return (
     <div className="space-y-8">
       {/* Revenue & Funding */}
@@ -662,7 +667,7 @@ function FinancialsTab({ company }: { company: Company }) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <DetailField 
             label="Annual Revenue" 
-            value={company.annual_revenue ? `$${company.annual_revenue.toLocaleString()}` : undefined} 
+            value={company.annual_revenue ? formatCurrency(company.annual_revenue, company.annual_revenue_currency) : undefined} 
           />
           <DetailField 
             label="Revenue Currency" 
@@ -670,7 +675,7 @@ function FinancialsTab({ company }: { company: Company }) {
           />
           <DetailField 
             label="Total Funding" 
-            value={company.total_funding ? `$${company.total_funding.toLocaleString()}` : undefined} 
+            value={company.total_funding ? formatCurrency(company.total_funding) : undefined} 
           />
           <DetailField label="Employee Count" value={company.employee_count?.toLocaleString()} />
           <DetailField label="Funding Stage" value={company.funding_stage} />
@@ -694,11 +699,11 @@ function TechnologiesTab({ company }: { company: Company }) {
     if (!company.technologies || company.technologies.length === 0) {
       return (
         <div className="text-center py-12">
-          <Code className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          <Code className="w-12 h-12 text-gray-400 dark:text-[#6A6A6A] mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-[#EDEDED] mb-2">
             No Technologies Listed
           </h3>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-gray-600 dark:text-[#9CA3AF]">
             Technology stack information not available for this company.
           </p>
         </div>
@@ -759,20 +764,20 @@ function TechnologiesTab({ company }: { company: Company }) {
       <div className="space-y-8">
         {/* Technology Stack Overview */}
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-[#EDEDED] mb-4">
             Technology Stack ({company.technologies.length} technologies)
           </h3>
           <div className="flex flex-wrap gap-2 mb-6">
             {company.technologies.slice(0, 20).map((tech, index) => (
               <span
                 key={index}
-                className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"
+                className="inline-flex items-center px-3 py-1 text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg"
               >
                 {tech}
               </span>
             ))}
             {company.technologies.length > 20 && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+              <span className="inline-flex items-center px-3 py-1 text-sm bg-gray-100 dark:bg-[#2A2A2A] text-gray-600 dark:text-[#9CA3AF] rounded-lg">
                 +{company.technologies.length - 20} more
               </span>
             )}
@@ -787,12 +792,12 @@ function TechnologiesTab({ company }: { company: Company }) {
               
               return (
                 <div key={category}>
-                  <h4 className="font-medium text-gray-900 dark:text-white mb-3">{category}</h4>
+                  <h4 className="font-medium text-gray-900 dark:text-[#EDEDED] mb-3">{category}</h4>
                   <div className="flex flex-wrap gap-2">
                     {techs.map((tech, index) => (
                       <span
                         key={index}
-                        className="inline-flex items-center px-2.5 py-1 rounded-lg text-sm bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300"
+                        className="inline-flex items-center px-2.5 py-1 text-sm bg-[#006239]/10 text-[#006239] border border-[#006239]/20 rounded-lg"
                       >
                         {tech}
                       </span>
@@ -811,11 +816,11 @@ function IntentTab({ company }: { company: Company }) {
   if (!company.intent_signals || (typeof company.intent_signals === 'object' && Object.keys(company.intent_signals).length === 0)) {
     return (
       <div className="text-center py-12">
-        <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+        <TrendingUp className="w-12 h-12 text-gray-400 dark:text-[#6A6A6A] mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-[#EDEDED] mb-2">
           No Intent Signals
         </h3>
-        <p className="text-gray-600 dark:text-gray-400">
+        <p className="text-gray-600 dark:text-[#9CA3AF]">
           No buying intent signals detected for this company yet.
         </p>
       </div>
@@ -831,38 +836,38 @@ function IntentTab({ company }: { company: Company }) {
       <DetailSection icon={TrendingUp} title="Buying Intent Signals">
         <div className="space-y-4">
           {intentSignals.map((signal, index) => (
-            <div key={index} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <div key={index} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#1A1A1A] border border-gray-300 dark:border-[#2A2A2A] rounded-2xl">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
-                  <span className="font-medium text-gray-900 dark:text-white">
+                  <span className="font-medium text-gray-900 dark:text-[#EDEDED]">
                     {signal.name || 'Intent Signal'}
                   </span>
                   {signal.confidence && (
                     <span className={cn(
-                      "px-2 py-1 rounded-full text-xs font-medium",
+                      "px-2 py-1 text-xs font-medium rounded-lg",
                       signal.confidence >= 80
-                        ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                        ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300"
                         : signal.confidence >= 60
-                        ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
-                        : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                        ? "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300"
+                        : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300"
                     )}>
                       {signal.confidence}% confidence
                     </span>
                   )}
                 </div>
                 {signal.detected_date && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-sm text-gray-500 dark:text-[#6A6A6A]">
                     Detected {format(new Date(signal.detected_date), 'MMM d, yyyy')}
                   </p>
                 )}
                 {signal.description && (
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                  <p className="text-sm text-gray-600 dark:text-[#9CA3AF] mt-1">
                     {signal.description}
                   </p>
                 )}
               </div>
               <div className="text-right">
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+                <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg">
                   Active
                 </span>
               </div>
@@ -874,24 +879,21 @@ function IntentTab({ company }: { company: Company }) {
       {/* Intent Summary */}
       <DetailSection icon={Star} title="Intent Summary">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-              {intentSignals.length}
-            </div>
-            <div className="text-sm text-green-700 dark:text-green-300">Total Signals</div>
-          </div>
-          <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-              {Math.round(intentSignals.reduce((acc, signal) => acc + (signal.confidence || 0), 0) / intentSignals.length)}%
-            </div>
-            <div className="text-sm text-blue-700 dark:text-blue-300">Avg Confidence</div>
-          </div>
-          <div className="text-center p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-              {intentSignals.filter(s => s.confidence && s.confidence >= 80).length}
-            </div>
-            <div className="text-sm text-amber-700 dark:text-amber-300">High Confidence</div>
-          </div>
+          <StatCard
+            value={intentSignals.length.toString()}
+            label="Total Signals"
+            color="green"
+          />
+          <StatCard
+            value={`${Math.round(intentSignals.reduce((acc, signal) => acc + (signal.confidence || 0), 0) / intentSignals.length)}%`}
+            label="Avg Confidence"
+            color="blue"
+          />
+          <StatCard
+            value={intentSignals.filter(s => s.confidence && s.confidence >= 80).length.toString()}
+            label="High Confidence"
+            color="orange"
+          />
         </div>
       </DetailSection>
     </div>
@@ -902,11 +904,11 @@ function RelationshipsTab({ company }: { company: Company }) {
     if (!company.relationships || (typeof company.relationships === 'object' && Object.keys(company.relationships).length === 0)) {
       return (
         <div className="text-center py-12">
-          <Shield className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          <Shield className="w-12 h-12 text-gray-400 dark:text-[#6A6A6A] mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-[#EDEDED] mb-2">
             No Relationship Data
           </h3>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-gray-600 dark:text-[#9CA3AF]">
             Relationship information not available for this company.
           </p>
         </div>
@@ -933,13 +935,13 @@ function RelationshipsTab({ company }: { company: Company }) {
           <DetailSection icon={Users} title="Key Customers">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {relationships.customers.slice(0, 9).map((customer: { similarity_score: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; }, index: Key | null | undefined) => (
-                <div key={index} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <div className="font-medium text-gray-900 dark:text-white">
+                <div key={index} className="p-3 bg-gray-50 dark:bg-[#1A1A1A] border border-gray-300 dark:border-[#2A2A2A] rounded-2xl">
+                  <div className="font-medium text-gray-900 dark:text-[#EDEDED]">
                     {renderRelationshipItem(customer)}
                   </div>
                   {/* Show similarity score if available */}
                   {typeof customer === 'object' && customer.similarity_score && (
-                    <div className="text-xs text-gray-500 mt-1">
+                    <div className="text-xs text-gray-500 dark:text-[#6A6A6A] mt-1">
                       Similarity: {customer.similarity_score}%
                     </div>
                   )}
@@ -947,7 +949,7 @@ function RelationshipsTab({ company }: { company: Company }) {
               ))}
             </div>
             {relationships.customers.length > 9 && (
-              <div className="mt-4 text-center text-sm text-gray-500">
+              <div className="mt-4 text-center text-sm text-gray-500 dark:text-[#6A6A6A]">
                 +{relationships.customers.length - 9} more customers
               </div>
             )}
@@ -961,7 +963,7 @@ function RelationshipsTab({ company }: { company: Company }) {
               {relationships.partners.map((partner: any, index: Key | null | undefined) => (
                 <span
                   key={index}
-                  className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300"
+                  className="inline-flex items-center px-3 py-1 text-sm bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800 rounded-lg"
                 >
                   {renderRelationshipItem(partner)}
                 </span>
@@ -977,7 +979,7 @@ function RelationshipsTab({ company }: { company: Company }) {
               {relationships.competitors.map((competitor: any, index: Key | null | undefined) => (
                 <span
                   key={index}
-                  className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300"
+                  className="inline-flex items-center px-3 py-1 text-sm bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800 rounded-lg"
                 >
                   {renderRelationshipItem(competitor)}
                 </span>
@@ -1000,12 +1002,12 @@ function DetailSection({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 shadow-sm">
+    <div className="bg-white dark:bg-[#1A1A1A] border border-gray-300 dark:border-[#2A2A2A] rounded-2xl p-6">
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
-          <Icon className="w-5 h-5 text-[#67F227]" />
+        <div className="w-10 h-10 bg-[#006239]/10 flex items-center justify-center border border-[#006239]/20 rounded-xl">
+          <Icon className="w-5 h-5 text-[#006239]" />
         </div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-[#EDEDED]">{title}</h3>
       </div>
       {children}
     </div>
@@ -1025,20 +1027,20 @@ function DetailField({
 
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{label}</label>
+      <label className="block text-sm font-medium text-gray-700 dark:text-[#9CA3AF] mb-2">{label}</label>
       {type === 'chips' ? (
         <div className="flex flex-wrap gap-2">
           {Array.isArray(value) ? (
             value.map((item, index) => (
               <span
                 key={index}
-                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300"
+                className="inline-flex items-center px-2.5 py-0.5 text-xs font-medium bg-[#006239]/10 text-[#006239] border border-[#006239]/20 rounded-lg"
               >
                 {item}
               </span>
             ))
           ) : (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
+            <span className="inline-flex items-center px-2.5 py-0.5 text-xs font-medium bg-[#006239]/10 text-[#006239] border border-[#006239]/20 rounded-lg">
               {value}
             </span>
           )}
@@ -1048,26 +1050,26 @@ function DetailField({
           href={value.startsWith('http') ? value : `https://${value}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[#67F227] hover:text-[#A7F205] transition-colors text-sm"
+          className="text-[#006239] hover:text-[#006239] transition-colors text-sm"
         >
           {value}
         </a>
       ) : type === 'email' ? (
         <a 
           href={`mailto:${value}`}
-          className="text-[#67F227] hover:text-[#A7F205] transition-colors text-sm"
+          className="text-[#006239] hover:text-[#006239] transition-colors text-sm"
         >
           {value}
         </a>
       ) : type === 'phone' ? (
         <a 
           href={`tel:${value}`}
-          className="text-[#67F227] hover:text-[#A7F205] transition-colors text-sm"
+          className="text-[#006239] hover:text-[#006239] transition-colors text-sm"
         >
           {value}
         </a>
       ) : (
-        <p className="text-sm text-gray-900 dark:text-white">{value}</p>
+        <p className="text-sm text-gray-900 dark:text-[#EDEDED]">{value}</p>
       )}
     </div>
   );
@@ -1084,21 +1086,21 @@ function ScoreField({
 }) {
   const scoreValue = score?.score || 0;
   const colorClasses = {
-    green: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-    blue: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-    red: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-    amber: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+    green: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
+    blue: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300',
+    red: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300',
+    amber: 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300'
   };
 
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{label}</label>
+      <label className="block text-sm font-medium text-gray-700 dark:text-[#9CA3AF] mb-2">{label}</label>
       <div className="flex items-center gap-3">
-        <div className="w-32 bg-gray-200 dark:bg-gray-700 rounded-full h-2 flex-1">
+        <div className="w-32 bg-gray-200 dark:bg-[#2A2A2A] h-2 flex-1 rounded-full">
           <div 
             className={cn(
-              "h-2 rounded-full transition-all duration-300",
-              color === 'green' && "bg-[#67F227]",
+              "h-2 transition-all duration-300 rounded-full",
+              color === 'green' && "bg-[#006239]",
               color === 'blue' && "bg-blue-500",
               color === 'red' && "bg-red-500",
               color === 'amber' && "bg-amber-500"
@@ -1107,20 +1109,44 @@ function ScoreField({
           />
         </div>
         <span className={cn(
-          "px-2 py-1 rounded-full text-xs font-medium min-w-12 text-center",
+          "px-2 py-1 text-xs font-medium min-w-12 text-center border rounded-lg",
           colorClasses[color]
         )}>
           {scoreValue}%
         </span>
       </div>
       {score?.reason && (
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{score.reason}</p>
+        <p className="text-xs text-gray-500 dark:text-[#6A6A6A] mt-1">{score.reason}</p>
       )}
       {score?.confidence && (
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        <p className="text-xs text-gray-500 dark:text-[#6A6A6A] mt-1">
           Confidence: {score.confidence}%
         </p>
       )}
     </div>
   );
+}
+
+// StatCard component to match CompaniesList styling
+function StatCard({ value, label, color }: { 
+  value: string; 
+  label: string; 
+  color: 'blue' | 'green' | 'purple' | 'orange';
+}) {
+  const colorClasses = {
+    blue: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800',
+    green: 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-[#006239] border-green-200 dark:border-green-800',
+    purple: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800',
+    orange: 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-800'
+  }
+
+  return (
+    <div className={cn(
+      "p-4 rounded-2xl border text-center",
+      colorClasses[color]
+    )}>
+      <div className="text-2xl font-bold">{value}</div>
+      <div className="text-sm text-gray-600 dark:text-[#9CA3AF]">{label}</div>
+    </div>
+  )
 }

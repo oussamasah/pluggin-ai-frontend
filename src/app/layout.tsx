@@ -23,10 +23,10 @@ export default function RootLayout({
         <SessionProvider>
         <ThemeProvider>
           <div className="flex h-full">
-            <div className="w-[20%]">
+            <div className="w-[20%] relative">
             <EnhancedSidebar />
             </div>
-            <main className="w-[80%]">
+            <main className="w-[100%]">
 
               {children}
             </main>

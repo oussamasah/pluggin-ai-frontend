@@ -4,7 +4,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  X, 
   Send, 
   Bot, 
   User,
@@ -13,10 +12,16 @@ import {
   Loader,
   Target,
   Zap,
-  BrainCircuit
+  BrainCircuit,
+  ArrowUp,
+  Crown
 } from 'lucide-react'
 import { useSession } from '@/context/SessionContext'
 import { cn } from '@/lib/utils'
+
+// Brand Colors
+const ACCENT_GREEN = '#006239'
+const ACTIVE_GREEN = '#006239'
 
 export function ICPConfigChat() {
   const {
@@ -25,7 +30,6 @@ export function ICPConfigChat() {
     sendICPConfigMessage,
     currentICPSuggestion,
     applyICPSuggestion,
-
   } = useSession()
 
   const [inputMessage, setInputMessage] = useState('')
@@ -62,205 +66,210 @@ export function ICPConfigChat() {
   const isConfigReady = currentICPSuggestion?.isComplete
 
   return (
-    <AnimatePresence>
-      
-        <motion.div
-          initial={{ opacity: 0, x: '100%' }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: '100%' }}
-          className="w-full h-screen bg-gradient-to-b from-gray-900/80 to-black border-l border-green-500/20 shadow-2xl z-50 flex flex-col justify-between"
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-green-500/20 bg-black/50 backdrop-blur-xl">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-400 rounded-xl flex items-center justify-center shadow-lg shadow-green-500/20">
-                <Target className="w-5 h-5 text-black" />
+    <div className="w-full h-[100vh] bg-white dark:bg-[#0F0F0F] flex flex-col">
+      {/* Header - UPDATED STYLING */}
+      <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-[#2A2A2A] bg-white dark:bg-[#0F0F0F]">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-[#006239] rounded-xl flex items-center justify-center">
+            <Target className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900 dark:text-[#EDEDED] text-lg">
+              ICP Configuration Assistant
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-[#9CA3AF]">
+              AI-powered configuration
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-[#006239] animate-pulse" />
+          <span className="text-sm text-gray-600 dark:text-[#9CA3AF] font-medium">Live</span>
+        </div>
+      </div>
+
+      {/* Messages - UPDATED STYLING */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50 dark:bg-[#0F0F0F]">
+        {icpConfigConversation.length === 0 && !isICPConfigLoading && (
+          <div className="text-center text-gray-600 dark:text-[#9CA3AF] mt-8">
+            <div className="w-16 h-16 bg-[#006239] rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Sparkles className="w-8 h-8 text-white" />
+            </div>
+            <p className="text-sm font-medium">Start configuring your ICP...</p>
+          </div>
+        )}
+
+        {icpConfigConversation.map((message, index) => (
+          <div
+            key={index}
+            className={cn(
+              "flex gap-4",
+              message.role === 'user' ? 'justify-end' : 'justify-start'
+            )}
+          >
+            {message.role === 'bot' && (
+              <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-gray-100 dark:bg-[#2A2A2A] flex items-center justify-center">
+                <Bot className="w-4 h-4 text-gray-600 dark:text-[#9CA3AF]" />
               </div>
-              <div>
-                <h3 className="font-bold text-white tracking-wide">
-                  ICP CONFIG ASSISTANT
-                </h3>
-                <p className="text-xs text-green-400 font-medium">
-                  AI-POWERED CONFIGURATION
-                </p>
+            )}
+            
+            <div className={cn(
+              "flex flex-col gap-2 max-w-[85%]",
+              message.role === 'user' ? "items-end" : "items-start"
+            )}>
+              <div className={cn(
+                "px-4 py-3 rounded-2xl",
+                message.role === 'user'
+                  ? "bg-[#006239] text-white rounded-br-md"
+                  : "bg-white dark:bg-[#1A1A1A] text-gray-900 dark:text-[#EDEDED] border border-gray-200 dark:border-[#2A2A2A] rounded-bl-md"
+              )}>
+                <div className="text-sm whitespace-pre-wrap leading-relaxed">
+                  {message.content}
+                </div>
+              </div>
+              <div className={cn(
+                "text-xs px-1",
+                message.role === 'user' 
+                  ? "text-gray-500 dark:text-[#9CA3AF] text-right" 
+                  : "text-gray-500 dark:text-[#9CA3AF] text-left"
+              )}>
+                {message.role === 'user' ? 'You' : 'Assistant'} • {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </div>
             </div>
-    
-          </div>
 
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {icpConfigConversation.length === 0 && !isICPConfigLoading && (
-              <div className="text-center text-green-400 mt-8">
-                <Sparkles className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p className="text-sm font-light">Start configuring your ICP...</p>
+            {message.role === 'user' && (
+              <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-blue-500 flex items-center justify-center">
+                <User className="w-4 h-4 text-white" />
               </div>
             )}
+          </div>
+        ))}
 
-            {icpConfigConversation.map((message, index) => (
-              <div
+        {/* Quick Starters - UPDATED STYLING */}
+        {icpConfigConversation.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-3 mt-6"
+          >
+            <p className="text-xs text-gray-500 dark:text-[#6A6A6A] font-medium text-center">QUICK START</p>
+            {quickStarters.map((starter, index) => (
+              <button
                 key={index}
-                className={cn(
-                  "flex gap-3",
-                  message.role === 'user' ? 'flex-row-reverse' : 'flex-row'
-                )}
+                onClick={() => handleQuickQuestion(starter)}
+                className="w-full text-left p-4 text-sm text-gray-700 dark:text-[#EDEDED] bg-white dark:bg-[#1A1A1A] rounded-xl border border-gray-200 dark:border-[#2A2A2A] hover:border-[#006239] hover:shadow-sm transition-all duration-200"
               >
-                <div
-                  className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg",
-                    message.role === 'user' 
-                      ? 'bg-blue-500 shadow-blue-500/30' 
-                      : 'bg-gradient-to-br from-green-500 to-emerald-400 shadow-green-500/30'
-                  )}
-                >
-                  {message.role === 'user' ? (
-                    <User className="w-4 h-4 text-white" />
-                  ) : (
-                    <Bot className="w-4 h-4 text-black" />
-                  )}
-                </div>
-                <div
-                  className={cn(
-                    "max-w-[80%] rounded-2xl px-4 py-3 backdrop-blur-sm border",
-                    message.role === 'user'
-                      ? "bg-blue-500/20 text-blue-100 border-blue-500/30 rounded-br-md"
-                      : "bg-green-500/10 text-green-100 border-green-500/30 rounded-bl-md"
-                  )}
-                >
-                  <div className="text-sm whitespace-pre-wrap leading-relaxed">
-                    {message.content}
-                  </div>
-                </div>
-              </div>
+                {starter}
+              </button>
             ))}
+          </motion.div>
+        )}
 
-            {/* Quick Starters */}
-            {icpConfigConversation.length === 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-2 mt-4"
-              >
-                <p className="text-xs text-green-400/70 font-medium text-center">QUICK START</p>
-                {quickStarters.map((starter, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleQuickQuestion(starter)}
-                    className="w-full text-left p-3 text-sm text-green-300/80 bg-green-500/5 rounded-xl border border-green-500/20 hover:bg-green-500/10 hover:border-green-500/30 transition-all duration-200"
-                  >
-                    {starter}
-                  </button>
-                ))}
-              </motion.div>
-            )}
-
-            {/* Suggestion Preview */}
-            {currentICPSuggestion && !isConfigReady && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="bg-green-500/5 border border-green-500/20 rounded-xl p-4 mt-4"
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <Zap className="w-4 h-4 text-green-400" />
-                  <span className="text-sm font-medium text-green-400">DRAFT CONFIGURATION</span>
-                </div>
-                <div className="text-xs text-green-300/80 space-y-1">
-                  <div><strong>Industries:</strong> {currentICPSuggestion.config.industries?.join(', ') || 'Not set'}</div>
-                  <div><strong>Size:</strong> {currentICPSuggestion.config.employeeRange || 'Not set'}</div>
-                  <div><strong>Geography:</strong> {currentICPSuggestion.config.geographies?.join(', ') || 'Not set'}</div>
-                  <div className="text-green-400/60 text-xs mt-2">
-                    Confidence: {Math.round(currentICPSuggestion.confidence * 100)}%
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Ready to Apply */}
-            {isConfigReady && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-xl p-4 mt-4"
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <CheckCircle className="w-4 h-4 text-green-400" />
-                  <span className="text-sm font-bold text-green-400">CONFIGURATION READY</span>
-                </div>
-                <p className="text-xs text-green-300/80 mb-3">
-                  Your ICP configuration is complete and ready to apply.
-                </p>
-                <button
-                  onClick={applyICPSuggestion}
-                  className="w-full bg-gradient-to-r from-green-500 to-emerald-400 text-black py-2 px-4 rounded-lg font-bold text-sm hover:from-green-400 hover:to-emerald-300 transition-all duration-200 shadow-lg shadow-green-500/25"
-                >
-                  APPLY ICP CONFIGURATION
-                </button>
-              </motion.div>
-            )}
-
-            {/* Loading Indicator */}
-            {isICPConfigLoading && (
-              <div className="flex justify-start">
-                <div className="flex gap-3 max-w-[80%]">
-                  <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-400 rounded-full flex items-center justify-center shadow-lg shadow-green-500/30">
-                    <Bot className="w-4 h-4 text-black" />
-                  </div>
-                  <div className="bg-green-500/10 border border-green-500/30 rounded-2xl rounded-bl-md px-4 py-3">
-                    <div className="flex gap-1">
-                      {[0, 1, 2].map(i => (
-                        <motion.div
-                          key={i}
-                          className="w-2 h-2 bg-green-400 rounded-full"
-                          animate={{ scale: [1, 1.2, 1] }}
-                          transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.2 }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
+        {/* Suggestion Preview - UPDATED STYLING */}
+        {currentICPSuggestion && !isConfigReady && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-[#1A1A1A] border border-gray-200 dark:border-[#2A2A2A] rounded-2xl p-4 mt-4 shadow-sm"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <Zap className="w-4 h-4 text-[#006239]" />
+              <span className="text-sm font-medium text-gray-900 dark:text-[#EDEDED]">Draft Configuration</span>
+            </div>
+            <div className="text-sm text-gray-600 dark:text-[#9CA3AF] space-y-2">
+              <div><strong>Industries:</strong> {currentICPSuggestion.config.industries?.join(', ') || 'Not set'}</div>
+              <div><strong>Size:</strong> {currentICPSuggestion.config.employeeRange || 'Not set'}</div>
+              <div><strong>Geography:</strong> {currentICPSuggestion.config.geographies?.join(', ') || 'Not set'}</div>
+              <div className="text-gray-500 dark:text-[#6A6A6A] text-xs mt-2">
+                Confidence: {Math.round(currentICPSuggestion.confidence * 100)}%
               </div>
-            )}
+            </div>
+          </motion.div>
+        )}
 
-            <div ref={messagesEndRef} />
-          </div>
+        {/* Ready to Apply - UPDATED STYLING */}
+        {isConfigReady && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white dark:bg-[#1A1A1A] border border-gray-200 dark:border-[#2A2A2A] rounded-2xl p-4 mt-4 shadow-sm"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <CheckCircle className="w-4 h-4 text-[#006239]" />
+              <span className="text-sm font-semibold text-gray-900 dark:text-[#EDEDED]">Configuration Ready</span>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-[#9CA3AF] mb-4">
+              Your ICP configuration is complete and ready to apply.
+            </p>
+            <button
+              onClick={applyICPSuggestion}
+              className="w-full bg-[#006239] text-white py-3 px-4 rounded-xl font-medium text-sm hover:bg-[#006239] transition-all duration-200 shadow-sm hover:shadow-md"
+            >
+              Apply ICP Configuration
+            </button>
+          </motion.div>
+        )}
 
-          {/* Input Area */}
-          <div className="p-4 border-t border-green-500/20 bg-black/50 backdrop-blur-xl">
-            <form onSubmit={handleSendMessage} className="space-y-3">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Describe your ideal customers..."
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  disabled={isICPConfigLoading}
-                  className="w-full bg-black/40 border border-green-500/30 rounded-xl px-4 py-3 text-green-100 placeholder-green-400/50 text-sm focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500/30 backdrop-blur-sm"
-                />
-                <button
-                  type="submit"
-                  disabled={!inputMessage.trim() || isICPConfigLoading}
-                  className={cn(
-                    "absolute right-2 top-1/2 transform -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200",
-                    inputMessage.trim() && !isICPConfigLoading
-                      ? "bg-green-500 text-black hover:bg-green-400 shadow-lg shadow-green-500/25"
-                      : "bg-green-500/20 text-green-400/50 cursor-not-allowed"
-                  )}
-                >
-                  {isICPConfigLoading ? (
-                    <Loader className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Send className="w-4 h-4" />
-                  )}
-                </button>
+        {/* Loading Indicator - UPDATED STYLING */}
+        {isICPConfigLoading && (
+          <div className="flex justify-start gap-4">
+            <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-gray-100 dark:bg-[#2A2A2A] flex items-center justify-center">
+              <Bot className="w-4 h-4 text-gray-600 dark:text-[#9CA3AF]" />
+            </div>
+            <div className="bg-white dark:bg-[#1A1A1A] border border-gray-200 dark:border-[#2A2A2A] rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex space-x-1">
+                  {[0, 1, 2].map(i => (
+                    <motion.div
+                      key={i}
+                      className="w-2 h-2 bg-gray-400 rounded-full"
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.2 }}
+                    />
+                  ))}
+                </div>
+                <span className="text-sm text-gray-600 dark:text-[#9CA3AF]">
+                  Analyzing your requirements...
+                </span>
               </div>
-              
-              {/* Quick Action Buttons */}
-            
-            </form>
+            </div>
           </div>
-        </motion.div>
-      
-    </AnimatePresence>
+        )}
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input Area - UPDATED STYLING */}
+      <div className="p-6 border-t border-gray-200 dark:border-[#2A2A2A] bg-white dark:bg-[#0F0F0F]">
+        <form onSubmit={handleSendMessage} className="space-y-4">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Describe your ideal customers..."
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              disabled={isICPConfigLoading}
+              className="w-full bg-white dark:bg-[#1A1A1A] border border-gray-300 dark:border-[#3A3A3A] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EDEDED] placeholder-gray-500 dark:placeholder-[#9CA3AF] text-sm focus:outline-none focus:ring-2 focus:ring-[#006239] focus:border-transparent"
+            />
+            <button
+              type="submit"
+              disabled={!inputMessage.trim() || isICPConfigLoading}
+              className={cn(
+                "absolute right-2 top-1/2 transform -translate-y-1/2 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200",
+                inputMessage.trim() && !isICPConfigLoading
+                  ? "bg-[#006239] text-white hover:bg-[#006239] hover:shadow-md"
+                  : "bg-gray-200 dark:bg-[#2A2A2A] text-gray-400 dark:text-[#6A6A6A] cursor-not-allowed"
+              )}
+            >
+              {isICPConfigLoading ? (
+                <Loader className="w-4 h-4 animate-spin" />
+              ) : (
+                <ArrowUp className="w-4 h-4" />
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   )
 }

@@ -16,7 +16,10 @@ import {
   Plus,
   FileText,
   BrainCircuit,
-  MessageCircle
+  MessageCircle,
+  Zap,
+  Crown,
+  Sparkles
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import ProcessingWorkflow from './ProcessingWorkflow'
@@ -25,6 +28,7 @@ import { useTypingText } from '@/context/hooks/useTypingText'
 import { searchModeTexts } from '@/types'
 import { formatAIText } from '@/context/hooks/formatAIText'
 import { webSocketService } from '@/lib/services/WebSocketService'
+
 interface FormattingOptions {
   preserveLineBreaks?: boolean;
   className?: string;
@@ -37,10 +41,12 @@ interface ChatMessage {
   timestamp: Date;
 }
 
+// Brand Colors
+const ACCENT_GREEN = '#006239' // Primary brand green
+const ACTIVE_GREEN = '#006239' // User chat bubbles & active states
+
 export function PremiumChatInterface() {
-  // ✅ ALL HOOKS AT TOP LEVEL - IN SAME ORDER EVERY RENDER
-  
-  // 1. State hooks
+  // State hooks - KEEP ALL ORIGINAL FEATURES
   const [message, setMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [searchType, setSearchType] = useState<string>(
@@ -49,9 +55,9 @@ export function PremiumChatInterface() {
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([])
   const [showUploadAnimation, setShowUploadAnimation] = useState(false)
   const [activeCommandCategory, setActiveCommandCategory] = useState<string | null>(null)
-  const [isTyping, setIsTyping] = useState(false) // ✅ New state for typing animation
+  const [isTyping, setIsTyping] = useState(false)
 
-  // 2. Context hooks
+  // Context hooks - KEEP ALL ORIGINAL FUNCTIONALITY
   const { 
     currentSession, 
     startSearch, 
@@ -64,15 +70,15 @@ export function PremiumChatInterface() {
     handleResultsAction
   } = useSession()
 
-  // 3. Ref hooks
+  // Ref hooks
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // 4. Custom hooks
+  // Custom hooks
   const searchModeText = searchModeTexts[searchType] || searchModeTexts.default
   const typedText = useTypingText(searchModeText, 100)
 
-  // ✅ FIXED CONVERSATION MANAGEMENT FUNCTIONS
+  // Conversation management - KEEP ORIGINAL LOGIC
   const getCurrentQuery = useCallback((session: any): string => {
     if (!session?.query) return ''
     if (Array.isArray(session.query)) {
@@ -81,12 +87,9 @@ export function PremiumChatInterface() {
     return session.query || ''
   }, [])
 
-  // ✅ FIXED: Use local state to track conversation to avoid race conditions
   const [localConversation, setLocalConversation] = useState<{role: 'user' | 'assistant', content: string}[]>([]);
-
   const conversationRef = useRef(localConversation);
 
-  // Keep ref in sync with state
   useEffect(() => {
     conversationRef.current = localConversation;
   }, [localConversation]);
@@ -100,10 +103,8 @@ export function PremiumChatInterface() {
     const newMessage = { role, content };
     const allMessages = [...conversationRef.current, newMessage];
     
-    // Update local state
     setLocalConversation(allMessages);
     
-    // Update backend with the complete conversation
     const updatedQueries = allMessages.map(msg => 
       `CHAT_${msg.role.toUpperCase()}: ${msg.content}`
     );
@@ -113,7 +114,6 @@ export function PremiumChatInterface() {
     
   }, [currentSession, updateSessionQuery]);
 
-  // ✅ Load conversation from session when it changes
   useEffect(() => {
     if (currentSession?.query) {
       const queries = Array.isArray(currentSession.query) 
@@ -131,7 +131,7 @@ export function PremiumChatInterface() {
       
       setLocalConversation(messages);
     }
-  }, [currentSession?.id]); // Only reload when session ID changes
+  }, [currentSession?.id]);
 
   const updateConversationContext = useCallback((classification: any) => {
     if (currentSession?.id) {
@@ -139,7 +139,6 @@ export function PremiumChatInterface() {
     }
   }, [currentSession?.id])
 
-  // ✅ FIXED CHAT MESSAGES - Use local conversation state
   const chatMessages: ChatMessage[] = useMemo(() => {
     return localConversation.map((msg, index) => ({
       id: `chat-${currentSession?.id || 'no-session'}-${index}-${Date.now()}`,
@@ -149,11 +148,18 @@ export function PremiumChatInterface() {
     }));
   }, [localConversation, currentSession?.id])
 
-  // ✅ DERIVED VALUES
   const hasMessages = chatMessages.length > 0
-  const placeholderText = hasMessages ? "CONTINUE CONVERSATION..." : "DESCRIBE THE COMPANIES YOU WANT TO FIND..."
+  const placeholderText = hasMessages ? "Continue conversation..." : "Describe your ideal investment targets..."
 
-  // ✅ EFFECT HOOKS
+  // Auto-resize textarea
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+    }
+  }, [message]);
+
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [])
@@ -162,14 +168,12 @@ export function PremiumChatInterface() {
     scrollToBottom()
   }, [chatMessages, currentSession?.searchStatus, scrollToBottom])
 
-  // ✅ Focus input after response
   useEffect(() => {
-    if (!isLoading && inputRef.current) {
-      inputRef.current.focus();
+    if (!isLoading && textareaRef.current) {
+      textareaRef.current.focus();
     }
   }, [isLoading]);
 
-  // ✅ LOAD CONVERSATION CONTEXT ON MOUNT
   useEffect(() => {
     if (currentSession?.id) {
       const savedContext = localStorage.getItem(`conversation-context-${currentSession.id}`);
@@ -184,7 +188,6 @@ export function PremiumChatInterface() {
     }
   }, [currentSession?.id])
 
-  // ✅ ACTION EXECUTION FUNCTION
   const executeAction = useCallback(async (action: any, classification: any, sessionId: string) => {
     if (!action) return
 
@@ -192,37 +195,34 @@ export function PremiumChatInterface() {
       switch (action.type) {
         case 'start_search':
           await startSearch(sessionId, action.query, primaryModel?.id)
-          break
-          
+          break;
         case 'refine_search':
           if (typeof refineSearch === 'function') {
-            await refineSearch(sessionId, action.query, action.previous_query)
+          //  await refineSearch(sessionId, action.query, action.previous_query)
+          await startSearch(sessionId, action.query, primaryModel?.id)
+
           } else {
             console.warn('refineSearch function not available, using startSearch instead')
             await startSearch(sessionId, action.query, primaryModel?.id)
           }
-          break
-          
+          break;
         case 'analyze_signals':
           if (typeof analyzeSignals === 'function') {
             await analyzeSignals(sessionId, action.scope)
           } else {
             console.warn('analyzeSignals function not available')
           }
-          break
-          
+          break;
         case 'handle_results':
           if (typeof handleResultsAction === 'function') {
             await handleResultsAction(sessionId, action.action_type)
           } else {
             console.warn('handleResultsAction function not available')
           }
-          break
-          
+          break;
         case 'respond_only':
           console.log('Response only action completed')
-          break
-          
+          break;
         default:
           console.warn('Unknown action type:', action.type)
       }
@@ -231,21 +231,18 @@ export function PremiumChatInterface() {
     }
   }, [startSearch, refineSearch, analyzeSignals, handleResultsAction, primaryModel?.id])
 
-  // ✅ FIXED MAIN MESSAGE HANDLER
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!message.trim() || !currentSession || isLoading) return
 
     const userMessage = message.trim();
-    setMessage(''); // ✅ Clear input immediately
+    setMessage('');
     setIsLoading(true)
     
     try {
-      // 1. Add user message to chat immediately
       console.log('👤 Adding user message:', userMessage);
       addMessageToChat('user', userMessage)
       
-      // 2. Prepare conversation context for backend
       const lastClassification = currentSession.id ? 
         localStorage.getItem(`conversation-context-${currentSession.id}`) : null
       
@@ -265,7 +262,6 @@ export function PremiumChatInterface() {
 
       console.log('📤 Sending to backend with context:', context);
 
-      // 3. CALL BACKEND API FOR INTENT CLASSIFICATION
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/classify-intent`, {
         method: 'POST',
         headers: {
@@ -287,23 +283,16 @@ export function PremiumChatInterface() {
       
       console.log('🤖 AI Response received:', aiResponse);
       
-      // ✅ Add typing animation before AI response
       setIsTyping(true);
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate typing delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
       setIsTyping(false);
       
-      // 4. Add AI response to chat
       addMessageToChat('assistant', aiResponse)
-      
-      // 5. Update conversation context
       updateConversationContext(classification)
-      
-      // 6. Execute the appropriate action
       await executeAction(action, classification, currentSession.id)
       
     } catch (error) {
       console.error('Error processing message:', error)
-      // Add error message to chat
       addMessageToChat('assistant', 'Sorry, I encountered an error processing your request. Please try again.')
     } finally {
       setIsLoading(false)
@@ -330,33 +319,40 @@ export function PremiumChatInterface() {
         return;
       }
       
-      // Handle horizontal rule
       if (trimmedLine === '---') {
-        elements.push(<hr key={`hr-${lineIndex}`} className="my-4 border-gray-600" />);
+        elements.push(
+          <hr 
+            key={`hr-${lineIndex}`} 
+            className="my-6 border-gray-200 dark:border-[#2A2A2A]" 
+          />
+        );
         return;
       }
       
-      // Handle bullet points
       if (trimmedLine.startsWith('* ')) {
         const text = trimmedLine.substring(2);
         elements.push(
-          <div key={`bullet-${lineIndex}`} className="flex items-start ml-4">
-            <span className="mr-2">•</span>
-            <span>{formatBoldText(text)}</span>
+          <div key={`bullet-${lineIndex}`} className="flex items-start mb-2">
+            <span 
+              className="w-1.5 h-1.5 rounded-full mt-2 mr-3 flex-shrink-0" 
+              style={{ backgroundColor: ACTIVE_GREEN }}
+            />
+            <span className="text-gray-700 dark:text-[#9CA3AF] leading-relaxed">
+              {formatBoldText(text)}
+            </span>
           </div>
         );
         return;
       }
       
-      // Handle regular paragraphs
       elements.push(
-        <p key={`p-${lineIndex}`} className="mb-2 leading-relaxed">
+        <p key={`p-${lineIndex}`} className="mb-3 leading-relaxed text-gray-700 dark:text-[#9CA3AF] last:mb-0">
           {formatBoldText(trimmedLine)}
         </p>
       );
     });
     
-    return <div className={className}>{elements}</div>;
+    return <div className={cn("space-y-2", className)}>{elements}</div>;
   }
   
   function formatBoldText(text: string): React.ReactNode {
@@ -364,7 +360,7 @@ export function PremiumChatInterface() {
     return parts.map((part, index) => {
       if (part.startsWith('**') && part.endsWith('**')) {
         return (
-          <strong key={index} className="font-bold">
+          <strong key={index} className="font-semibold text-gray-900 dark:text-[#EDEDED]">
             {part.slice(2, -2)}
           </strong>
         );
@@ -373,7 +369,6 @@ export function PremiumChatInterface() {
     });
   }
   
-  // ✅ EVENT HANDLERS
   const handleUploadFile = () => {
     setShowUploadAnimation(true)
     setTimeout(() => {
@@ -388,7 +383,6 @@ export function PremiumChatInterface() {
     setSearchType(type)
   }
 
-  // ✅ IMPROVED DEBUG COMPONENT
   const ConversationDebug = () => {
     useEffect(() => {
       console.log('=== CONVERSATION DEBUG ===');
@@ -404,11 +398,8 @@ export function PremiumChatInterface() {
   }
 
   useEffect(() => {
-    // Define a wrapper callback to pass the event data to your function
     const handleSearchComplete = async(data: any) => {
       const { sessionId, companies, resultsCount, summary } = data;
-   
-     
       console.log('✅ Search complete:', { sessionId, resultsCount })
       addMessageToChat('assistant', summary);
     };
@@ -420,173 +411,218 @@ export function PremiumChatInterface() {
     };
   }, [addMessageToChat]);
   
-  // ✅ RENDER LOGIC
   return (
-    <div className="flex-1 flex flex-col h-full bg-black/80 h-screen relative overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-white dark:bg-[#0F0F0F] min-h-screen">
       <ConversationDebug />
       
-      {/* Conversation Header */}
+      {/* Premium Header - UPDATED STYLE */}
       {hasMessages && (
-        <div className="flex items-center justify-between p-4 border-b border-[#27272a]">
-          <div className="flex items-center gap-3">
-            <MessageCircle className="w-5 h-5 text-[#00FA64]" />
-            <span className="text-white font-medium tracking-wide">CONVERSATION</span>
-            <span className="bg-[#00FA64]/10 text-[#00FA64] px-2 py-1 rounded-full text-xs font-medium">
-              {chatMessages.filter(m => m.role === 'user').length} messages
-            </span>
+        <div className={cn(
+          "px-6 py-4 border-b backdrop-blur-sm",
+          "bg-white/80 dark:bg-[#0F0F0F]/80",
+          "border-gray-200 dark:border-[#2A2A2A]"
+        )}>
+          <div className="max-w-3xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div 
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: ACCENT_GREEN }}
+              >
+                <Crown className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <h1 className="text-sm font-medium text-gray-900 dark:text-[#EDEDED]">
+                  GTM Intelligence
+                </h1>
+                <p className="text-xs text-gray-500 dark:text-[#9CA3AF] font-light">
+                  {chatMessages.filter(m => m.role === 'user').length} messages • Active session
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div 
+                className="w-2 h-2 rounded-full animate-pulse" 
+                style={{ backgroundColor: ACTIVE_GREEN }}
+              />
+              <span className="text-xs text-gray-600 dark:text-[#9CA3AF] font-medium">Live</span>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Messages Area */}
+      {/* Messages Area - UPDATED STYLE */}
       <div className={cn(
         "overflow-hidden transition-all duration-300",
+        "bg-white dark:bg-[#0F0F0F]",
         hasMessages ? "flex-1" : "flex-1 flex items-center justify-center"
       )}>
         <div className={cn(
           "h-full overflow-y-auto",
-          hasMessages ? "p-8" : "w-full"
+          hasMessages ? "px-4 py-6" : "w-full"
         )}>
           <div className={cn(
             "mx-auto space-y-6",
-            hasMessages ? "max-w-5xl" : "w-full max-w-4xl px-8"
+            hasMessages ? "max-w-3xl" : "w-full max-w-3xl px-6"
           )}>
             <AnimatePresence initial={false} mode="wait">
-              {/* Chat Messages */}
+              {/* Chat Messages - UPDATED STYLE */}
               {chatMessages.map((msg, index) => (
                 <motion.div
                   key={msg.id}
-                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
                   className={cn(
-                    "flex gap-4 max-w-2xl",
-                    msg.role === 'user' ? "justify-end ml-auto" : "justify-start"
+                    "flex gap-4",
+                    msg.role === 'user' ? "justify-end" : "justify-start"
                   )}
                 >
                   {msg.role === 'assistant' && (
-                    <div className="w-10 h-10 bg-gradient-to-br from-[#67F227] to-[#A7F205] rounded-2xl flex items-center justify-center shadow-lg shadow-[#67F227]/20 flex-shrink-0">
-                      <Bot className="w-5 h-5 text-black" />
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#F3F4F6] dark:bg-[#1E1E1E] flex items-center justify-center">
+                      <Bot className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                     </div>
                   )}
                   
-                  <div className="flex gap-3 items-start group">
-  <div className={cn(
-    "rounded-2xl px-6 py-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)] max-w-md",
-    msg.role === 'user' 
-      ? "bg-gradient-to-r from-[#67F227] to-[#A7F205] text-black rounded-br-md" 
-      : "bg-black/10 text-white rounded-bl-md border border-[#27272a]"
-  )}>
-    <div className="text-sm font-medium tracking-wide prose prose-invert">
-      {parseContent(msg.content)}
-    </div>
-  </div>
-</div>
+                  <div className={cn(
+                    "flex flex-col gap-2 max-w-[85%]",
+                    msg.role === 'user' ? "items-end" : "items-start"
+                  )}>
+                    <div className={cn(
+                      "px-4 py-3 rounded-2xl",
+                      msg.role === 'user' 
+                        ? cn(
+                            "bg-[#F3F4F6] dark:bg-[#1E1E1E] text-white text-gray-900 dark:text-[#EDEDED]  rounded-br-md"
+                          )
+                        : cn(
+                            "bg-[#F3F4F6] dark:bg-[#1E1E1E] text-gray-900 dark:text-[#EDEDED] rounded-bl-md"
+                          )
+                    )}
+                    style={{
+                    
+                    }}
+                    >
+                      <div className="text-sm leading-6 font-light">
+                        {parseContent(msg.content)}
+                      </div>
+                    </div>
+                    <div className={cn(
+                      "text-xs font-light tracking-wide px-1",
+                      msg.role === 'user' 
+                        ? "text-gray-500 dark:text-[#9CA3AF] text-right" 
+                        : "text-gray-500 dark:text-[#9CA3AF] text-left"
+                    )}>
+                      {msg.role === 'user' ? 'You' : 'Analyst'} • {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+
                   {msg.role === 'user' && (
-                    <div className="w-10 h-10 bg-gradient-to-br from-[#67F227] to-[#A7F205] rounded-full flex items-center justify-center flex-shrink-0 shadow-[0_0_20px_rgba(0,250,100,0.3)]">
-                      <User className="w-5 h-5 text-black" />
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
+                      <User className="w-4 h-4 text-white" />
                     </div>
                   )}
                 </motion.div>
               ))}
 
-              {/* Typing Animation */}
+              {/* Typing Animation - UPDATED STYLE */}
               {isTyping && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="flex justify-start"
+                  className="flex justify-start gap-4"
                 >
-                  <div className="flex gap-4 max-w-2xl">
-                    <div className="w-10 h-10 bg-gradient-to-br from-[#67F227] to-[#A7F205] rounded-2xl flex items-center justify-center shadow-lg shadow-[#67F227]/20">
-                      <Bot className="w-5 h-5 text-black" />
-                    </div>
-                    <div className="bg-black/10 rounded-2xl rounded-bl-md px-6 py-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex-1 border border-[#27272a]">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#F3F4F6] dark:bg-[#1E1E1E] flex items-center justify-center">
+                    <Bot className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  </div>
+                  <div className={cn(
+                    "px-4 py-3 rounded-2xl rounded-bl-md",
+                    "bg-[#F3F4F6] dark:bg-[#1E1E1E]"
+                  )}>
+                    <div className="flex items-center gap-3">
                       <div className="flex space-x-1">
                         <motion.div
-                          className="w-2 h-2 bg-[#00FA64] rounded-full"
-                          animate={{ opacity: [0.3, 1, 0.3] }}
-                          transition={{ duration: 1.5, repeat: Infinity, repeatType: "loop" }}
+                          className="w-2 h-2 rounded-full bg-gray-400"
+                          animate={{ scale: [1, 1.2, 1] }}
+                          transition={{ duration: 1, repeat: Infinity, delay: 0 }}
                         />
                         <motion.div
-                          className="w-2 h-2 bg-[#00FA64] rounded-full"
-                          animate={{ opacity: [0.3, 1, 0.3] }}
-                          transition={{ duration: 1.5, repeat: Infinity, repeatType: "loop", delay: 0.2 }}
+                          className="w-2 h-2 rounded-full bg-gray-400"
+                          animate={{ scale: [1, 1.2, 1] }}
+                          transition={{ duration: 1, repeat: Infinity, delay: 0.2 }}
                         />
                         <motion.div
-                          className="w-2 h-2 bg-[#00FA64] rounded-full"
-                          animate={{ opacity: [0.3, 1, 0.3] }}
-                          transition={{ duration: 1.5, repeat: Infinity, repeatType: "loop", delay: 0.4 }}
+                          className="w-2 h-2 rounded-full bg-gray-400"
+                          animate={{ scale: [1, 1.2, 1] }}
+                          transition={{ duration: 1, repeat: Infinity, delay: 0.4 }}
                         />
                       </div>
+                      <span className="text-sm text-gray-500 dark:text-[#9CA3AF] font-light">
+                        Analyzing your request...
+                      </span>
                     </div>
                   </div>
                 </motion.div>
               )}
 
-              {/* Current Processing Status */}
+              {/* Current Processing Status - KEEP ORIGINAL */}
               {currentSession?.searchStatus?.stage=="searching" && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="flex justify-start"
+                  className="flex justify-start gap-4"
                 >
-                  <div className="flex gap-4 max-w-2xl">
-                    <div className="w-10 h-10 bg-gradient-to-br from-[#67F227] to-[#A7F205] rounded-2xl flex items-center justify-center shadow-lg shadow-[#67F227]/20">
-                      <Bot className="w-5 h-5 text-black" />
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#F3F4F6] dark:bg-[#1E1E1E] flex items-center justify-center">
+                    <Bot className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  </div>
+                  <div className="px-4 py-2">
+                    <div className="flex items-center gap-3 mb-4">
+                      {!isConnected && (
+                        <span className="text-xs bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 px-3 py-1 font-medium tracking-wide">
+                          Connecting...
+                        </span>
+                      )}
                     </div>
-                    <div className="bg-black/10 rounded-2xl rounded-bl-md px-6 py-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex-1 border border-[#27272a]">
-                      <div className="flex items-center gap-3 mb-3">
-                        {!isConnected && (
-                          <span className="text-xs bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-full font-medium tracking-wide">
-                            CONNECTING...
-                          </span>
-                        )}
-                      </div>
-
-                      <ProcessingWorkflow /> 
-                    </div>
+                    <ProcessingWorkflow /> 
                   </div>
                 </motion.div>
               )}
 
-              {/* Enhanced Response for Completed Search */}
-             {/* {currentSession?.searchStatus?.stage === 'complete' && currentSession.searchStatus.details && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex justify-start"
-                >
-                  <div className="flex gap-4 max-w-2xl">
-                    <div className="w-10 h-10 bg-gradient-to-br from-[#67F227] to-[#A7F205] rounded-2xl flex items-center justify-center shadow-lg shadow-[#67F227]/20">
-                      <Bot className="w-5 h-5 text-black" />
-                    </div>
-                    <div className="bg-black/10 rounded-2xl rounded-bl-md px-6 py-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex-1 border border-[#27272a]">
-                      <EnhancedResponse
-                        content={currentSession.searchStatus.details}
-                      />
-                    </div>
-                  </div>
-                </motion.div>
-              )}*/}
-
-              {/* Centered Empty State */}
+              {/* Centered Empty State - UPDATED STYLE */}
               {!hasMessages && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
-                  className="text-center w-full pt-10"
+                  className="text-center w-full"
                 >
-                  <div className="flex gap-4 max-w-2xl">
-                    <div className="w-10 h-10 bg-gradient-to-br from-[#67F227] to-[#A7F205] rounded-2xl flex items-center justify-center shadow-lg shadow-[#67F227]/20">
-                      <Bot className="w-5 h-5 text-black" />
+                  <div className="space-y-8">
+                    <div className="space-y-4">
+                      <div 
+                        className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center"
+                        style={{ backgroundColor: ACCENT_GREEN }}
+                      >
+                        <Sparkles className="w-8 h-8 text-white" />
+                      </div>
+                      <h2 className="text-2xl font-light text-gray-900 dark:text-[#EDEDED] tracking-tight">
+                        GTM Intelligence Platform
+                      </h2>
+                      <p className="text-gray-600 dark:text-[#9CA3AF] text-lg font-light leading-relaxed max-w-2xl mx-auto">
+                        Describe the companies, markets, or investment opportunities you want to explore. 
+                        I'll help you find the most promising targets with detailed analysis and insights.
+                      </p>
                     </div>
-                    <div className="bg-black/10 rounded-2xl rounded-bl-md px-6 py-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex-1 border border-[#27272a]">
-                      <p 
-                        className='text-left text-white'  
-                        dangerouslySetInnerHTML={{ __html: formatAIText(typedText) }}
-                      />
+                    
+                    <div className={cn(
+                      "rounded-2xl p-6 text-left max-w-2xl mx-auto",
+                      "bg-[#F9FAFB] dark:bg-[#1A1A1A] border border-gray-200 dark:border-[#2A2A2A]"
+                    )}>
+                      <div className="text-gray-700 dark:text-[#9CA3AF] text-sm leading-6 font-light">
+                        {typedText}
+                      </div>
+                      <div className="flex items-center gap-2 mt-4 text-gray-500 dark:text-[#6B7280] text-xs font-light">
+                        <Zap className="w-3 h-3" />
+                        Start by describing your investment thesis or target criteria
+                      </div>
                     </div>
                   </div>
                 </motion.div>
@@ -597,211 +633,250 @@ export function PremiumChatInterface() {
         </div>
       </div>
 
-      {/* Input Area */}
+      {/* Input Area - UPDATED STYLE */}
       <div className={cn(
-        "transition-all duration-300",
-        hasMessages ? "p-6" : "p-8"
+        "border-0 bg-white dark:bg-[#0F0F0F] sticky bottom-0",
+        "border-gray-200 dark:border-0",
+        hasMessages ? "pt-4 pb-6" : "pt-8 pb-8"
       )}>
-        <div className={cn(
-          "mx-auto",
-          hasMessages ? "max-w-5xl" : "max-w-5xl"
-        )}>
-          {/* Main Input Area */}
+        <div className="max-w-3xl mx-auto px-4">
+          {/* Search Type Selector - KEEP ORIGINAL FEATURE */}
+        
+
+          {/* Uploaded Files - KEEP ORIGINAL */}
+          {uploadedFiles.length > 0 && (
+            <div className="mb-4">
+              <div className="flex flex-wrap gap-2">
+                {uploadedFiles.map((file, index) => (
+                  <div
+                    key={index}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2 rounded-lg text-sm",
+                      "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300",
+                      "border border-green-200 dark:border-green-800"
+                    )}
+                  >
+                    <FileText className="w-3 h-3" />
+                    <span className="font-light">{file}</span>
+                    <button
+                      onClick={() => setUploadedFiles((prev) => prev.filter((_, i) => i !== index))}
+                      className="text-green-600 dark:text-[#006239] hover:text-green-700 dark:hover:text-green-300 ml-1"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Input Container - UPDATED STYLE */}
           <div className={cn(
-            "bg-black/40 backdrop-blur-xl rounded-xl border border-[#27272a] shadow-[0_8px_32px_rgba(0,0,0,0.4)] overflow-hidden transition-all duration-300 w-full",
-            hasMessages ? "" : "max-w-2xl mx-auto"
+            "rounded-2xl border shadow-sm overflow-hidden",
+            "bg-[#F9FAFB] dark:bg-[#1A1A1A]",
+            "border-gray-200 dark:border-[#2A2A2A]",
+            "focus-within:ring-1 focus-within:ring-[#006239] focus-within:border-transparent",
+            "transition-all duration-200"
           )}>
-            <div className="p-4">
-              <input
-                ref={inputRef}
-                type="text"
+            <div className="px-4 py-3">
+              <textarea
+                ref={textareaRef}
                 placeholder={placeholderText}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                className="w-full bg-transparent text-white text-base outline-none placeholder:text-[#A1A1AA] font-light tracking-wide"
+                rows={1}
+                className={cn(
+                  "w-full resize-none bg-transparent outline-none placeholder:font-light",
+                  "text-gray-900 dark:text-[#EDEDED] placeholder:text-gray-500 dark:placeholder:text-[#9CA3AF]",
+                  "text-sm leading-5 max-h-32"
+                )}
                 disabled={!isConnected || isLoading}
-                onKeyPress={(e) => {
+                onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    handleSubmit(e)
+                    e.preventDefault();
+                    handleSubmit(e);
                   }
                 }}
               />
             </div>
 
-            {/* Uploaded Files */}
-            {uploadedFiles.length > 0 && (
-              <div className="px-4 pb-3">
-                <div className="flex flex-wrap gap-2">
-                  {uploadedFiles.map((file, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-2 bg-[#00FA64]/10 py-1 px-3 rounded-lg border border-[#00FA64]/20"
-                    >
-                      <FileText className="w-3 h-3 text-[#00FA64]" />
-                      <span className="text-xs text-[#A1A1AA] font-medium">{file}</span>
-                      <button
-                        onClick={() => setUploadedFiles((prev) => prev.filter((_, i) => i !== index))}
-                        className="text-[#666666] hover:text-[#A1A1AA] transition-colors"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="12"
-                          height="12"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <line x1="18" y1="6" x2="6" y2="18"></line>
-                          <line x1="6" y1="6" x2="18" y2="18"></line>
-                        </svg>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Function Buttons and Actions */}
-            <div className="px-4 py-3 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => handleSearchTypeChange("search")}
-                  className={cn(
-                    "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold tracking-wide transition-all duration-300 border",
-                    searchType === "search"
-                      ? "bg-[#00FA64]/10 text-[#00FA64] border-[#00FA64]/30 shadow-[0_0_15px_rgba(0,250,100,0.2)]"
-                      : "bg-[#27272a] text-[#A1A1AA] border-[#363636] hover:border-[#00FA64]/30"
-                  )}
-                >
-                  <Search className="w-4 h-4" />
-                  <span>SEARCH</span>
-                </button>
-                <button
-                  onClick={() => handleSearchTypeChange("deepResearch")}
-                  className={cn(
-                    "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold tracking-wide transition-all duration-300 border",
-                    searchType === "deepResearch"
-                      ? "bg-[#00FA64]/10 text-[#00FA64] border-[#00FA64]/30 shadow-[0_0_15px_rgba(0,250,100,0.2)]"
-                      : "bg-[#27272a] text-[#A1A1AA] border-[#363636] hover:border-[#00FA64]/30"
-                  )}
-                >
-                  <Target className="w-4 h-4" />
-                  <span>DEEP RESEARCH</span>
-                </button>
-                <button
-                  onClick={() => handleSearchTypeChange("reasoning")}
-                  className={cn(
-                    "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold tracking-wide transition-all duration-300 border",
-                    searchType === "reasoning"
-                      ? "bg-[#00FA64]/10 text-[#00FA64] border-[#00FA64]/30 shadow-[0_0_15px_rgba(0,250,100,0.2)]"
-                      : "bg-[#27272a] text-[#A1A1AA] border-[#363636] hover:border-[#00FA64]/30"
-                  )}
-                >
-                  <BrainCircuit className="w-4 h-4" />
-                  <span>REASONING</span>
-                </button>
-              </div>
-              <div className="flex items-center gap-3">
-                <button className="p-2 text-[#A1A1AA] hover:text-white transition-colors duration-300">
-                  <Mic className="w-5 h-5" />
-                </button>
+            {/* Action Bar - KEEP ALL ORIGINAL BUTTONS */}
+            <div className={cn(
+              "px-4 py-3 flex items-center justify-between border-t",
+              "border-gray-200 dark:border-[#2A2A2A]",
+              "bg-white/50 dark:bg-[#0F0F0F]/50"
+            )}>
+              <div className="flex items-center gap-1">
                 <button
                   onClick={handleUploadFile}
-                  className="p-2 text-[#A1A1AA] hover:text-white transition-colors duration-300"
+                  className={cn(
+                    "p-2 rounded-lg transition-all duration-200",
+                    "text-gray-500 dark:text-[#9CA3AF] hover:text-gray-700 dark:hover:text-[#EDEDED]",
+                    "hover:bg-gray-100 dark:hover:bg-[#2A2A2A]"
+                  )}
+                  disabled={!isConnected}
                 >
                   {showUploadAnimation ? (
                     <motion.div
                       className="flex space-x-1"
                       initial="hidden"
                       animate="visible"
-                      variants={{
-                        hidden: {},
-                        visible: {
-                          transition: {
-                            staggerChildren: 0.1,
-                          },
-                        },
-                      }}
                     >
                       {[...Array(3)].map((_, i) => (
                         <motion.div
                           key={i}
-                          className="w-1.5 h-1.5 bg-[#00FA64] rounded-full"
-                          variants={{
-                            hidden: { opacity: 0, y: 5 },
-                            visible: {
-                              opacity: 1,
-                              y: 0,
-                              transition: {
-                                duration: 0.4,
-                                repeat: Infinity,
-                                repeatType: "mirror",
-                                delay: i * 0.1,
-                              },
-                            },
-                          }}
+                          className="w-1.5 h-1.5 rounded-full bg-[#006239]"
+                          animate={{ opacity: [0.3, 1, 0.3] }}
+                          transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
                         />
                       ))}
                     </motion.div>
                   ) : (
-                    <Plus className="w-5 h-5" />
+                    <Plus className="w-4 h-4" />
                   )}
                 </button>
+
                 <button
-                  onClick={handleSubmit}
-                  disabled={!message.trim() || !isConnected || isLoading}
                   className={cn(
-                    "w-10 h-10 flex items-center justify-center rounded-full transition-all duration-500 shadow-[0_8px_32px_rgba(0,0,0,0.4)]",
-                    message.trim() && isConnected && !isLoading
-                      ? "bg-gradient-to-r from-[#00FA64] to-[#00FF80] text-black hover:from-[#00FF80] hover:to-[#80FFC2] hover:shadow-[0_12px_40px_rgba(0,250,100,0.4)] hover:scale-105 border border-[#00FA64]/30"
-                      : "bg-[#27272a] text-[#666666] cursor-not-allowed border border-[#363636]"
+                    "p-2 rounded-lg transition-all duration-200",
+                    "text-gray-500 dark:text-[#9CA3AF] hover:text-gray-700 dark:hover:text-[#EDEDED]",
+                    "hover:bg-gray-100 dark:hover:bg-[#2A2A2A]"
                   )}
+                  disabled={!isConnected}
                 >
-                  {isLoading ? (
-                    <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <ArrowUp className="w-5 h-5" />
-                  )}
+                  <Mic className="w-4 h-4" />
                 </button>
               </div>
+
+              <button
+                onClick={handleSubmit}
+                disabled={!message.trim() || !isConnected || isLoading}
+                className={cn(
+                  "p-2 rounded-lg transition-all duration-200",
+                  "flex items-center justify-center",
+                  message.trim() && isConnected && !isLoading
+                    ? cn(
+                        "text-white",
+                        "hover:shadow-lg transform hover:scale-105"
+                      )
+                    : cn(
+                        "text-gray-400 dark:text-[#6B7280]",
+                        "cursor-not-allowed"
+                      )
+                )}
+                style={{
+                  backgroundColor: message.trim() && isConnected && !isLoading ? ACTIVE_GREEN : undefined
+                }}
+              >
+                {isLoading ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <ArrowUp className="w-4 h-4" />
+                )}
+              </button>
             </div>
           </div>
-
-          {/* Active ICP Model Badge */}
+<div className='flex justify-between items-center'>
+          {/* Active ICP Model Badge - KEEP ORIGINAL */}
           {primaryModel && isConnected && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-3 text-sm mt-4 justify-center"
+              className="flex items-center gap-4 text-sm  justify-center"
             >
-              <span className="text-[#A1A1AA] font-light tracking-wide">ACTIVE ICP MODEL:</span>
-              <span className="bg-[#00FA64]/10 text-[#00FA64] px-3 py-1.5 rounded-full font-medium tracking-wide border border-[#00FA64]/30">
+              <span className="text-gray-500 dark:text-[#9CA3AF] font-light tracking-wide">
+                ACTIVE MODEL:
+              </span>
+              <span className={cn(
+                "bg-white dark:bg-[#1E1E1E] text-gray-600 dark:text-[#9CA3AF]",
+                "border-gray-300 dark:border-[#2A2A2A] hover:border-green-300 hover:text-green-600 dark:hover:text-[#006239]"
+        )}>
                 {primaryModel.name}
               </span>
             </motion.div>
           )}
-
-          {/* Connection Warning */}
+  <div className="flex items-center gap-2 mt-2 justify-center">
+            <button
+              onClick={() => handleSearchTypeChange("search")}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 text-xs font-medium tracking-wide transition-all duration-300 rounded-lg border",
+                searchType === "search"
+                  ? cn(
+                      "text-white border-transparent"
+                    )
+                  : cn(
+                      "bg-white dark:bg-[#1E1E1E] text-gray-600 dark:text-[#9CA3AF]",
+                      "border-gray-300 dark:border-[#2A2A2A] hover:border-green-300 hover:text-green-600 dark:hover:text-[#006239]"
+                    )
+              )}
+              style={{
+                backgroundColor: searchType === "search" ? ACTIVE_GREEN : undefined
+              }}
+            >
+              <Search className="w-3 h-3" />
+              <span>Search</span>
+            </button>
+            <button
+              onClick={() => handleSearchTypeChange("deepResearch")}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 text-xs font-medium tracking-wide transition-all duration-300 rounded-lg border",
+                searchType === "deepResearch"
+                  ? cn(
+                      "text-white border-transparent"
+                    )
+                  : cn(
+                      "bg-white dark:bg-[#1E1E1E] text-gray-600 dark:text-[#9CA3AF]",
+                      "border-gray-300 dark:border-[#2A2A2A] hover:border-green-300 hover:text-green-600 dark:hover:text-[#006239]"
+                    )
+              )}
+              style={{
+                backgroundColor: searchType === "deepResearch" ? ACTIVE_GREEN : undefined
+              }}
+            >
+              <Target className="w-3 h-3" />
+              <span>Deep</span>
+            </button>
+            <button
+              onClick={() => handleSearchTypeChange("reasoning")}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 text-xs font-medium tracking-wide transition-all duration-300 rounded-lg border",
+                searchType === "reasoning"
+                  ? cn(
+                      "text-white border-transparent"
+                    )
+                  : cn(
+                      "bg-white dark:bg-[#1E1E1E] text-gray-600 dark:text-[#9CA3AF]",
+                      "border-gray-300 dark:border-[#2A2A2A] hover:border-green-300 hover:text-green-600 dark:hover:text-[#006239]"
+                    )
+              )}
+              style={{
+                backgroundColor: searchType === "reasoning" ? ACTIVE_GREEN : undefined
+              }}
+            >
+              <BrainCircuit className="w-3 h-3" />
+              <span>Reasoning</span>
+            </button>
+          </div>
+          </div>
+          {/* Connection Warning - KEEP ORIGINAL */}
           {!isConnected && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex items-center gap-3 text-sm mt-4 justify-center"
+              className="flex items-center gap-4 text-sm mt-6 justify-center"
             >
-              <div className="p-1.5 bg-yellow-500/20 rounded-lg">
-                <WifiOff className="w-4 h-4 text-yellow-400" />
+              <div className="p-2 bg-yellow-100 dark:bg-yellow-900">
+                <WifiOff className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
               </div>
-              <span className="text-yellow-400 font-medium tracking-wide">
-                NOT CONNECTED TO BACKEND. ENSURE SERVER IS RUNNING ON PORT 3001.
+              <span className="text-yellow-700 dark:text-yellow-300 font-medium tracking-wide">
+                Establishing secure connection to analysis engine...
               </span>
             </motion.div>
           )}
+
+
         </div>
       </div>
     </div>
-  )
+  );
 }

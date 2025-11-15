@@ -148,7 +148,7 @@ const EnhancedResponse: React.FC<EnhancedResponseProps> = ({
                 </span>
               </div>
             </div>
-            <div className="text-lg font-bold text-green-400 mb-1">
+            <div className="text-lg font-bold text-[#006239] mb-1">
               {metric.value}
             </div>
             {metric.description && (
@@ -250,7 +250,7 @@ const EnhancedResponse: React.FC<EnhancedResponseProps> = ({
                 >
                   {section.title && (
                     <div className="flex items-center gap-2 mb-4">
-                      <div className="text-green-400">
+                      <div className="text-[#006239]">
                         {getSectionIcon(section.type, section.title)}
                       </div>
                       <h3 className="text-base font-semibold text-white">
@@ -275,7 +275,7 @@ const EnhancedResponse: React.FC<EnhancedResponseProps> = ({
               <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
               <span>Analysis ready</span>
             </div>
-            <span className="text-green-400/70 font-medium">
+            <span className="text-[#006239]/70 font-medium">
               Powered by AI
             </span>
           </div>

@@ -13,99 +13,207 @@ const ShaderBackground = () => {
     }
   `;
 
-  // Fragment shader source code
+  // Fragment shader source code - Modern Radar/Networking Style
   const fsSource = `
     precision highp float;
     uniform vec2 iResolution;
     uniform float iTime;
 
-    const float overallSpeed = 0.2;
-    const float gridSmoothWidth = 0.015;
-    const float axisWidth = 0.05;
-    const float majorLineWidth = 0.025;
-    const float minorLineWidth = 0.0125;
-    const float majorLineFrequency = 5.0;
-    const float minorLineFrequency = 1.0;
-    const vec4 gridColor = vec4(0.5);
-    const float scale = 5.0;
-    const vec4 lineColor = vec4(0.4, 0.2, 0.8, 1.0);
-    const float minLineWidth = 0.01;
-    const float maxLineWidth = 0.2;
-    const float lineSpeed = 1.0 * overallSpeed;
-    const float lineAmplitude = 1.0;
-    const float lineFrequency = 0.2;
-    const float warpSpeed = 0.2 * overallSpeed;
-    const float warpFrequency = 0.5;
-    const float warpAmplitude = 1.0;
-    const float offsetFrequency = 0.5;
-    const float offsetSpeed = 1.33 * overallSpeed;
-    const float minOffsetSpread = 0.6;
-    const float maxOffsetSpread = 2.0;
-    const int linesPerGroup = 16;
+    #define PRIMARY_COLOR vec3(0.6549, 0.9490, 0.0196) // #a7f205
+    #define SECONDARY_COLOR vec3(0.1, 0.3, 0.05)
+    #define BG_COLOR_1 vec3(0.02, 0.05, 0.08)
+    #define BG_COLOR_2 vec3(0.01, 0.03, 0.06)
+    #define GRID_COLOR vec3(0.15, 0.25, 0.1)
+    
+    const float PI = 3.14159265359;
+    const float TAU = 6.28318530718;
 
-    #define drawCircle(pos, radius, coord) smoothstep(radius + gridSmoothWidth, radius, length(coord - (pos)))
-    #define drawSmoothLine(pos, halfWidth, t) smoothstep(halfWidth, 0.0, abs(pos - (t)))
-    #define drawCrispLine(pos, halfWidth, t) smoothstep(halfWidth + gridSmoothWidth, halfWidth, abs(pos - (t)))
-    #define drawPeriodicLine(freq, width, t) drawCrispLine(freq / 2.0, width, abs(mod(t, freq) - (freq) / 2.0))
-
-    float drawGridLines(float axis) {
-      return drawCrispLine(0.0, axisWidth, axis)
-            + drawPeriodicLine(majorLineFrequency, majorLineWidth, axis)
-            + drawPeriodicLine(minorLineFrequency, minorLineWidth, axis);
+    // Smooth HSV to RGB conversion
+    vec3 hsv2rgb(vec3 c) {
+      vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+      vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+      return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
     }
 
-    float drawGrid(vec2 space) {
-      return min(1.0, drawGridLines(space.x) + drawGridLines(space.y));
+    // 2D Random function
+    float random (in vec2 st) {
+      return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
     }
 
-    float random(float t) {
-      return (cos(t) + cos(t * 1.3 + 1.3) + cos(t * 1.4 + 1.4)) / 3.0;
+    // 2D Noise function
+    float noise (in vec2 st) {
+      vec2 i = floor(st);
+      vec2 f = fract(st);
+      
+      float a = random(i);
+      float b = random(i + vec2(1.0, 0.0));
+      float c = random(i + vec2(0.0, 1.0));
+      float d = random(i + vec2(1.0, 1.0));
+      
+      vec2 u = f * f * (3.0 - 2.0 * f);
+      
+      return mix(a, b, u.x) + 
+            (c - a)* u.y * (1.0 - u.x) + 
+            (d - b) * u.x * u.y;
     }
 
-    float getPlasmaY(float x, float horizontalFade, float offset) {
-      return random(x * lineFrequency + iTime * lineSpeed) * horizontalFade * lineAmplitude + offset;
+    // Rotate function
+    mat2 rotate2d(float angle){
+      return mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
+    }
+
+    // Draw a circle with smooth edges
+    float circle(vec2 uv, vec2 pos, float radius, float blur) {
+      return smoothstep(radius + blur, radius, length(uv - pos));
+    }
+
+    // Draw a ring
+    float ring(vec2 uv, vec2 pos, float radius, float width, float blur) {
+      float d = length(uv - pos);
+      return smoothstep(radius + width + blur, radius + width, d) - 
+            smoothstep(radius - blur, radius, d);
+    }
+
+    // Draw a radar sweep
+    float radarSweep(vec2 uv, float time) {
+      vec2 centered = uv - 0.5;
+      float angle = atan(centered.y, centered.x);
+      float sweep = mod(angle + time * 2.0, TAU);
+      float dist = length(centered);
+      
+      float sweepWidth = 0.3;
+      float sweepGlow = exp(-sweep * 4.0) * 0.5;
+      
+      return sweepGlow * smoothstep(0.0, 0.5, dist) * (1.0 - smoothstep(0.4, 0.5, dist));
+    }
+
+    // Generate network nodes
+    float networkNodes(vec2 uv, float time) {
+      float nodeIntensity = 0.0;
+      
+      for(int i = 0; i < 8; i++) {
+        float fi = float(i);
+        float angle = fi * TAU / 8.0 + time * 0.5;
+        float radius = 0.2 + sin(time * 0.3 + fi) * 0.05;
+        
+        vec2 nodePos = vec2(cos(angle), sin(angle)) * radius + 0.5;
+        
+        // Pulsing nodes
+        float pulse = sin(time * 3.0 + fi * 2.0) * 0.5 + 0.5;
+        float node = circle(uv, nodePos, 0.008 + pulse * 0.004, 0.002);
+        nodeIntensity += node * (0.8 + pulse * 0.4);
+        
+        // Connection lines between nodes
+        float nextAngle = angle + TAU / 8.0;
+        vec2 nextNodePos = vec2(cos(nextAngle), sin(nextAngle)) * radius + 0.5;
+        
+        vec2 lineDir = normalize(nextNodePos - nodePos);
+        vec2 toUV = uv - nodePos;
+        float projection = dot(toUV, lineDir);
+        vec2 closest = nodePos + lineDir * clamp(projection, 0.0, length(nextNodePos - nodePos));
+        float lineDist = length(uv - closest);
+        
+        float connection = smoothstep(0.003, 0.001, lineDist) * 
+                          smoothstep(0.0, 0.1, projection) * 
+                          smoothstep(length(nextNodePos - nodePos), 
+                                   length(nextNodePos - nodePos) - 0.1, projection);
+        nodeIntensity += connection * 0.3;
+      }
+      
+      return nodeIntensity;
+    }
+
+    // Generate data streams
+    float dataStreams(vec2 uv, float time) {
+      float streams = 0.0;
+      vec2 centered = uv - 0.5;
+      
+      for(int i = 0; i < 4; i++) {
+        float fi = float(i);
+        float streamAngle = fi * TAU / 4.0 + time * 0.2;
+        vec2 streamDir = vec2(cos(streamAngle), sin(streamAngle));
+        
+        float distFromCenter = dot(centered, streamDir);
+        float perpendicularDist = length(centered - streamDir * distFromCenter);
+        
+        if(distFromCenter > 0.0) {
+          float speed = 2.0 + fi * 0.5;
+          float pulse = sin((distFromCenter - time * speed) * 20.0) * 0.5 + 0.5;
+          float stream = smoothstep(0.02, 0.01, perpendicularDist) * 
+                        pulse * 
+                        exp(-distFromCenter * 2.0) *
+                        smoothstep(0.0, 0.1, distFromCenter);
+          streams += stream;
+        }
+      }
+      
+      return streams;
+    }
+
+    // Generate hexagon grid
+    float hexagonGrid(vec2 uv, float time) {
+      uv *= 8.0;
+      
+      vec2 grid = fract(uv) - 0.5;
+      vec2 id = floor(uv);
+      
+      // Create hexagonal pattern
+      float hex = max(abs(grid.x), abs(grid.y * 1.5));
+      float hexLine = smoothstep(0.45, 0.43, hex);
+      
+      // Animate some hexagons
+      float pulse = sin(time * 2.0 + id.x * 0.5 + id.y * 0.3) * 0.5 + 0.5;
+      float animatedHex = hexLine * pulse * 0.3;
+      
+      return animatedHex * 0.1;
     }
 
     void main() {
       vec2 fragCoord = gl_FragCoord.xy;
-      vec4 fragColor;
       vec2 uv = fragCoord.xy / iResolution.xy;
-      vec2 space = (fragCoord - iResolution.xy / 2.0) / iResolution.x * 2.0 * scale;
-
-      float horizontalFade = 1.0 - (cos(uv.x * 6.28) * 0.5 + 0.5);
-      float verticalFade = 1.0 - (cos(uv.y * 6.28) * 0.5 + 0.5);
-
-      space.y += random(space.x * warpFrequency + iTime * warpSpeed) * warpAmplitude * (0.5 + horizontalFade);
-      space.x += random(space.y * warpFrequency + iTime * warpSpeed + 2.0) * warpAmplitude * horizontalFade;
-
-      vec4 lines = vec4(0.0);
-      vec4 bgColor1 = vec4(0.1, 0.1, 0.3, 1.0);
-      vec4 bgColor2 = vec4(0.3, 0.1, 0.5, 1.0);
-
-      for(int l = 0; l < linesPerGroup; l++) {
-        float normalizedLineIndex = float(l) / float(linesPerGroup);
-        float offsetTime = iTime * offsetSpeed;
-        float offsetPosition = float(l) + space.x * offsetFrequency;
-        float rand = random(offsetPosition + offsetTime) * 0.5 + 0.5;
-        float halfWidth = mix(minLineWidth, maxLineWidth, rand * horizontalFade) / 2.0;
-        float offset = random(offsetPosition + offsetTime * (1.0 + normalizedLineIndex)) * mix(minOffsetSpread, maxOffsetSpread, horizontalFade);
-        float linePosition = getPlasmaY(space.x, horizontalFade, offset);
-        float line = drawSmoothLine(linePosition, halfWidth, space.y) / 2.0 + drawCrispLine(linePosition, halfWidth * 0.15, space.y);
-
-        float circleX = mod(float(l) + iTime * lineSpeed, 25.0) - 12.0;
-        vec2 circlePosition = vec2(circleX, getPlasmaY(circleX, horizontalFade, offset));
-        float circle = drawCircle(circlePosition, 0.01, space) * 4.0;
-
-        line = line + circle;
-        lines += line * lineColor * rand;
+      vec2 centeredUV = uv - 0.5;
+      float aspect = iResolution.x / iResolution.y;
+      centeredUV.x *= aspect;
+      
+      // Background gradient
+      vec3 bg = mix(BG_COLOR_1, BG_COLOR_2, uv.y);
+      
+      // Hexagon grid in background
+      float grid = hexagonGrid(uv, iTime);
+      bg += grid * GRID_COLOR * 0.3;
+      
+      // Main radar rings
+      float rings = 0.0;
+      for(int i = 1; i <= 3; i++) {
+        float radius = 0.15 * float(i);
+        rings += ring(centeredUV, vec2(0.0), radius, 0.002, 0.001) * 0.5;
       }
-
-      fragColor = mix(bgColor1, bgColor2, uv.x);
-      fragColor *= verticalFade;
-      fragColor.a = 1.0;
-      fragColor += lines;
-
-      gl_FragColor = fragColor;
+      
+      // Radar sweep
+      float sweep = radarSweep(uv, iTime);
+      
+      // Network nodes and connections
+      float nodes = networkNodes(uv, iTime);
+      
+      // Data streams
+      float streams = dataStreams(centeredUV, iTime);
+      
+      // Combine all elements
+      vec3 finalColor = bg;
+      finalColor += rings * PRIMARY_COLOR;
+      finalColor += sweep * PRIMARY_COLOR * 2.0;
+      finalColor += nodes * PRIMARY_COLOR * 1.5;
+      finalColor += streams * PRIMARY_COLOR * 0.8;
+      
+      // Add some subtle noise for texture
+      float grain = noise(uv * 500.0 + iTime) * 0.02;
+      finalColor += grain;
+      
+      // Vignette effect
+      float vignette = 1.0 - smoothstep(0.0, 0.7, length(centeredUV));
+      finalColor *= vignette;
+      
+      gl_FragColor = vec4(finalColor, 1.0);
     }
   `;
 
@@ -191,9 +299,11 @@ const ShaderBackground = () => {
       const width = window.innerWidth;
       const height = window.innerHeight;
       
-      canvas.width = width;
-      canvas.height = height;
-      gl.viewport(0, 0, width, height);
+      canvas.width = width * devicePixelRatio;
+      canvas.height = height * devicePixelRatio;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      gl.viewport(0, 0, canvas.width, canvas.height);
     };
 
     window.addEventListener('resize', resizeCanvas);
@@ -255,7 +365,10 @@ const ShaderBackground = () => {
     <canvas 
       ref={canvasRef} 
       className="fixed top-0 left-0 w-full h-full -z-10"
-      style={{ display: 'block' }}
+      style={{ 
+        display: 'block',
+        background: 'linear-gradient(135deg, #020617 0%, #0f172a 100%)'
+      }}
     />
   );
 };

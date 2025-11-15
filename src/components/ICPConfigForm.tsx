@@ -2,13 +2,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { 
   X, 
   Plus, 
-  Trash2,
   Save,
-  Copy,
   Target,
   Building2,
   MapPin,
@@ -18,10 +16,16 @@ import {
   Shield,
   TrendingUp,
   Filter,
-  Sliders
+  Sliders,
+  Crown,
+  Sparkles
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ICPModel, ICPConfig } from '@/types'
+
+// Brand Colors
+const ACCENT_GREEN = '#006239'
+const ACTIVE_GREEN = '#006239'
 
 interface ICPConfigFormProps {
   model?: ICPModel | null
@@ -63,12 +67,12 @@ const employeeRanges = [
 ]
 
 const acvRanges = [
-  '$1k–$10k',
-  '$10k–$50k',
-  '$50k–$100k',
-  '$100k–$500k',
-  '$500k–$1M',
-  '$1M+'
+"less than 1M$ ",
+"1M$ to 10M$",
+"10M$ to 50M$" ,
+"50M$ to 100M$",
+"100M$ to 500M$",
+"+500M$"
 ]
 
 const buyingTriggerOptions = {
@@ -77,13 +81,11 @@ const buyingTriggerOptions = {
     { label: 'New Funding Round', value: 'new_funding_round' },
     { label: 'New Investment', value: 'new_investment' },
   ],
-
   organizationalChanges: [
     { label: 'New Office', value: 'new_office' },
     { label: 'Closing Office', value: 'closing_office' },
     { label: 'Merger and Acquisitions', value: 'merger_and_acquisitions' },
   ],
-
   workforceTrends: [
     { label: 'Employee Joined Company', value: 'employee_joined_company' },
     { label: 'Increase in Engineering Department', value: 'increase_in_engineering_department' },
@@ -113,12 +115,10 @@ const buyingTriggerOptions = {
     { label: 'Hiring in Trade Department', value: 'hiring_in_trade_department' },
     { label: 'Hiring in Unknown Department', value: 'hiring_in_unknown_department' },
   ],
-
   productAndPartnershipUpdates: [
     { label: 'New Product', value: 'new_product' },
     { label: 'New Partnership', value: 'new_partnership' },
   ],
-
   otherSignificantEvents: [
     { label: 'Company Award', value: 'company_award' },
     { label: 'Outages and Security Breaches', value: 'outages_and_security_breaches' },
@@ -141,13 +141,10 @@ export function ICPConfigForm({ model, onSave, onClose }: ICPConfigFormProps) {
 
   useEffect(() => {
     if (model) {
-      // Merge with default config to ensure all properties exist
       setConfig({
         ...defaultConfig,
         ...model.config,
-        // Ensure scoringWeights exists with default values if missing
         scoringWeights: model.config.scoringWeights || defaultConfig.scoringWeights,
-        // Ensure arrays exist
         industries: model.config.industries || [],
         geographies: model.config.geographies || [],
         mustHaveTech: model.config.mustHaveTech || [],
@@ -200,90 +197,74 @@ export function ICPConfigForm({ model, onSave, onClose }: ICPConfigFormProps) {
     })
   }
 
-// Handler for ICP Fit Scoring (firmographic & technographic)
-const handleICPFitScoringChange = (firmographicValue: number) => {
-  setConfig(prev => {
-    const currentWeights = { ...prev.scoringWeights };
-    const technographicValue = 100 - firmographicValue;
-    
-    return {
+  const handleICPFitScoringChange = (firmographicValue: number) => {
+    setConfig(prev => ({
       ...prev,
       scoringWeights: {
-        ...currentWeights,
+        ...prev.scoringWeights,
         firmographic: firmographicValue,
-        technographic: technographicValue
+        technographic: 100 - firmographicValue
       }
-    };
-  })
-}
+    }))
+  }
 
-// Handler for Intent Scoring (intent & behavioral)
-const handleIntentScoringChange = (intentValue: number) => {
-  setConfig(prev => {
-    const currentWeights = { ...prev.scoringWeights };
-    const behavioralValue = 100 - intentValue;
-    
-    return {
+  const handleIntentScoringChange = (intentValue: number) => {
+    setConfig(prev => ({
       ...prev,
       scoringWeights: {
-        ...currentWeights,
+        ...prev.scoringWeights,
         intent: intentValue,
-        behavioral: behavioralValue
+        behavioral: 100 - intentValue
       }
-    };
-  })
-}
-
-  // Safe calculation with fallback
-  const totalWeights = config.scoringWeights 
-    ? Object.values(config.scoringWeights).reduce((sum, weight) => sum + weight, 0)
-    : 0
+    }))
+  }
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
       onClick={onClose}
     >
       <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex"
+        initial={{ scale: 0.95, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.95, opacity: 0, y: 20 }}
+        transition={{ type: "spring", damping: 25 }}
+        className="bg-white dark:bg-[#0F0F0F] w-full max-w-6xl max-h-[90vh] overflow-hidden flex rounded-3xl border border-gray-200 dark:border-[#2A2A2A] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Form Section */}
         <div className="flex-1 overflow-y-auto">
           <div className="p-8">
-            {/* Header */}
+            {/* Header - UPDATED STYLING */}
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#67F227] to-[#A7F205] rounded-2xl flex items-center justify-center">
-                  <Target className="w-6 h-6 text-gray-900" />
+                <div className="w-12 h-12 bg-[#006239] rounded-2xl flex items-center justify-center">
+                  <Target className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  <h2 className="text-2xl font-semibold text-gray-900 dark:text-[#EDEDED]">
                     {model ? 'Edit ICP Model' : 'Create ICP Model'}
                   </h2>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Define your ideal customer profile with precision
+                  <p className="text-gray-600 dark:text-[#9CA3AF]">
+                    Define your ideal customer profile
                   </p>
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-[#2A2A2A] transition-colors rounded-xl"
               >
-                <X className="w-6 h-6 text-gray-400" />
+                <X className="w-6 h-6 text-gray-400 dark:text-[#9CA3AF]" />
               </button>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-8">
-              {/* Model Name */}
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl p-6">
-                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-3">
+              {/* Model Name - UPDATED STYLING */}
+              <div className="bg-gray-50 dark:bg-[#1A1A1A] p-6 rounded-2xl border border-gray-200 dark:border-[#2A2A2A]">
+                <label className="block text-sm font-medium text-gray-700 dark:text-[#9CA3AF] mb-3">
                   Model Name *
                 </label>
                 <input
@@ -291,7 +272,7 @@ const handleIntentScoringChange = (intentValue: number) => {
                   required
                   value={config.modelName}
                   onChange={(e) => setConfig(prev => ({ ...prev, modelName: e.target.value }))}
-                  className="w-full px-4 py-3 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-[#67F227] focus:border-transparent text-gray-900 dark:text-white"
+                  className="w-full px-4 py-3 bg-white dark:bg-[#0F0F0F] border border-gray-300 dark:border-[#3A3A3A] focus:outline-none focus:ring-2 focus:ring-[#006239] focus:border-transparent text-gray-900 dark:text-[#EDEDED] placeholder-gray-500 dark:placeholder-[#9CA3AF] rounded-xl"
                   placeholder="e.g., Enterprise SaaS ICP"
                 />
                 <div className="flex items-center gap-3 mt-4">
@@ -300,15 +281,15 @@ const handleIntentScoringChange = (intentValue: number) => {
                     id="isPrimary"
                     checked={isPrimary}
                     onChange={(e) => setIsPrimary(e.target.checked)}
-                    className="rounded border-gray-300 dark:border-gray-600 text-[#67F227] focus:ring-[#67F227] bg-white dark:bg-gray-900"
+                    className="rounded border-gray-300 dark:border-[#3A3A3A] text-[#006239] focus:ring-[#006239] bg-white dark:bg-[#0F0F0F]"
                   />
-                  <label htmlFor="isPrimary" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <label htmlFor="isPrimary" className="text-sm font-medium text-gray-700 dark:text-[#9CA3AF]">
                     Set as primary ICP model
                   </label>
                 </div>
               </div>
 
-              {/* Company Profile */}
+              {/* Company Profile - UPDATED STYLING */}
               <FormSection 
                 icon={Building2}
                 title="Company Profile"
@@ -336,7 +317,7 @@ const handleIntentScoringChange = (intentValue: number) => {
                     onChange={(value) => setConfig(prev => ({ ...prev, employeeRange: value }))}
                   />
                   <SelectInput
-                    label="ACV Range ($) *"
+                    label="Annuel Revenu ($) *"
                     value={config.acvRange}
                     options={acvRanges}
                     onChange={(value) => setConfig(prev => ({ ...prev, acvRange: value }))}
@@ -344,7 +325,7 @@ const handleIntentScoringChange = (intentValue: number) => {
                 </div>
               </FormSection>
 
-              {/* Must-Haves */}
+              {/* Must-Haves - UPDATED STYLING */}
               <FormSection 
                 icon={Filter}
                 title="Must-Haves"
@@ -374,7 +355,7 @@ const handleIntentScoringChange = (intentValue: number) => {
                 </div>
               </FormSection>
 
-              {/* Disqualifiers */}
+              {/* Disqualifiers - UPDATED STYLING */}
               <FormSection 
                 icon={X}
                 title="Disqualifiers"
@@ -411,7 +392,7 @@ const handleIntentScoringChange = (intentValue: number) => {
                 </div>
               </FormSection>
 
-              {/* Buying Triggers */}
+              {/* Buying Triggers - UPDATED STYLING */}
               <FormSection 
                 icon={TrendingUp}
                 title="Buying Triggers"
@@ -420,7 +401,7 @@ const handleIntentScoringChange = (intentValue: number) => {
                 <div className="">
                   {Object.entries(buyingTriggerOptions).map(([category, triggers]) => (
                     <div key={category} className="mb-6">
-                      <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200 mb-3 capitalize">
+                      <h3 className="text-base font-medium text-gray-800 dark:text-[#EDEDED] mb-3 capitalize">
                         {category.replace(/([A-Z])/g, ' $1')}
                       </h3>
 
@@ -431,9 +412,12 @@ const handleIntentScoringChange = (intentValue: number) => {
                         return (
                           <label
                             key={trigger.value}
-                            className={`flex items-center space-x-3 p-3 rounded-lg transition-colors
-                              ${limitReached ? 'opacity-50 cursor-not-allowed' : 'bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'}
-                            `}
+                            className={cn(
+                              "flex items-center space-x-3 p-3 transition-colors rounded-xl",
+                              limitReached 
+                                ? "opacity-50 cursor-not-allowed" 
+                                : "bg-gray-50 dark:bg-[#1A1A1A] hover:bg-gray-100 dark:hover:bg-[#2A2A2A]"
+                            )}
                           >
                             <input
                               type="checkbox"
@@ -454,9 +438,9 @@ const handleIntentScoringChange = (intentValue: number) => {
                                   }));
                                 }
                               }}
-                              className="rounded border-gray-300 dark:border-gray-600 text-[#67F227] focus:ring-[#67F227] bg-white dark:bg-gray-900"
+                              className="rounded border-gray-300 dark:border-[#3A3A3A] text-[#006239] focus:ring-[#006239] bg-white dark:bg-[#0F0F0F]"
                             />
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <span className="text-sm font-medium text-gray-700 dark:text-[#EDEDED]">
                               {trigger.label}
                             </span>
                           </label>
@@ -467,7 +451,7 @@ const handleIntentScoringChange = (intentValue: number) => {
                 </div>
               </FormSection>
 
-              {/* Target Personas */}
+              {/* Target Personas - UPDATED STYLING */}
               <FormSection 
                 icon={Users}
                 title="Target Personas"
@@ -482,119 +466,113 @@ const handleIntentScoringChange = (intentValue: number) => {
                 />
               </FormSection>
 
-              {/* Scoring Weights */}
+              {/* Scoring Weights - UPDATED STYLING */}
               <FormSection 
-  icon={Sliders}
-  title="SCORING WEIGHTS"
-  description="Configure scoring weights for different criteria categories"
->
-  <div className="space-y-6">
-    {/* ICP Fit Scoring Slider - Controls firmographic & technographic */}
-    <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
-      <div className="mb-4">
-        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          ICP Fit Scoring
-        </h3>
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          Balance between firmographic and technographic matching
-        </p>
-      </div>
-      
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex-1">
-          <div className="w-full bg-white dark:bg-gray-700 rounded-full h-5">
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={config.scoringWeights.firmographic}
-              onChange={(e) => handleICPFitScoringChange(parseInt(e.target.value))}
-              className="w-full  rounded-full appearance-none bg-transparent [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#67F227]"
-            />
-          </div>
-        </div>
-        <div className="flex items-center gap-6 text-sm">
-          <div className="text-center">
-            <div className="font-medium text-gray-600 dark:text-gray-400">Firmographic</div>
-            <div className="text-lg font-bold text-[#67F227]">{config.scoringWeights.firmographic}%</div>
-          </div>
-          <div className="text-center">
-            <div className="font-medium text-gray-600 dark:text-gray-400">Technographic</div>
-            <div className="text-lg font-bold text-[#67F227]">{config.scoringWeights.technographic}%</div>
-          </div>
-        </div>
-      </div>
-    </div>
+                icon={Sliders}
+                title="Scoring Weights"
+                description="Configure scoring weights for different criteria categories"
+              >
+                <div className="space-y-6">
+                  {/* ICP Fit Scoring Slider */}
+                  <div className="p-4 bg-gray-50 dark:bg-[#1A1A1A] rounded-2xl border border-gray-200 dark:border-[#2A2A2A]">
+                    <div className="mb-4">
+                      <h3 className="text-sm font-medium text-gray-700 dark:text-[#EDEDED] mb-1">
+                        ICP Fit Scoring
+                      </h3>
+                      <p className="text-xs text-gray-500 dark:text-[#9CA3AF]">
+                        Balance between firmographic and technographic matching
+                      </p>
+                    </div>
+                    
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex-1">
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={config.scoringWeights.firmographic}
+                          onChange={(e) => handleICPFitScoringChange(parseInt(e.target.value))}
+                          className="w-full h-2 bg-gray-200 dark:bg-[#2A2A2A] rounded-full appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#006239]"
+                        />
+                      </div>
+                      <div className="flex items-center gap-6 text-sm">
+                        <div className="text-center">
+                          <div className="font-medium text-gray-600 dark:text-[#9CA3AF]">Firmographic</div>
+                          <div className="text-lg font-semibold text-[#006239]">{config.scoringWeights.firmographic}%</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="font-medium text-gray-600 dark:text-[#9CA3AF]">Technographic</div>
+                          <div className="text-lg font-semibold text-[#006239]">{config.scoringWeights.technographic}%</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
-    {/* Intent Scoring Slider - Controls intent & behavioral */}
-    <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
-      <div className="mb-4">
-        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Intent Scoring
-        </h3>
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          Balance between intent and behavioral signals
-        </p>
-      </div>
-      
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex-1">
-          <div className="w-full bg-white dark:bg-gray-700 rounded-full h-5">
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={config.scoringWeights.intent}
-              onChange={(e) => handleIntentScoringChange(parseInt(e.target.value))}
-              className="w-full  rounded-full appearance-none bg-transparent [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#3B82F6]"
-            />
-          </div>
-        </div>
-        <div className="flex items-center gap-6 text-sm">
-          <div className="text-center">
-            <div className="font-medium text-gray-600 dark:text-gray-400">Intent</div>
-            <div className="text-lg font-bold text-[#3B82F6]">{config.scoringWeights.intent}%</div>
-          </div>
-          <div className="text-center">
-            <div className="font-medium text-gray-600 dark:text-gray-400">Behavioral</div>
-            <div className="text-lg font-bold text-[#3B82F6]">{config.scoringWeights.behavioral}%</div>
-          </div>
-        </div>
-      </div>
-    </div>
+                  {/* Intent Scoring Slider */}
+                  <div className="p-4 bg-gray-50 dark:bg-[#1A1A1A] rounded-2xl border border-gray-200 dark:border-[#2A2A2A]">
+                    <div className="mb-4">
+                      <h3 className="text-sm font-medium text-gray-700 dark:text-[#EDEDED] mb-1">
+                        Intent Scoring
+                      </h3>
+                      <p className="text-xs text-gray-500 dark:text-[#9CA3AF]">
+                        Balance between intent and behavioral signals
+                      </p>
+                    </div>
+                    
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex-1">
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={config.scoringWeights.intent}
+                          onChange={(e) => handleIntentScoringChange(parseInt(e.target.value))}
+                          className="w-full h-2 bg-gray-200 dark:bg-[#2A2A2A] rounded-full appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#006239]"
+                        />
+                      </div>
+                      <div className="flex items-center gap-6 text-sm">
+                        <div className="text-center">
+                          <div className="font-medium text-gray-600 dark:text-[#9CA3AF]">Intent</div>
+                          <div className="text-lg font-semibold text-[#006239]">{config.scoringWeights.intent}%</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="font-medium text-gray-600 dark:text-[#9CA3AF]">Behavioral</div>
+                          <div className="text-lg font-semibold text-[#006239]">{config.scoringWeights.behavioral}%</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
-    {/* Total Weights Display */}
-  {/* Overall Distribution Display */}
-  <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
-      <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 text-center">
-        Overall Distribution
-      </h3>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-          <div className="text-xs text-gray-600 dark:text-gray-400">ICP Fit Score</div>
-          <div className="text-lg font-bold text-[#67F227]">100%</div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Firmographic: {config.scoringWeights.firmographic}% + Technographic: {config.scoringWeights.technographic}%
-          </div>
-        </div>
-        <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-          <div className="text-xs text-gray-600 dark:text-gray-400">Intent Score</div>
-          <div className="text-lg font-bold text-[#3B82F6]">100%</div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Intent: {config.scoringWeights.intent}% + Behavioral: {config.scoringWeights.behavioral}%
-          </div>
-        </div>
-      </div>
-    </div>
+                  {/* Overall Distribution Display */}
+                  <div className="p-4 bg-gray-50 dark:bg-[#1A1A1A] rounded-2xl border border-gray-200 dark:border-[#2A2A2A]">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-[#EDEDED] mb-3 text-center">
+                      Overall Distribution
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-center p-3 bg-[#006239]/10 rounded-xl border border-[#006239]/20">
+                        <div className="text-xs text-gray-600 dark:text-[#9CA3AF]">ICP Fit Score</div>
+                        <div className="text-lg font-semibold text-[#006239]">100%</div>
+                        <div className="text-xs text-gray-500 dark:text-[#6A6A6A] mt-1">
+                          Firmographic: {config.scoringWeights.firmographic}% + Technographic: {config.scoringWeights.technographic}%
+                        </div>
+                      </div>
+                      <div className="text-center p-3 bg-[#006239]/10 rounded-xl border border-[#006239]/20">
+                        <div className="text-xs text-gray-600 dark:text-[#9CA3AF]">Intent Score</div>
+                        <div className="text-lg font-semibold text-[#006239]">100%</div>
+                        <div className="text-xs text-gray-500 dark:text-[#6A6A6A] mt-1">
+                          Intent: {config.scoringWeights.intent}% + Behavioral: {config.scoringWeights.behavioral}%
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </FormSection>
 
-  </div>
-</FormSection>
-
-              {/* Form Actions */}
-              <div className="flex gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
+              {/* Form Actions - UPDATED STYLING */}
+              <div className="flex gap-3 pt-6 border-t border-gray-200 dark:border-[#2A2A2A]">
                 <button
                   type="submit"
-                  className="flex-1 bg-gradient-to-r from-[#67F227] to-[#A7F205] text-gray-900 py-4 px-6 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:from-[#A7F205] hover:to-[#C3F25C] transition-all duration-300 flex items-center justify-center gap-2"
+                  className="flex-1 bg-[#006239] text-white py-4 px-6 font-medium hover:bg-[#006239] transition-all duration-300 flex items-center justify-center gap-2 rounded-xl shadow-sm hover:shadow-md"
                 >
                   <Save className="w-5 h-5" />
                   {model ? 'Update ICP Model' : 'Create ICP Model'}
@@ -602,7 +580,7 @@ const handleIntentScoringChange = (intentValue: number) => {
                 <button
                   type="button"
                   onClick={onClose}
-                  className="flex-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 py-4 px-6 rounded-xl font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-300"
+                  className="flex-1 bg-gray-100 dark:bg-[#2A2A2A] text-gray-700 dark:text-[#9CA3AF] py-4 px-6 font-medium hover:bg-gray-200 dark:hover:bg-[#3A3A3A] transition-all duration-300 rounded-xl"
                 >
                   Cancel
                 </button>
@@ -611,14 +589,14 @@ const handleIntentScoringChange = (intentValue: number) => {
           </div>
         </div>
 
-        {/* Live Preview */}
-        <div className="w-96 border-l border-gray-200/60 dark:border-gray-700/60 bg-gray-50/50 dark:bg-gray-800/50 flex flex-col">
-          <div className="p-6 border-b border-gray-200/60 dark:border-gray-700/60">
-            <h3 className="font-semibold text-gray-900 dark:text-white">Live Preview</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Real-time configuration preview</p>
+        {/* Live Preview - UPDATED STYLING */}
+        <div className="w-96 border-l border-gray-200 dark:border-[#2A2A2A] bg-gray-50 dark:bg-[#1A1A1A] flex flex-col">
+          <div className="p-6 border-b border-gray-200 dark:border-[#2A2A2A]">
+            <h3 className="font-medium text-gray-900 dark:text-[#EDEDED]">Live Preview</h3>
+            <p className="text-sm text-gray-600 dark:text-[#9CA3AF] mt-1">Real-time configuration preview</p>
           </div>
           <div className="flex-1 p-6 overflow-y-auto">
-            <pre className="bg-gray-900 text-green-400 p-4 rounded-xl text-sm overflow-auto">
+            <pre className="bg-gray-900 dark:bg-[#0F0F0F] text-[#006239] p-4 text-sm overflow-auto rounded-xl border border-gray-800 dark:border-[#2A2A2A]">
               {JSON.stringify(config, null, 2)}
             </pre>
           </div>
@@ -640,14 +618,14 @@ function FormSection({
   children: React.ReactNode
 }) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 shadow-sm">
+    <div className="bg-white dark:bg-[#1A1A1A] border border-gray-300 dark:border-[#2A2A2A] p-6 rounded-2xl">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
-          <Icon className="w-5 h-5 text-[#67F227]" />
+        <div className="w-10 h-10 bg-[#006239]/10 flex items-center justify-center border border-[#006239]/20 rounded-xl">
+          <Icon className="w-5 h-5 text-[#006239]" />
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400">{description}</p>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-[#EDEDED]">{title}</h3>
+          <p className="text-sm text-gray-600 dark:text-[#9CA3AF]">{description}</p>
         </div>
       </div>
       {children}
@@ -682,21 +660,21 @@ function ChipInput({
 
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+      <label className="block text-sm font-medium text-gray-700 dark:text-[#9CA3AF] mb-2">
         {label}
       </label>
-      <div className="border border-gray-300 dark:border-gray-600 rounded-xl p-3 min-h-[42px] focus-within:ring-2 focus-within:ring-[#67F227] focus-within:border-transparent bg-white dark:bg-gray-900">
+      <div className="border border-gray-300 dark:border-[#3A3A3A] p-3 min-h-[42px] focus-within:outline-none focus-within:ring-2 focus-within:ring-[#006239] focus-within:border-transparent bg-white dark:bg-[#0F0F0F] rounded-xl">
         <div className="flex flex-wrap gap-2 mb-2">
           {chips.map((chip, index) => (
             <span
               key={index}
-              className="inline-flex items-center gap-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-3 py-1 rounded-full text-sm"
+              className="inline-flex items-center gap-1 bg-[#006239]/10 text-[#006239] px-3 py-1 text-sm border border-[#006239]/20 rounded-lg"
             >
               {chip}
               <button
                 type="button"
                 onClick={() => onRemove(index)}
-                className="hover:text-green-900 dark:hover:text-green-200 transition-colors"
+                className="hover:text-[#006239] transition-colors"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -709,7 +687,7 @@ function ChipInput({
           onChange={(e) => setInputValue(e.target.value)}
           onKeyPress={handleKeyPress}
           placeholder={placeholder}
-          className="w-full border-0 focus:ring-0 p-0 text-sm bg-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+          className="w-full border-0 focus:ring-0 p-0 text-sm bg-transparent text-gray-900 dark:text-[#EDEDED] placeholder-gray-500 dark:placeholder-[#9CA3AF]"
         />
       </div>
     </div>
@@ -729,13 +707,13 @@ function SelectInput({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+      <label className="block text-sm font-medium text-gray-700 dark:text-[#9CA3AF] mb-2">
         {label}
       </label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-[#67F227] focus:border-transparent bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+        className="w-full px-4 py-3 border border-gray-300 dark:border-[#3A3A3A] focus:outline-none focus:ring-2 focus:ring-[#006239] focus:border-transparent bg-white dark:bg-[#0F0F0F] text-gray-900 dark:text-[#EDEDED] rounded-xl"
       >
         {options.map(option => (
           <option key={option} value={option}>

@@ -180,7 +180,9 @@ export interface Substep {
   priority?: 'low' | 'medium' | 'high';
   tools?: string[];
   metadata?: Record<string, any>;
+  message?:string;
   startedAt?: Date;
+  progress?:any;
   completedAt?: Date;
   error?: string;
 }

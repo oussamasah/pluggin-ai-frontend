@@ -2,9 +2,8 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Sparkles, Search, Target, Zap, ArrowRight, Users, BarChart3, Building2 } from 'lucide-react'
+import { Sparkles, Search, Target, Zap, ArrowRight, Users, BarChart3, Building2, Crown, Rocket, Globe } from 'lucide-react'
 import { useSession } from '@/context/SessionContext'
-import { LiquidButton } from './ui/liquid-glass-button'
 
 const features = [
   {
@@ -62,26 +61,26 @@ export function WelcomeScreen() {
   }
 
   return (
-    <div className="relative flex-1 flex items-center justify-center p-6 overflow-hidden  bg-black/80  w-full">
-      {/* WebGL Shader Background */}
-   
-      
+    <div className="relative flex-1 flex items-start justify-center pt-20 pb-28 px-4 md:px-8 overflow-y-auto w-full bg-white dark:bg-[#0F0F0F]">
       {/* Main Content Container */}
-      <div className="relative w-full max-w-7xl mx-auto">
+      <div className="relative w-full max-w-3xl mx-auto">
+        
         {/* Header Section */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-center gap-4 mb-16"
+          className="flex flex-col items-center justify-center gap-4 mb-16"
         >
-          <div className="p-3 bg-gradient-to-br from-[#00FA64] to-[#00FF80] rounded-2xl shadow-[0_0_40px_rgba(0,250,100,0.3)]">
-            <Sparkles className="w-8 h-8 text-black" />
+          <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-[#006239]">
+            <Crown className="w-7 h-7 text-white" />
           </div>
           <div className="text-center">
-            <h1 className="text-5xl font-extrabold tracking-tight text-white">
-              ICP SCOUT
+            <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-[#EDEDED]">
+              GTM Intelligence
             </h1>
-            <p className="text-[#A1A1AA] text-sm mt-2 font-light tracking-wide">ENTERPRISE INTELLIGENCE PLATFORM</p>
+            <p className="text-gray-600 dark:text-[#9CA3AF] text-sm mt-2">
+              <span className="font-semibold">Powered by Plugging AI</span> — Premium Intelligence Platform
+            </p>
           </div>
         </motion.div>
 
@@ -90,55 +89,55 @@ export function WelcomeScreen() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid grid-cols-3 gap-6 max-w-2xl mx-auto mb-16"
+          className="grid grid-cols-3 gap-4 max-w-xl mx-auto mb-16"
         >
-          {stats.map((stat, index) => (
+          {stats.map((stat) => (
             <div
               key={stat.label}
-              className="text-center p-6 bg-black/40 backdrop-blur-xl rounded-2xl border border-[#27272a] shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
+              className="text-center p-4 bg-gray-50 dark:bg-[#1E1E1E] border border-gray-200 dark:border-[#2A2A2A] rounded-xl transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-[#2A2A2A]"
             >
-              <div className="flex items-center justify-center gap-3 mb-3">
-                <stat.icon className="w-5 h-5 text-[#00FA64]" />
-                <div className="text-2xl font-bold text-white">{stat.value}</div>
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <stat.icon className="w-4 h-4 text-[#006239]" />
+                <div className="text-xl font-bold text-gray-900 dark:text-[#EDEDED]">{stat.value}</div>
               </div>
-              <div className="text-[#A1A1AA] text-xs font-medium tracking-wide">{stat.label}</div>
+              <div className="text-gray-600 dark:text-[#9CA3AF] text-xs font-medium">{stat.label}</div>
             </div>
           ))}
         </motion.div>
 
         {/* Main Hero Section */}
-        <div className="bg-black/40 backdrop-blur-xl rounded-3xl border border-[#27272a] shadow-[0_20px_80px_rgba(0,0,0,0.6)] overflow-hidden mb-12">
-          <div className="p-16 text-center">
+        <div className="p-8 bg-white dark:bg-transparent border border-gray-200 dark:border-[#2A2A2A] rounded-2xl shadow-xl mb-12">
+          <div className="text-center">
             <motion.h2
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="text-7xl font-extrabold tracking-tight text-white mb-8 leading-tight"
+              className="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-[#EDEDED] mb-4 leading-tight"
             >
-              FIND YOUR IDEAL CUSTOMERS
+              Discover Your Ideal Investments
             </motion.h2>
             
             <motion.p
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="text-xl text-[#A1A1AA] mb-12 max-w-3xl mx-auto leading-relaxed font-light"
+              className="text-lg text-gray-600 dark:text-[#9CA3AF] mb-8 max-w-2xl mx-auto leading-relaxed"
             >
-              Discover, score, and connect with companies that perfectly match your ideal customer profile using advanced AI algorithms
+              Identify, analyze, and connect with companies that match your investment criteria using advanced AI algorithms.
             </motion.p>
 
-            {/* Availability Indicator */}
+            {/* Status Indicator */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4 }}
-              className="flex items-center justify-center gap-3 mb-12"
+              className="flex items-center justify-center gap-2 mb-10"
             >
-              <span className="relative flex h-3 w-3 items-center justify-center">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#00FA64] opacity-75"></span>
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-[#00FA64]"></span>
+              <span className="relative flex h-2 w-2 items-center justify-center">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 bg-[#006239]"></span>
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-[#006239]"></span>
               </span>
-              <p className="text-[#00FA64] text-sm font-medium tracking-wide">READY TO FIND YOUR PERFECT MATCHES</p>
+              <p className="text-gray-600 dark:text-[#9CA3AF] text-sm font-medium">AI Engine: Active and Ready</p>
             </motion.div>
 
             {/* Quick Start Button */}
@@ -148,13 +147,14 @@ export function WelcomeScreen() {
               transition={{ delay: 0.5 }}
               className="flex justify-center"
             >
-              <LiquidButton 
+              <button 
                 onClick={handleQuickStart}
-                className="text-white border border-[#00FA64]/30 rounded-full bg-gradient-to-r from-[#00FA64] to-[#00FF80] hover:from-[#00FF80] hover:to-[#80FFC2] transition-all duration-500 shadow-[0_0_40px_rgba(0,250,100,0.3)] hover:shadow-[0_0_60px_rgba(0,250,100,0.5)]"
-                size="xxl"
+                className="px-8 py-4 text-white font-semibold text-lg transition-all duration-300 rounded-xl flex items-center gap-3 shadow-md hover:shadow-lg bg-[#006239] border border-[#006239] hover:bg-[#25a843] hover:border-[#25a843]"
               >
-                START SEARCHING NOW
-              </LiquidButton>
+                <Rocket className="w-5 h-5" />
+                Start New Analysis
+                <ArrowRight className="w-5 h-5" />
+              </button>
             </motion.div>
           </div>
         </div>
@@ -164,7 +164,7 @@ export function WelcomeScreen() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16"
+          className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12"
         >
           {features.map((feature, index) => (
             <motion.div
@@ -172,14 +172,16 @@ export function WelcomeScreen() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.7 + index * 0.1 }}
-              className="group p-8 bg-black/40 backdrop-blur-xl rounded-2xl border border-[#27272a] shadow-[0_8px_32px_rgba(0,0,0,0.4)] hover:shadow-[0_12px_48px_rgba(0,250,100,0.1)] transition-all duration-500 hover:-translate-y-2 cursor-pointer hover:border-[#00FA64]/30"
-              onClick={() => handleQuickStart()}
+              className="group p-6 bg-gray-50 dark:bg-[#1E1E1E] border border-gray-200 dark:border-[#2A2A2A] rounded-xl shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-[#2A2A2A]"
+              onClick={handleQuickStart}
             >
-              <div className="w-14 h-14 bg-[#00FA64]/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 group-hover:bg-[#00FA64]/20">
-                <feature.icon className="w-7 h-7 text-[#00FA64]" />
+              <div 
+                className="w-10 h-10 rounded-lg flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110 bg-green-50 dark:bg-green-900/20"
+              >
+                <feature.icon className="w-5 h-5 text-[#006239]" />
               </div>
-              <h3 className="font-bold text-white text-xl mb-4 tracking-wide">{feature.title}</h3>
-              <p className="text-[#A1A1AA] text-sm leading-relaxed font-light">{feature.description}</p>
+              <h3 className="font-semibold text-gray-900 dark:text-[#EDEDED] text-lg mb-2">{feature.title}</h3>
+              <p className="text-gray-600 dark:text-[#9CA3AF] text-sm leading-relaxed">{feature.description}</p>
             </motion.div>
           ))}
         </motion.div>
@@ -189,11 +191,11 @@ export function WelcomeScreen() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8 }}
-          className="bg-black/40 backdrop-blur-xl rounded-2xl border border-[#27272a] shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-10"
+          className="bg-white dark:bg-transparent border border-gray-200 dark:border-[#2A2A2A] rounded-2xl shadow-sm p-8"
         >
-          <div className="flex items-center gap-3 mb-8">
-            <Search className="w-6 h-6 text-[#00FA64]" />
-            <h3 className="text-xl font-bold text-white tracking-wide">TRY THESE EXAMPLE SEARCHES</h3>
+          <div className="flex items-center gap-3 mb-6">
+            <Search className="w-5 h-5 text-[#006239]" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-[#EDEDED]">Try These Example Searches</h3>
           </div>
           
           <div className="space-y-4">
@@ -202,22 +204,25 @@ export function WelcomeScreen() {
                 key={index}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.9 + index * 0.1 }}
+                transition={{ 
+                  delay: 0.9 + index * 0.1, 
+                  ease: [0.25, 0.46, 0.45, 0.94] 
+                }}
                 onClick={() => handleExampleQuery(query)}
-                className="w-full p-6 text-left bg-black/60 backdrop-blur-md rounded-xl border border-[#27272a] hover:border-[#00FA64]/40 hover:bg-[#00FA64]/5 transition-all duration-500 group hover:shadow-[0_8px_32px_rgba(0,250,100,0.1)]"
+                className="w-full p-4 text-left bg-gray-50 dark:bg-[#1E1E1E] border border-gray-200 dark:border-[#2A2A2A] rounded-xl transition-all duration-300 group hover:shadow-lg dark:hover:shadow-green-900/10 hover:border-green-200 dark:hover:border-green-800"
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-white text-base mb-2 tracking-wide">
-                      SEARCH SESSION {index + 1}
+                  <div className="flex-1 min-w-0 pr-4">
+                    <h4 className="font-medium text-gray-900 dark:text-[#EDEDED] text-sm mb-1">
+                      Analysis {index + 1}
                     </h4>
-                    <p className="text-[#A1A1AA] text-sm font-light">
+                    <p className="text-gray-600 dark:text-[#9CA3AF] text-sm">
                       {query}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                    <span className="text-xs text-[#00FA64] font-medium tracking-wide">CLICK TO START</span>
-                    <ArrowRight className="w-5 h-5 text-[#00FA64] transform group-hover:translate-x-2 transition-transform duration-500" />
+                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <span className="text-xs font-medium text-[#006239]">Start</span>
+                    <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform duration-300 text-[#006239]" />
                   </div>
                 </div>
               </motion.button>
@@ -232,9 +237,12 @@ export function WelcomeScreen() {
           transition={{ delay: 1.0 }}
           className="text-center mt-16"
         >
-          <p className="text-[#A1A1AA] text-sm font-light tracking-wide">
-            JOIN THOUSANDS OF SALES TEAMS FINDING THEIR PERFECT CUSTOMERS WITH ICP SCOUT
-          </p>
+          <div className="flex items-center justify-center gap-2">
+            <Globe className="w-4 h-4 text-gray-500 dark:text-[#9CA3AF]" />
+            <p className="text-gray-500 dark:text-[#9CA3AF] text-sm">
+              Trusted by leading investment teams worldwide
+            </p>
+          </div>
         </motion.div>
       </div>
     </div>

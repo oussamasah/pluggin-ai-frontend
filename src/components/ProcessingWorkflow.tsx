@@ -1,613 +1,310 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
-import {
-  CheckCircle2,
-  Circle,
-  CircleAlert,
-  CircleDotDashed,
-  CircleX,
-  ChevronDown,
-  ChevronRight,
-} from "lucide-react";
-import { motion, AnimatePresence, LayoutGroup, Variants, TargetAndTransition, easeInOut } from "framer-motion";
+import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { useSession } from '@/context/SessionContext';
-import { Substep } from '@/types';
+import { CheckCircle2, Circle, XCircle, Loader2, ChevronRight, Zap, Target, Users, TrendingUp } from 'lucide-react';
 
-// Type definitions matching your backend structure
 interface WorkflowSubstep {
   id: string;
   name: string;
-  description: string;
-  status: string;
-  category: string;
-  priority: string;
-  tools: string[];
-  message: string;
+  status: 'pending' | 'in-progress' | 'completed' | 'failed' | 'error';
+  description?: string;
+  category?: string;
 }
 
 interface WorkflowStep {
-  stage: string;
-  message: string;
-  progress: number;
-  currentStep: number;
-  totalSteps: number;
   substeps: WorkflowSubstep[];
 }
 
-// Group substeps by category for better organization
-const groupSubstepsByCategory = (substeps: WorkflowSubstep[] = []) => {
-  const categories: { [key: string]: WorkflowSubstep[] } = {};
-  
-  substeps.forEach((substep) => {
-    const category = substep.category || 'other';
-    if (!categories[category]) {
-      categories[category] = [];
-    }
-    categories[category].push(substep);
-  });
-  
-  return categories;
-};
+// Brand Colors
+const ACCENT_GREEN = '#006239'
+const ACTIVE_GREEN = '#006239'
 
-// Get category display name
-const getCategoryDisplayName = (category: string): string => {
-  const categoryMap: { [key: string]: string } = {
-    'query-processing': 'Query Processing',
-    'search-execution': 'Company Search',
-    'data-mapping': 'Data Mapping',
-    'results-preparation': 'Results Preparation',
-    'search': 'Search',
-    'enrichment': 'Enrichment',
-    'scoring': 'Scoring',
-    'analysis': 'Analysis'
-  };
-  return categoryMap[category] || category.split('-').map(word => 
-    word.charAt(0).toUpperCase() + word.slice(1)
-  ).join(' ');
-};
+// Define the phase structure that matches your backend workflow
+const WORKFLOW_PHASES = [
+  {
+    id: 1,
+    title: "Dynamic ICP Discovery",
+    stepIds: ['1.1', '1.2', '1.3'],
+    steps: [
+      { name: "Generate hypotheses", id: '1.1' },
+      { name: "Market Discovery", id: '1.2' },
+      { name: "Clean and validate data", id: '1.3' }
+    ],
+    icon: Target
+  },
+  {
+    id: 2,
+    title: "Account Intelligence",
+    stepIds: ['2.1', '2.2', '2.3'],
+    steps: [
+      { name: "Enrich multi-source data", id: '2.1' },
+      { name: "Score fit", id: '2.2' },
+      { name: "Explain reasoning", id: '2.3' }
+    ],
+    icon: Users
+  },
+  {
+    id: 3,
+    title: "Persona Intelligence",
+    stepIds: ['3.1', '3.2', '3.3'],
+    steps: [
+      { name: "Identify relevant personas", id: '3.1' },
+      { name: "Map psychographic data", id: '3.2' },
+      { name: "Enrich contact information", id: '3.3' }
+    ],
+    icon: Users
+  },
+  {
+    id: 4,
+    title: "Intent & Timing Intelligence",
+    stepIds: ['4.1', '4.2', '4.3'],
+    steps: [
+      { name: "Detect buying signals", id: '4.1' },
+      { name: "Score intent", id: '4.2' },
+      { name: "Summarize reasoning", id: '4.3' }
+    ],
+    icon: TrendingUp
+  }
+];
 
 export default function ProcessingWorkflow() {
-  const { currentSession, isConnected } = useSession();
-  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
-  const [userHasManuallyExpanded, setUserHasManuallyExpanded] = useState<boolean>(false);
+  const { currentSession } = useSession();
+  const [workflowPhases, setWorkflowPhases] = useState(WORKFLOW_PHASES);
   
-  const prefersReducedMotion = 
-    typeof window !== 'undefined' 
-      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches 
-      : false;
-      const workflowData = currentSession?.searchStatus as WorkflowStep | null;
+  const workflowData = currentSession?.searchStatus as WorkflowStep | null;
+  const backendSubsteps = workflowData?.substeps || [];
 
-  const substeps = workflowData?.substeps || [];
+  // Map backend substep status to frontend status
+  const mapBackendStatus = (backendStatus: string) => {
+    switch (backendStatus) {
+      case 'completed': return 'done';
+      case 'in-progress': return 'processing';
+      case 'failed':
+      case 'error': return 'failed';
+      default: return 'waiting';
+    }
+  };
 
-  // Memoize expensive computations to prevent unnecessary re-renders
-  const groupedSubsteps = useMemo(() => groupSubstepsByCategory(substeps), [substeps]);
-  const categories = useMemo(() => Object.keys(groupedSubsteps), [groupedSubsteps]);
-
-  // Auto-manage category expansion based on progress
+  // Update workflow phases based on backend data
   useEffect(() => {
-    if (!userHasManuallyExpanded && categories.length > 0) {
-      // Find categories with in-progress substeps
-      const inProgressCategories = categories.filter(category => 
-        groupedSubsteps[category].some(substep => substep.status === 'in-progress')
-      );
+    if (!backendSubsteps.length) return;
 
-      if (inProgressCategories.length > 0) {
-        // Expand categories with in-progress tasks
-        setExpandedCategories(inProgressCategories);
-      } else {
-        // Check if all completed
-        const allCompleted = categories.every(category =>
-          groupedSubsteps[category].every(substep => substep.status === 'completed')
-        );
+    const updatedPhases = WORKFLOW_PHASES.map(phase => ({
+      ...phase,
+      steps: phase.steps.map(step => {
+        const backendStep = backendSubsteps.find(s => s.id === step.id);
+        return {
+          ...step,
+          status: backendStep ? mapBackendStatus(backendStep.status) : 'waiting'
+        };
+      })
+    }));
 
-        if (allCompleted) {
-          // Close all when everything is completed
-          setExpandedCategories([]);
-        } else {
-          // Expand first category by default
-          setExpandedCategories([categories[0]]);
-        }
-      }
-    }
-  }, [substeps, userHasManuallyExpanded]); // Removed categories and groupedSubsteps from dependencies
+    setWorkflowPhases(updatedPhases);
+  }, [backendSubsteps]);
 
-  // Toggle category expansion
-  const toggleCategoryExpansion = (category: string) => {
-    setUserHasManuallyExpanded(true);
-    setExpandedCategories((prev) => {
-      if (prev.includes(category)) {
-        return prev.filter((cat) => cat !== category);
-      } else {
-        return [...prev, category];
-      }
-    });
-  };
-
-  // Toggle all categories
-  const toggleAllCategories = () => {
-    setUserHasManuallyExpanded(true);
-    if (expandedCategories.length === categories.length) {
-      setExpandedCategories([]);
-    } else {
-      setExpandedCategories(categories);
-    }
-  };
-
-
-  const categoryVariants: Variants = {
-    hidden: { opacity: 0, y: prefersReducedMotion ? 0 : -5 },
-    visible: { 
-      opacity: 1,
-      y: 0,
-      transition: prefersReducedMotion
-        ? { type: "tween", duration: 0.2, ease: easeInOut }
-        : { type: "spring", stiffness: 500, damping: 30 }
-    }
-  };
-
-  const substepListVariants = {
-    hidden: {
-      opacity: 0,
-      height: 0,
-      overflow: "hidden"
-    },
-    visible: {
-      opacity: 1,
-      height: "auto",
-      overflow: "hidden",
-      transition: {
-        duration: 0.3,
-        staggerChildren: 0.05,
-        when: "beforeChildren",
-        ease: easeInOut // <- Replace number[] with easing
-      }
-    },
-    exit: {
-      opacity: 0,
-      height: 0,
-      overflow: "hidden",
-      transition: {
-        duration: 0.2,
-        ease: easeInOut
-      }
-    }
-  };
-  
-
-  const substepVariants: Variants = {
-    hidden: {
-      opacity: 0,
-      x: prefersReducedMotion ? 0 : -10
-    },
-    visible: {
-      opacity: 1,
-      x: 0,
-      transition: prefersReducedMotion
-        ? { type: "tween", duration: 0.2, ease: easeInOut }
-        : { type: "spring", stiffness: 500, damping: 25 } // no duration
-    },
-    exit: {
-      opacity: 0,
-      x: prefersReducedMotion ? 0 : -10,
-      transition: { duration: 0.15, ease: easeInOut }
-    }
-  };
-  // Status badge animation variants
-
-  const statusBadgeVariants = {
-    initial: { scale: 1 },
-    animate: {
-      scale: [1, 1.05, 1],
-      transition: {
-        duration: 0.6,
-        ease: easeInOut, // use built-in easing instead of number[]
-      }
-    }
-  };
-  
-
-  // Pulse animation for in-progress items
-  const pulseAnimation: TargetAndTransition = {
-    scale: [1, 1.05, 1],
-    transition: {
-      duration: 0.6,
-      repeat: Infinity,
-      ease: easeInOut // use Framer Motion's built-in easing
-    }
-  };
-  // Get status colors based on your theme
-  const getStatusColors = (status: string) => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
-      case "completed":
-        return {
-          bg: "bg-[#00FA64]/10",
-          text: "text-[#00FA64]",
-          border: "border-[#00FA64]/30",
-          badge: "bg-[#00FA64]/20 text-[#00FA64] border-[#00FA64]/30"
-        };
-      case "in-progress":
-        return {
-          bg: "bg-blue-500/10",
-          text: "text-blue-400",
-          border: "border-blue-500/30",
-          badge: "bg-blue-500/20 text-blue-400 border-blue-500/30"
-        };
-      case "error":
-        return {
-          bg: "bg-red-500/10",
-          text: "text-red-400",
-          border: "border-red-500/30",
-          badge: "bg-red-500/20 text-red-400 border-red-500/30"
-        };
+      case 'done':
+        return <CheckCircle2 className="w-4 h-4 text-[#006239]" fill="currentColor" />;
+      case 'processing':
+        return <Loader2 className="w-4 h-4 text-[#006239] animate-spin" />;
+      case 'failed':
+        return <XCircle className="w-4 h-4 text-red-500" fill="currentColor" />;
       default:
-        return {
-          bg: "bg-[#27272a]",
-          text: "text-[#A1A1AA]",
-          border: "border-[#363636]",
-          badge: "bg-[#363636] text-[#A1A1AA] border-[#565656]"
-        };
+        return <Circle className="w-4 h-4 text-gray-400 dark:text-[#6A6A6A]" />;
     }
   };
 
-  // Get category status (overall status for all substeps in category)
-  const getCategoryStatus = (substeps: WorkflowSubstep[]): string => {
-    if (substeps.length === 0) return 'pending';
-    
-    const hasInProgress = substeps.some(st => st.status === 'in-progress');
-    const hasError = substeps.some(st => st.status === 'error');
-    const allCompleted = substeps.every(st => st.status === 'completed');
-    
-    if (hasError) return 'error';
-    if (hasInProgress) return 'in-progress';
-    if (allCompleted) return 'completed';
-    return 'pending';
-  };
-
-  // Get status icon
-  const getStatusIcon = (status: string, size: string = "5") => {
-    const className = `w-${size} h-${size}`;
-    
+  const getStepTextColor = (status: string) => {
     switch (status) {
-      case "completed":
-        return <CheckCircle2 className={`${className} text-[#00FA64]`} />;
-      case "in-progress":
-        return <CircleDotDashed className={`${className} text-blue-400`} />;
-      case "error":
-        return <CircleX className={`${className} text-red-400`} />;
+      case 'done':
+        return 'text-gray-700 dark:text-[#EDEDED]';
+      case 'processing':
+        return 'text-gray-900 dark:text-[#EDEDED] font-medium';
+      case 'failed':
+        return 'text-red-600 dark:text-red-400';
       default:
-        return <Circle className={`${className} text-[#A1A1AA]`} />;
+        return 'text-gray-500 dark:text-[#9CA3AF]';
     }
   };
 
-  // Don't show if no active session with search status
-  if (!workflowData) {
+  const getPhaseStatus = (steps: any[]) => {
+    if (steps.every(s => s.status === 'done')) return 'done';
+    if (steps.some(s => s.status === 'processing')) return 'processing';
+    if (steps.some(s => s.status === 'failed')) return 'failed';
+    return 'waiting';
+  };
+
+  const getProgressPercentage = () => {
+    const totalSteps = workflowPhases.reduce((acc, phase) => acc + phase.steps.length, 0);
+    const completedSteps = workflowPhases.reduce((acc, phase) => 
+      acc + phase.steps.filter(s => s.status === 'done').length, 0
+    );
+    return totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
+  };
+
+  if (!workflowData || backendSubsteps.length === 0) {
     return null;
   }
 
-  const progress = workflowData.progress || 0;
-  const message = workflowData.message || 'Processing your search request...';
-  const allCompleted = categories.every(category => 
-    getCategoryStatus(groupedSubsteps[category]) === 'completed'
-  );
-
   return (
-    <div className="bg-black/40 backdrop-blur-lg rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] overflow-hidden">
-      <motion.div 
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ 
-          opacity: 1, 
-          y: 0,
-          transition: {
-            duration: 0.3,
-            ease: [0.2, 0.65, 0.3, 0.9]
-          }
-        }}
-      >
-        <LayoutGroup>
-          <div className="p-6 overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-[#00FA64] to-[#00FF80] rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(0,250,100,0.3)]">
-                  <motion.div
-                    animate={{ rotate: [0, 5, 0] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  >
-                    <CheckCircle2 className="w-6 h-6 text-black" />
-                  </motion.div>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-white">
-                    Search Progress
-                  </h3>
-                  <p className="text-sm text-[#A1A1AA] font-light">{message}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-[#00FA64]' : 'bg-red-500'}`} />
-                    <span className="text-xs text-[#A1A1AA]">
-                      {isConnected ? 'Connected' : 'Disconnected'}
-                    </span>
+    <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-6 max-w-2xl border border-gray-200 dark:border-[#2A2A2A] shadow-sm">
+      {/* Header - UPDATED STYLING */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#006239] rounded-xl flex items-center justify-center">
+              <Zap className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-[#EDEDED]">Workflow Pipeline</h2>
+              <p className="text-sm text-gray-600 dark:text-[#9CA3AF]">Intelligence generation in progress</p>
+            </div>
+          </div>
+          <span className="text-sm font-semibold text-[#006239] bg-[#006239]/10 px-3 py-1 rounded-xl border border-[#006239]/20">
+            {getProgressPercentage()}% Complete
+          </span>
+        </div>
+      </div>
+
+      {/* Timeline - UPDATED STYLING */}
+      <div className="relative">
+        {workflowPhases.map((phase, phaseIndex) => {
+          const PhaseIcon = phase.icon;
+          const phaseStatus = getPhaseStatus(phase.steps);
+          const isLastPhase = phaseIndex === workflowPhases.length - 1;
+
+          return (
+            <motion.div 
+              key={phase.id} 
+              className="relative"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: phaseIndex * 0.1 }}
+            >
+              {/* Timeline Line */}
+              {!isLastPhase && (
+                <div className="absolute left-5 top-12 bottom-0 w-0.5 bg-gradient-to-b from-gray-200 dark:from-[#2A2A2A] via-gray-100 dark:via-[#1A1A1A] to-transparent" />
+              )}
+
+              {/* Phase Container */}
+              <div className="relative pb-6">
+                {/* Phase Header with Timeline Node */}
+                <div className="flex items-start gap-4 mb-3">
+                  {/* Timeline Node */}
+                  <div className={`relative z-10 flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300
+                    ${phaseStatus === 'done' ? 'bg-[#006239] ring-4 ring-[#006239]/20' : 
+                      phaseStatus === 'processing' ? 'bg-[#006239] ring-4 ring-[#006239]/20 animate-pulse' : 
+                      phaseStatus === 'failed' ? 'bg-red-500 ring-4 ring-red-500/20' :
+                      'bg-gray-100 dark:bg-[#2A2A2A] border border-gray-300 dark:border-[#3A3A3A]'}`}>
+                    <PhaseIcon className={`w-4 h-4 ${
+                      phaseStatus === 'waiting' 
+                        ? 'text-gray-500 dark:text-[#9CA3AF]' 
+                        : 'text-white'
+                    }`} />
+                  </div>
+
+                  {/* Phase Title */}
+                  <div className="flex-1 pt-1">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-[#EDEDED] mb-1">{phase.title}</h3>
+                    <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-[#9CA3AF]">
+                      <span>{phase.steps.filter(s => s.status === 'done').length}/{phase.steps.length} completed</span>
+                      {phaseStatus === 'processing' && (
+                        <>
+                          <ChevronRight className="w-3 h-3" />
+                          <span className="text-[#006239] font-medium">In Progress</span>
+                        </>
+                      )}
+                      {phaseStatus === 'failed' && (
+                        <>
+                          <ChevronRight className="w-3 h-3" />
+                          <span className="text-red-500 font-medium">Issues Detected</span>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Expand/Collapse All Button */}
-              {categories.length > 0 && (
-                <motion.button
-                  onClick={toggleAllCategories}
-                  className="flex items-center gap-1 px-3 py-1 text-xs text-[#A1A1AA] hover:text-white transition-colors border border-[#363636] rounded-lg hover:border-[#00FA64]/30"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  {expandedCategories.length === categories.length ? (
-                    <>
-                      <ChevronDown className="w-3 h-3" />
-                      Collapse All
-                    </>
-                  ) : (
-                    <>
-                      <ChevronRight className="w-3 h-3" />
-                      Expand All
-                    </>
-                  )}
-                </motion.button>
-              )}
-            </div>
-
-            {/* Progress Bar */}
-            <div className="mb-6">
-              <div className="flex justify-between text-sm text-[#A1A1AA] mb-2">
-                <span>Progress</span>
-                <span>{progress}%</span>
-              </div>
-              <div className="w-full bg-[#27272a] rounded-full h-2">
-                <motion.div
-                  className="bg-gradient-to-r from-[#00FA64] to-[#00FF80] h-2 rounded-full"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progress}%` }}
-                  transition={{ duration: 0.5, ease: "easeOut" }}
-                />
-              </div>
-            </div>
-
-            {/* Status Indicator */}
-            {allCompleted && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="flex items-center gap-2 mb-4 p-3 bg-[#00FA64]/10 border border-[#00FA64]/30 rounded-lg"
-              >
-                <CheckCircle2 className="w-4 h-4 text-[#00FA64]" />
-                <span className="text-sm text-[#00FA64] font-medium">
-                  All tasks completed!
-                </span>
-              </motion.div>
-            )}
-
-            {/* Categories and Substeps */}
-            <ul className="space-y-3 overflow-hidden">
-              {categories.map((category) => {
-                const categorySubsteps = groupedSubsteps[category];
-                const isExpanded = expandedCategories.includes(category);
-                const categoryStatus = getCategoryStatus(categorySubsteps);
-                const isInProgress = categoryStatus === 'in-progress';
-                const colors = getStatusColors(categoryStatus);
-
-                return (
-                  <motion.li
-                    key={category}
-                    className={`rounded-lg border transition-all duration-300 ${colors.border} ${colors.bg} ${
-                      isInProgress ? "shadow-[0_0_20px_rgba(59,130,246,0.1)]" : ""
-                    }`}
-                    initial="hidden"
-                    animate="visible"
-                    variants={categoryVariants}
-                    whileHover={{ 
-                      borderColor: isInProgress ? "rgb(59,130,246,0.5)" : colors.border,
-                      transition: { duration: 0.2 }
-                    }}
-                  >
-                    {/* Category header */}
+                {/* Steps - UPDATED STYLING */}
+                <div className="ml-14 space-y-2">
+                  {phase.steps.map((step, stepIndex) => (
                     <motion.div 
-                      className="group flex items-center px-4 py-3 rounded-lg cursor-pointer"
-                      onClick={() => toggleCategoryExpansion(category)}
-                      animate={isInProgress ? pulseAnimation : {}}
+                      key={step.id}
+                      className={`flex items-center gap-3 group py-2 px-3 -mx-3 rounded-xl transition-all
+                        ${step.status === 'processing' ? 'bg-[#006239]/10 border border-[#006239]/20' : 
+                         step.status === 'failed' ? 'bg-red-500/10 border border-red-500/20' : 
+                         'hover:bg-gray-50 dark:hover:bg-[#2A2A2A]'}`}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: (phaseIndex * 0.1) + (stepIndex * 0.05) }}
                     >
-                      <motion.div
-                        className="mr-3 flex-shrink-0"
-                        whileHover={{ scale: 1.1 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                      >
-                        <AnimatePresence mode="wait">
-                          <motion.div
-                            key={categoryStatus}
-                            initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
-                            animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                            exit={{ opacity: 0, scale: 0.8, rotate: 10 }}
-                            transition={{
-                              duration: 0.3,
-                              ease: [0.2, 0.65, 0.3, 0.9]
-                            }}
-                          >
-                            {getStatusIcon(categoryStatus)}
-                          </motion.div>
-                        </AnimatePresence>
-                      </motion.div>
-
-                      <motion.div
-                        className="flex min-w-0 flex-grow items-center justify-between"
-                      >
-                        <div className="mr-4 flex-1">
-                          <span
-                            className={`font-medium tracking-wide ${categoryStatus === "completed" ? "text-[#00FA64]" : colors.text}`}
-                          >
-                            {getCategoryDisplayName(category)}
-                          </span>
-                          <p className="text-sm text-[#A1A1AA] font-light mt-1">
-                            {categorySubsteps.length} task{categorySubsteps.length !== 1 ? 's' : ''}
-                          </p>
+                      <div className="flex-shrink-0">
+                        {getStatusIcon(step.status)}
+                      </div>
+                      <p className={`text-sm flex-1 transition-colors ${getStepTextColor(step.status)}`}>
+                        {step.name}
+                      </p>
+                      {step.status === 'processing' && (
+                        <div className="flex items-center gap-2">
+                          <div className="flex gap-1">
+                            <span className="w-1.5 h-1.5 bg-[#006239] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                            <span className="w-1.5 h-1.5 bg-[#006239] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                            <span className="w-1.5 h-1.5 bg-[#006239] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                          </div>
+                          <span className="text-xs text-[#006239] font-medium">Processing</span>
                         </div>
-
-                        <div className="flex flex-shrink-0 items-center space-x-2">
-                          <motion.span
-                            className={`rounded-full px-3 py-1 text-xs font-bold tracking-wide border ${colors.badge}`}
-                            variants={statusBadgeVariants}
-                            initial="initial"
-                            animate="animate"
-                            key={categoryStatus}
-                          >
-                            {categoryStatus.replace('-', ' ').toUpperCase()}
-                          </motion.span>
-                          <motion.div
-                            animate={{ rotate: isExpanded ? 0 : -90 }}
-                            transition={{ duration: 0.2 }}
-                          >
-                            <ChevronDown className="w-4 h-4 text-[#A1A1AA]" />
-                          </motion.div>
-                        </div>
-                      </motion.div>
-                    </motion.div>
-
-                    {/* Substeps */}
-                    <AnimatePresence mode="wait">
-                      {isExpanded && (
-                        <motion.div 
-                          className="relative overflow-hidden"
-                          variants={substepListVariants}
-                          initial="hidden"
-                          animate="visible"
-                          exit="hidden"
-                          layout
-                        >
-                          <div className="absolute top-0 bottom-0 left-[38px] border-l-2 border-dashed border-[#00FA64]/30" />
-                          <ul className="mt-2 mr-4 mb-3 ml-4 space-y-2">
-                            {categorySubsteps.map((substep) => {
-                              const subColors = getStatusColors(substep.status);
-                              const isSubInProgress = substep.status === "in-progress";
-
-                              return (
-                                <motion.li
-                                  key={substep.id}
-                                  className="group flex flex-col pl-8"
-                                  variants={substepVariants}
-                                  initial="hidden"
-                                  animate="visible"
-                                  exit="exit"
-                                  layout
-                                >
-                                  <motion.div 
-                                    className="flex flex-1 items-center rounded-lg p-3 transition-all duration-300 border border-transparent hover:border-[#00FA64]/20"
-                                    whileHover={{ 
-                                      backgroundColor: "rgba(0, 250, 100, 0.05)",
-                                    }}
-                                    animate={isSubInProgress ? pulseAnimation : {}}
-                                    layout
-                                  >
-                                    <motion.div
-                                      className="mr-3 flex-shrink-0"
-                                      whileHover={{ scale: 1.1 }}
-                                      transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                                    >
-                                      <AnimatePresence mode="wait">
-                                        <motion.div
-                                          key={substep.status}
-                                          initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
-                                          animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                                          exit={{ opacity: 0, scale: 0.8, rotate: 10 }}
-                                          transition={{
-                                            duration: 0.3,
-                                            ease: [0.2, 0.65, 0.3, 0.9]
-                                          }}
-                                        >
-                                          {getStatusIcon(substep.status, "4")}
-                                        </motion.div>
-                                      </AnimatePresence>
-                                    </motion.div>
-
-                                    <div className="flex-1 min-w-0">
-                                      <span
-                                        className={`text-sm font-medium ${substep.status === "completed" ? "text-[#00FA64]" : subColors.text}`}
-                                      >
-                                        {substep.name}
-                                      </span>
-                                      <p className="text-xs text-[#A1A1AA] font-light mt-1">
-                                        {substep.description}
-                                      </p>
-                                      <p className="text-xs text-gray-400 mt-1 italic">
-                                        {substep.message}
-                                      </p>
-                                    </div>
-
-                                    <div className="flex items-center gap-2 ml-2">
-                                      <motion.span
-                                        className={`rounded-full px-2 py-1 text-xs font-bold tracking-wide border ${subColors.badge}`}
-                                        variants={statusBadgeVariants}
-                                        initial="initial"
-                                        animate="animate"
-                                        key={substep.status}
-                                      >
-                                        {substep.status.replace('-', ' ').toUpperCase()}
-                                      </motion.span>
-                                      
-                                      {/* Priority Badge */}
-                                      <span className={`rounded-full px-2 py-1 text-xs font-medium ${
-                                        substep.priority === 'high' 
-                                          ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                                          : substep.priority === 'medium'
-                                          ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
-                                          : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                                      }`}>
-                                        {substep.priority}
-                                      </span>
-                                    </div>
-                                  </motion.div>
-
-                                  {/* Tools */}
-                                  {substep.tools && substep.tools.length > 0 && (
-                                    <motion.div 
-                                      className="ml-11 mt-2 flex flex-wrap gap-1"
-                                      initial={{ opacity: 0 }}
-                                      animate={{ opacity: 1 }}
-                                      transition={{ delay: 0.1 }}
-                                    >
-                                      {substep.tools.map((tool, idx) => (
-                                        <motion.span
-                                          key={idx}
-                                          className="bg-[#00FA64]/10 text-[#00FA64] px-2 py-1 rounded text-[10px] font-medium border border-[#00FA64]/20"
-                                          initial={{ opacity: 0, y: -5 }}
-                                          animate={{ 
-                                            opacity: 1, 
-                                            y: 0,
-                                            transition: {
-                                              duration: 0.2,
-                                              delay: idx * 0.05
-                                            }
-                                          }}
-                                          whileHover={{ 
-                                            y: -1, 
-                                            backgroundColor: "rgba(0, 250, 100, 0.2)",
-                                            transition: { duration: 0.2 } 
-                                          }}
-                                        >
-                                          {tool}
-                                        </motion.span>
-                                      ))}
-                                    </motion.div>
-                                  )}
-                                </motion.li>
-                              );
-                            })}
-                          </ul>
-                        </motion.div>
                       )}
-                    </AnimatePresence>
-                  </motion.li>
-                );
-              })}
-            </ul>
+                      {step.status === 'failed' && (
+                        <div className="flex items-center gap-2">
+                          <XCircle className="w-4 h-4 text-red-500" />
+                          <span className="text-xs text-red-500 font-medium">Failed</span>
+                        </div>
+                      )}
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* Footer Stats - UPDATED STYLING */}
+      <div className="mt-6 pt-4 border-t border-gray-200 dark:border-[#2A2A2A]">
+        <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-[#006239]" />
+              <span className="text-gray-600 dark:text-[#9CA3AF]">
+                {workflowPhases.reduce((acc, p) => acc + p.steps.filter(s => s.status === 'done').length, 0)} Done
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-[#006239] animate-pulse" />
+              <span className="text-gray-600 dark:text-[#9CA3AF]">
+                {workflowPhases.reduce((acc, p) => acc + p.steps.filter(s => s.status === 'processing').length, 0)} Active
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-gray-400 dark:bg-[#6A6A6A]" />
+              <span className="text-gray-600 dark:text-[#9CA3AF]">
+                {workflowPhases.reduce((acc, p) => acc + p.steps.filter(s => s.status === 'waiting').length, 0)} Pending
+              </span>
+            </div>
+            {workflowPhases.some(p => p.steps.some(s => s.status === 'failed')) && (
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-red-500" />
+                <span className="text-gray-600 dark:text-[#9CA3AF]">
+                  {workflowPhases.reduce((acc, p) => acc + p.steps.filter(s => s.status === 'failed').length, 0)} Failed
+                </span>
+              </div>
+            )}
           </div>
-        </LayoutGroup>
-      </motion.div>
+        </div>
+      </div>
     </div>
   );
 }
