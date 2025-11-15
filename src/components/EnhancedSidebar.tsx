@@ -85,9 +85,17 @@ export function EnhancedSidebar() {
             <div className="flex items-center gap-3">
               <div 
                 className="w-10 h-10 rounded-lg flex items-center justify-center shadow-lg" 
-                style={{ backgroundColor: ACCENT_GREEN }}
+              
               >
-                <Crown className="w-5 h-5 text-white" />
+                           {theme=="dark"?<img 
+  src="/plauging-ai-dark.png" 
+  alt="Crown" 
+  className=""
+/>:<img 
+  src="/plauging-ai-light.png" 
+  alt="Crown" 
+  className=""
+/>}   
               </div>
               <div>
                 <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-[#EDEDED]">

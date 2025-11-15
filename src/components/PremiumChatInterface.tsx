@@ -28,6 +28,7 @@ import { useTypingText } from '@/context/hooks/useTypingText'
 import { searchModeTexts } from '@/types'
 import { formatAIText } from '@/context/hooks/formatAIText'
 import { webSocketService } from '@/lib/services/WebSocketService'
+import { useTheme } from '@/context/ThemeContext'
 
 interface FormattingOptions {
   preserveLineBreaks?: boolean;
@@ -56,7 +57,7 @@ export function PremiumChatInterface() {
   const [showUploadAnimation, setShowUploadAnimation] = useState(false)
   const [activeCommandCategory, setActiveCommandCategory] = useState<string | null>(null)
   const [isTyping, setIsTyping] = useState(false)
-
+ const { theme } = useTheme()
   // Context hooks - KEEP ALL ORIGINAL FUNCTIONALITY
   const { 
     currentSession, 
@@ -426,9 +427,19 @@ export function PremiumChatInterface() {
             <div className="flex items-center gap-3">
               <div 
                 className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ backgroundColor: ACCENT_GREEN }}
+                
               >
-                <Crown className="w-4 h-4 text-white" />
+             
+             {theme=="dark"?<img 
+  src="/plauging-ai-dark.png" 
+  alt="Crown" 
+  className=""
+/>:<img 
+  src="/plauging-ai-light.png" 
+  alt="Crown" 
+  className=""
+/>}   
+      
               </div>
               <div>
                 <h1 className="text-sm font-medium text-gray-900 dark:text-[#EDEDED]">

@@ -4,6 +4,7 @@
 import { motion } from 'framer-motion'
 import { Sparkles, Search, Target, Zap, ArrowRight, Users, BarChart3, Building2, Crown, Rocket, Globe } from 'lucide-react'
 import { useSession } from '@/context/SessionContext'
+import { useTheme } from '@/context/ThemeContext'
 
 const features = [
   {
@@ -50,7 +51,7 @@ const exampleQueries = [
 
 export function WelcomeScreen() {
   const { createNewSession } = useSession()
-
+ const { theme } = useTheme()
   const handleExampleQuery = async (query: string) => {
     const sessionName = `Search: ${query.substring(0, 30)}${query.length > 30 ? '...' : ''}`
     await createNewSession(sessionName)
@@ -71,8 +72,17 @@ export function WelcomeScreen() {
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-col items-center justify-center gap-4 mb-16"
         >
-          <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-[#006239]">
-            <Crown className="w-7 h-7 text-white" />
+          <div className="w-14 h-14 rounded-xl flex items-center justify-center ">
+                           {theme=="dark"?<img 
+  src="/plauging-ai-dark.png" 
+  alt="Crown" 
+  className=""
+/>:<img 
+  src="/plauging-ai-light.png" 
+  alt="Crown" 
+  className=""
+/>}   
+      
           </div>
           <div className="text-center">
             <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-[#EDEDED]">
