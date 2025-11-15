@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { useSession } from '@/context/SessionContext'
 import { cn } from '@/lib/utils'
+import { useTheme } from '@/context/ThemeContext'
 
 // Brand Colors
 const ACCENT_GREEN = '#006239'
@@ -31,6 +32,7 @@ export function ICPConfigChat() {
     currentICPSuggestion,
     applyICPSuggestion,
   } = useSession()
+  const { theme } = useTheme()
 
   const [inputMessage, setInputMessage] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -70,8 +72,17 @@ export function ICPConfigChat() {
       {/* Header - UPDATED STYLING */}
       <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-[#2A2A2A] bg-white dark:bg-[#0F0F0F]">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#006239] rounded-xl flex items-center justify-center">
-            <Target className="w-5 h-5 text-white" />
+          <div className="w-10 h-10  rounded-xl flex items-center justify-center">
+          {theme=="dark"?<img 
+  src="/plauging-ai-dark.png" 
+  alt="Crown" 
+  className=""
+/>:<img 
+  src="/plauging-ai-light.png" 
+  alt="Crown" 
+  className=""
+/>}   
+      
           </div>
           <div>
             <h3 className="font-semibold text-gray-900 dark:text-[#EDEDED] text-lg">
