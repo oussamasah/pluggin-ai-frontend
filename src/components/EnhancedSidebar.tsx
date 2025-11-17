@@ -160,7 +160,7 @@ export function EnhancedSidebar() {
             }}
           >
             <Plus className="w-4 h-4" />
-            <span className="tracking-wide">New Analysis</span>
+            <span className="tracking-wide">New Session</span>
           </motion.button>
 
           {/* New Session Input */}
@@ -171,7 +171,7 @@ export function EnhancedSidebar() {
             )}>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold tracking-wide text-gray-900 dark:text-[#EDEDED]">
-                  Create New Analysis
+                  Create Session
                 </h3>
                 <button
                   onClick={() => setIsCreating(false)}

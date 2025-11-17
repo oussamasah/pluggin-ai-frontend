@@ -156,7 +156,7 @@ export function PremiumICPConfiguration() {
                   </div>
                   <div className="flex items-center gap-1">
                     <DollarSign className="w-3 h-3 text-[#006239]" />
-                    <span>{model.config.acvRange}</span>
+                    <span>{model.config.annualRevenue}</span>
                   </div>
                 </div>
 
@@ -331,7 +331,7 @@ function ICPModelDetail({
               <ConfigField label="Industries" value={model.config.industries} type="chips" />
               <ConfigField label="Geographies" value={model.config.geographies} type="chips" />
               <ConfigField label="Employee Range" value={model.config.employeeRange} />
-              <ConfigField label="ACV Range" value={model.config.acvRange} />
+              <ConfigField label="Annual Revenue" value={model.config.annualRevenue} />
             </div>
           </ConfigSection>
 

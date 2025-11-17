@@ -200,7 +200,7 @@ export interface Substep {
     industries: string[]
     geographies: string[]
     employeeRange: string
-    acvRange: string
+    annualRevenue: string
     mustHaveTech: string[]
     mustHaveCompliance: string[]
     mustHaveMotion: string

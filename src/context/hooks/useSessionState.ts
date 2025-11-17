@@ -264,7 +264,7 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/icp-models/${modelId}/primary`, {
         headers: {
           'x-user-id': userID || '', // fallback to empty string if undefined
-          'Content-Type': 'application/json'
+         
         },
         
         method: 'PATCH'

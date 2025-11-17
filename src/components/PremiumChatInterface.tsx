@@ -576,7 +576,7 @@ export function PremiumChatInterface() {
               )}
 
               {/* Current Processing Status - KEEP ORIGINAL */}
-              {currentSession?.searchStatus?.stage=="searching" && (
+              {(currentSession?.searchStatus?.stage=="searching" || currentSession?.searchStatus?.stage=="refine_search") && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -765,7 +765,7 @@ export function PremiumChatInterface() {
                 className={cn(
                   "p-2 rounded-lg transition-all duration-200",
                   "flex items-center justify-center",
-                  message.trim() && isConnected && !isLoading
+                  message.trim() && isConnected && !isLoading && primaryModel
                     ? cn(
                         "text-white",
                         "hover:shadow-lg transform hover:scale-105"

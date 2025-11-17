@@ -38,7 +38,7 @@ const defaultConfig: ICPConfig = {
   industries: [],
   geographies: [],
   employeeRange: '51-200 employees',
-  acvRange: '$1k–$10k',
+  annualRevenue: '$1k–$10k',
   mustHaveTech: [],
   mustHaveCompliance: [],
   mustHaveMotion: 'None',
@@ -66,7 +66,7 @@ const employeeRanges = [
   '5000+ employees'
 ]
 
-const acvRanges = [
+const annualRevenues = [
 "less than 1M$ ",
 "1M$ to 10M$",
 "10M$ to 50M$" ,
@@ -318,9 +318,9 @@ export function ICPConfigForm({ model, onSave, onClose }: ICPConfigFormProps) {
                   />
                   <SelectInput
                     label="Annuel Revenu ($) *"
-                    value={config.acvRange}
-                    options={acvRanges}
-                    onChange={(value) => setConfig(prev => ({ ...prev, acvRange: value }))}
+                    value={config.annualRevenue}
+                    options={annualRevenues}
+                    onChange={(value) => setConfig(prev => ({ ...prev, annualRevenue: value }))}
                   />
                 </div>
               </FormSection>
