@@ -20,7 +20,7 @@ class WebSocketService {
   private heartbeatInterval: NodeJS.Timeout | null = null;
   private lastHeartbeat = 0;
   private pendingMessages: WebSocketMessage[] = [];
-  private userId: string | null = null;
+  private userId: string | undefined ;
 
   // Backend health monitoring
   private isBackendAvailable = true;
@@ -76,7 +76,7 @@ class WebSocketService {
     }
 
     this.isConnecting = true;
-    this.userId = userId || null;
+    this.userId = userId || undefined;
     
     console.log('🔗 Attempting WebSocket connection...', {
       userId,
