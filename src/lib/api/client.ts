@@ -20,9 +20,9 @@ class ApiClient {
     
     console.log(`🔗 API Request: ${endpoint} (attempt ${retryCount + 1}/${this.maxRetries + 1})`);
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
       const config: RequestInit = {
         headers: {
