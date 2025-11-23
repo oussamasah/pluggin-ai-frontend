@@ -719,7 +719,8 @@ export function CompaniesList() {
               <tbody className="divide-y divide-gray-200 dark:divide-[#2A2A2A]">
                 {companies.map((company) => (
                   <tr
-                    key={company.id}
+                    key={company.company_id}
+                    
                     className={cn(
                       "group cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-[#1A1A1A]",
                       selectedCompany?.company_id === company.company_id && "bg-[#006239]/5 dark:bg-[#006239]/10"
