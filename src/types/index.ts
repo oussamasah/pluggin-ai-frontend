@@ -1,6 +1,11 @@
 // types/index.ts
+
+import { Key } from "readline";
+
 // frontend/types/company.ts
 export interface Company  {
+  overview: any;
+  id: Key | null | undefined;
   employees: any[];
   business_model: any;
   location: any;
@@ -37,6 +42,7 @@ export interface Company  {
   updated_at: string;            // timestamp
   scoring_metrics: any;          // jsonb
   total_funding?: number;        // numeric, optional
+         // numeric, optional
 };
 
 export interface Firmographic {
