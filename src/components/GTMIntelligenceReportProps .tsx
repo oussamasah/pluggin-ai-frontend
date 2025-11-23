@@ -812,7 +812,7 @@ function MetricCard({ icon, label, value, trend, color }: any) {
           {icon}
         </div>
       </div>
-      <div className={cn("text-2xl font-bold mb-1", colorClasses[color])}>
+      <div className={cn("text-2xl font-bold mb-1", colorClasses[color as keyof typeof colorClasses])}>
         {value}
       </div>
       <div className="text-sm font-medium text-gray-900 dark:text-[#EDEDED] mb-1">
