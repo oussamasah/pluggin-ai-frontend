@@ -186,38 +186,43 @@ export interface Substep {
   completedAt?: Date;
   error?: string;
 }
-  export interface ICPModel {
-    id: string
-    name: string
-    isPrimary: boolean
-    createdAt: Date
-    updatedAt: Date
-    config: ICPConfig
-  }
+export interface ICPModel {
+  id: string
+  name: string
+  isPrimary: boolean
+  config: ICPConfig
+  createdAt: Date
+  updatedAt: Date
+}
   
-  export interface ICPConfig {
-    modelName: string
-    industries: string[]
-    geographies: string[]
-    employeeRange: string
-    annualRevenue: string
-    mustHaveTech: string[]
-    mustHaveCompliance: string[]
-    mustHaveMotion: string
-    excludedIndustries: string[]
-    excludedGeographies: string[]
-    excludedTechnologies: string[]
-    excludedSizeRange: string
-    buyingTriggers: string[]
-    targetPersonas: string[]
-    scoringWeights: {
-      firmographic: number
-      technographic: number
-      intent: number
-      behavioral: number
-    }
+export interface ICPConfig {
+  modelName: string
+  industries: string[]
+  geographies: string[]
+  employeeRange: string
+  annualRevenue: string
+  mustHaveTech: string[]
+  mustHaveCompliance: string[]
+  mustHaveMotion: string
+  excludedIndustries: string[]
+  excludedGeographies: string[]
+  excludedTechnologies: string[]
+  excludedSizeRange: string
+  buyingTriggers: string[]
+  targetPersonas: string[]
+  scoringWeights: {
+    firmographic: number
+    technographic: number
+    intent: number
+    behavioral: number
   }
-  
+  productSettings: {
+    productNames: string[]
+    valueProposition: string
+    uniqueSellingPoints: string[]
+    painPointsSolved: string[]
+  }
+}
   export interface ApiResponse<T = any> {
     success: boolean
     data?: T

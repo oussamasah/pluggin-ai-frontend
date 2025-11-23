@@ -479,7 +479,7 @@ export function PremiumChatInterface() {
               {/* Chat Messages - UPDATED STYLE */}
               {chatMessages.map((msg, index) => (
                 <motion.div
-                  key={msg.id}
+                  key={currentSession?.id+"-"+msg.id+"-"+msg.timestamp}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
@@ -576,27 +576,27 @@ export function PremiumChatInterface() {
               )}
 
               {/* Current Processing Status - KEEP ORIGINAL */}
-              {(currentSession?.searchStatus?.stage=="searching" || currentSession?.searchStatus?.stage=="refine_search") && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex justify-start gap-4"
-                >
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#F3F4F6] dark:bg-[#1E1E1E] flex items-center justify-center">
-                    <Bot className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                  </div>
-                  <div className="px-4 py-2">
-                    <div className="flex items-center gap-3 mb-4">
-                      {!isConnected && (
-                        <span className="text-xs bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 px-3 py-1 font-medium tracking-wide">
-                          Connecting...
-                        </span>
-                      )}
-                    </div>
-                    <ProcessingWorkflow /> 
-                  </div>
-                </motion.div>
-              )}
+              {(currentSession?.searchStatus?.stage === "searching" || currentSession?.searchStatus?.stage === "refine_search") && (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="flex justify-start gap-4"
+  >
+    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#F3F4F6] dark:bg-[#1E1E1E] flex items-center justify-center">
+      <Bot className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+    </div>
+    <div className="px-4 py-2">
+      <div className="flex items-center gap-3 mb-4">
+        {!isConnected && (
+          <span className="text-xs bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 px-3 py-1 font-medium tracking-wide">
+            Connecting...
+          </span>
+        )}
+      </div>
+      <ProcessingWorkflow key={currentSession?.id} /> {/* Add key to force re-render */}
+    </div>
+  </motion.div>
+)}
 
               {/* Centered Empty State - UPDATED STYLE */}
               {!hasMessages && (

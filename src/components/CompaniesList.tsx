@@ -1,7 +1,7 @@
 // components/CompaniesList.tsx
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useSession } from '@/context/SessionContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
@@ -144,9 +144,25 @@ export function CompaniesList() {
     hasPrev: false
   })
 
-  // Fetch companies
+  // Refs to prevent multiple requests
+  const isFetchingRef = useRef(false)
+  const abortControllerRef = useRef<AbortController | null>(null)
+
+  // Fetch companies - FIXED: Remove dependencies that cause recreations
   const fetchCompanies = useCallback(async (page = 1, resetFilters = false) => {
+    // Prevent multiple simultaneous requests
+    if (isFetchingRef.current) {
+      console.log('⏸️ Already fetching, skipping request')
+      return
+    }
+
+    // Cancel previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+
     try {
+      isFetchingRef.current = true
       setLoading(true)
       setError(null)
       
@@ -162,6 +178,9 @@ export function CompaniesList() {
         })
         setSelectedICP('all')
       }
+
+      // Create new abort controller
+      abortControllerRef.current = new AbortController()
 
       const params = new URLSearchParams({
         page: page.toString(),
@@ -179,12 +198,15 @@ export function CompaniesList() {
       if (filters.fundingStage !== 'all') params.append('fundingStage', filters.fundingStage)
       if (filters.targetMarket !== 'all') params.append('targetMarket', filters.targetMarket)
 
+      console.log('🔍 Fetching companies with params:', Object.fromEntries(params))
+
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/companies?${params}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
           'x-user-id': `${userID}`
         },
+        signal: abortControllerRef.current.signal
       })
 
       if (!response.ok) throw new Error('Failed to fetch companies')
@@ -204,15 +226,25 @@ export function CompaniesList() {
       } else {
         throw new Error(data?.error || 'Failed to fetch companies')
       }
-    } catch (err) {
+    } catch (err: any) {
+      // Don't show error for aborted requests
+      if (err.name === 'AbortError') {
+        console.log('⏸️ Request was aborted')
+        return
+      }
       console.error('Error fetching companies:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch companies')
     } finally {
+      isFetchingRef.current = false
       setLoading(false)
     }
-  }, [searchQuery, selectedICP, filters, sortConfig, pagination.limit])
+  }, [
+    // Only include stable dependencies
+    userID,
+    // Remove filters and searchQuery from dependencies to prevent recreations
+  ])
 
-  // Fetch statistics
+  // Fetch statistics - FIXED: Stable function
   const fetchStats = useCallback(async () => {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/companies/stats`, {
@@ -230,26 +262,48 @@ export function CompaniesList() {
     } catch (err) {
       console.error('Error fetching stats:', err)
     }
-  }, [])
+  }, [userID])
 
-  // Initial data fetch
+  // Initial data fetch - FIXED: Only run once
   useEffect(() => {
+    console.log('🚀 Initial data fetch')
     fetchCompanies(1)
     fetchStats()
-  }, [fetchCompanies, fetchStats])
+    
+    // Cleanup function
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+    }
+  }, []) // Empty dependency array - only run once on mount
 
-  // Debounced search
+  // Debounced search - FIXED: Proper debouncing
   useEffect(() => {
     const timer = setTimeout(() => {
+      console.log('🔍 Debounced search triggered')
       fetchCompanies(1)
     }, 500)
-    return () => clearTimeout(timer)
+
+    return () => {
+      clearTimeout(timer)
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+    }
   }, [searchQuery, fetchCompanies])
 
-  // Handle filter changes
+  // Handle filter changes - FIXED: Single effect for all filters
   useEffect(() => {
+    console.log('🔍 Filter change detected')
     fetchCompanies(1)
   }, [selectedICP, filters, sortConfig, fetchCompanies])
+
+  // Handle pagination limit changes
+  useEffect(() => {
+    console.log('🔍 Pagination limit changed')
+    fetchCompanies(1)
+  }, [pagination.limit, fetchCompanies])
 
   // Handle sort
   const handleSort = (field: keyof Company) => {
@@ -261,6 +315,7 @@ export function CompaniesList() {
 
   // Handle pagination
   const handlePageChange = (newPage: number) => {
+    console.log('📄 Page change:', newPage)
     fetchCompanies(newPage)
   }
 
@@ -296,6 +351,7 @@ export function CompaniesList() {
 
   // Reset all filters
   const resetFilters = () => {
+    console.log('🔄 Resetting filters')
     setSearchQuery('')
     setSelectedICP('all')
     setFilters({
@@ -307,6 +363,8 @@ export function CompaniesList() {
       targetMarket: 'all'
     })
     setSortConfig({ field: 'created_at', direction: 'desc' })
+    // Trigger fetch after reset
+    setTimeout(() => fetchCompanies(1, true), 0)
   }
 
   // Format currency
@@ -402,9 +460,15 @@ export function CompaniesList() {
               </button>
               <button
                 onClick={() => fetchCompanies(1, true)}
-                className="p-2 text-gray-400 dark:text-[#9CA3AF] hover:text-[#006239] hover:bg-gray-100 dark:hover:bg-[#2A2A2A] transition-colors rounded-xl"
+                disabled={loading}
+                className={cn(
+                  "p-2 transition-colors rounded-xl",
+                  loading 
+                    ? "text-gray-400 dark:text-[#6A6A6A] cursor-not-allowed" 
+                    : "text-gray-400 dark:text-[#9CA3AF] hover:text-[#006239] hover:bg-gray-100 dark:hover:bg-[#2A2A2A]"
+                )}
               >
-                <RefreshCw className="w-5 h-5" />
+                <RefreshCw className={cn("w-5 h-5", loading && "animate-spin")} />
               </button>
             </div>
           </div>
@@ -469,11 +533,14 @@ export function CompaniesList() {
             </select>
             <button
               onClick={() => setShowFilters(!showFilters)}
+              disabled={loading}
               className={cn(
                 "flex items-center gap-2 px-4 py-3 border rounded-xl transition-colors",
-                showFilters 
-                  ? "bg-[#006239] text-white border-[#006239]" 
-                  : "bg-gray-50 dark:bg-[#2A2A2A] border-gray-300 dark:border-[#3A3A3A] text-gray-700 dark:text-[#9CA3AF] hover:bg-gray-100 dark:hover:bg-[#3A3A3A]"
+                loading 
+                  ? "bg-gray-100 dark:bg-[#1A1A1A] text-gray-400 dark:text-[#6A6A6A] cursor-not-allowed" 
+                  : showFilters 
+                    ? "bg-[#006239] text-white border-[#006239]" 
+                    : "bg-gray-50 dark:bg-[#2A2A2A] border-gray-300 dark:border-[#3A3A3A] text-gray-700 dark:text-[#9CA3AF] hover:bg-gray-100 dark:hover:bg-[#3A3A3A]"
               )}
             >
               <Filter className="w-4 h-4" />
@@ -539,7 +606,13 @@ export function CompaniesList() {
                   <div className="flex items-end">
                     <button
                       onClick={resetFilters}
-                      className="w-full px-4 py-2 bg-white dark:bg-[#1A1A1A] border border-gray-300 dark:border-[#3A3A3A] text-gray-700 dark:text-[#9CA3AF] hover:bg-gray-50 dark:hover:bg-[#2A2A2A] transition-colors rounded-lg"
+                      disabled={loading}
+                      className={cn(
+                        "w-full px-4 py-2 border transition-colors rounded-lg",
+                        loading
+                          ? "bg-gray-100 dark:bg-[#1A1A1A] text-gray-400 dark:text-[#6A6A6A] cursor-not-allowed"
+                          : "bg-white dark:bg-[#1A1A1A] border-gray-300 dark:border-[#3A3A3A] text-gray-700 dark:text-[#9CA3AF] hover:bg-gray-50 dark:hover:bg-[#2A2A2A]"
+                      )}
                     >
                       Reset Filters
                     </button>
@@ -562,22 +635,28 @@ export function CompaniesList() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setViewMode('table')}
+                disabled={loading}
                 className={cn(
                   "p-2 transition-colors rounded-lg",
-                  viewMode === 'table' 
-                    ? "bg-[#006239] text-white" 
-                    : "text-gray-400 dark:text-[#9CA3AF] hover:text-[#006239] hover:bg-gray-100 dark:hover:bg-[#2A2A2A]"
+                  loading
+                    ? "text-gray-400 dark:text-[#6A6A6A] cursor-not-allowed"
+                    : viewMode === 'table' 
+                      ? "bg-[#006239] text-white" 
+                      : "text-gray-400 dark:text-[#9CA3AF] hover:text-[#006239] hover:bg-gray-100 dark:hover:bg-[#2A2A2A]"
                 )}
               >
                 <List className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setViewMode('grid')}
+                disabled={loading}
                 className={cn(
                   "p-2 transition-colors rounded-lg",
-                  viewMode === 'grid' 
-                    ? "bg-[#006239] text-white" 
-                    : "text-gray-400 dark:text-[#9CA3AF] hover:text-[#006239] hover:bg-gray-100 dark:hover:bg-[#2A2A2A]"
+                  loading
+                    ? "text-gray-400 dark:text-[#6A6A6A] cursor-not-allowed"
+                    : viewMode === 'grid' 
+                      ? "bg-[#006239] text-white" 
+                      : "text-gray-400 dark:text-[#9CA3AF] hover:text-[#006239] hover:bg-gray-100 dark:hover:bg-[#2A2A2A]"
                 )}
               >
                 <Grid className="w-4 h-4" />
@@ -588,7 +667,8 @@ export function CompaniesList() {
             <select
               value={pagination.limit}
               onChange={(e) => setPagination(prev => ({ ...prev, limit: parseInt(e.target.value), page: 1 }))}
-              className="px-3 py-1 bg-white dark:bg-[#2A2A2A] border border-gray-300 dark:border-[#3A3A3A] text-gray-900 dark:text-[#EDEDED] text-sm rounded-lg"
+              disabled={loading}
+              className="px-3 py-1 bg-white dark:bg-[#2A2A2A] border border-gray-300 dark:border-[#3A3A3A] text-gray-900 dark:text-[#EDEDED] text-sm rounded-lg disabled:opacity-50"
             >
               <option value="25">25 per page</option>
               <option value="50">50 per page</option>
@@ -614,11 +694,14 @@ export function CompaniesList() {
                         {column.sortable && (
                           <button
                             onClick={() => column.key !== 'actions' && handleSort(column.key as keyof Company)}
+                            disabled={loading}
                             className={cn(
                               "transition-colors",
-                              sortConfig.field === column.key 
-                                ? "text-[#006239]" 
-                                : "text-gray-400 hover:text-gray-600 dark:hover:text-[#9CA3AF]"
+                              loading
+                                ? "text-gray-400 cursor-not-allowed"
+                                : sortConfig.field === column.key 
+                                  ? "text-[#006239]" 
+                                  : "text-gray-400 hover:text-gray-600 dark:hover:text-[#9CA3AF]"
                             )}
                           >
                             {sortConfig.field === column.key && sortConfig.direction === 'asc' ? (
@@ -636,7 +719,7 @@ export function CompaniesList() {
               <tbody className="divide-y divide-gray-200 dark:divide-[#2A2A2A]">
                 {companies.map((company) => (
                   <tr
-                    key={company.company_id}
+                    key={company.id}
                     className={cn(
                       "group cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-[#1A1A1A]",
                       selectedCompany?.company_id === company.company_id && "bg-[#006239]/5 dark:bg-[#006239]/10"
@@ -779,10 +862,10 @@ export function CompaniesList() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handlePageChange(pagination.page - 1)}
-                  disabled={!pagination.hasPrev}
+                  disabled={!pagination.hasPrev || loading}
                   className={cn(
                     "px-4 py-2 text-sm transition-colors rounded-xl",
-                    pagination.hasPrev
+                    pagination.hasPrev && !loading
                       ? "bg-white dark:bg-[#2A2A2A] border border-gray-300 dark:border-[#3A3A3A] text-gray-700 dark:text-[#9CA3AF] hover:bg-gray-50 dark:hover:bg-[#3A3A3A] hover:text-[#006239]"
                       : "bg-gray-100 dark:bg-[#1A1A1A] text-gray-400 dark:text-[#6A6A6A] cursor-not-allowed"
                   )}
@@ -791,10 +874,10 @@ export function CompaniesList() {
                 </button>
                 <button
                   onClick={() => handlePageChange(pagination.page + 1)}
-                  disabled={!pagination.hasNext}
+                  disabled={!pagination.hasNext || loading}
                   className={cn(
                     "px-4 py-2 text-sm transition-colors rounded-xl",
-                    pagination.hasNext
+                    pagination.hasNext && !loading
                       ? "bg-white dark:bg-[#2A2A2A] border border-gray-300 dark:border-[#3A3A3A] text-gray-700 dark:text-[#9CA3AF] hover:bg-gray-50 dark:hover:bg-[#3A3A3A] hover:text-[#006239]"
                       : "bg-gray-100 dark:bg-[#1A1A1A] text-gray-400 dark:text-[#6A6A6A] cursor-not-allowed"
                   )}
@@ -814,17 +897,17 @@ export function CompaniesList() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center"
             onClick={() => setSelectedCompany(null)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              transition={{ type: "spring", damping: 25 }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
               className={cn(
-                "w-full max-w-7xl h-[90vh] overflow-hidden border shadow-2xl rounded-3xl",
-                "bg-white dark:bg-[#0F0F0F] border-gray-200 dark:border-[#2A2A2A]"
+                "w-full h-full overflow-hidden",
+                "bg-white dark:bg-[#0F0F0F]"
               )}
               onClick={(e) => e.stopPropagation()}
             >
@@ -841,7 +924,7 @@ export function CompaniesList() {
   )
 }
 
-// Supporting Components
+// Supporting Components (keep the same as before)
 function StatCard({ icon, label, value, trend, color }: { 
   icon: React.ReactNode; 
   label: string; 

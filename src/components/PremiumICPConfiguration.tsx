@@ -26,7 +26,10 @@ import {
   Crown,
   Database,
   Sparkles,
-  PlusCircle
+  PlusCircle,
+  Package,
+  Lightbulb,
+  Zap
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ICPModel, ICPConfig } from '@/types'
@@ -89,14 +92,13 @@ export function PremiumICPConfiguration() {
             </div>
           </div>
           <div className="flex gap-3 items-center justify-end cursor-pointer" onClick={(e)=>handleEditModel(null)}>
-        <PlusCircle className="text-sm text-[#006239]" ></PlusCircle>
-        <span className='text-sm text-[#006239]'>Add new ICP</span>
-        </div>
+            <PlusCircle className="text-sm text-[#006239]" />
+            <span className='text-sm text-[#006239]'>Add new ICP</span>
+          </div>
         </div>
 
         {/* Models List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-
           <AnimatePresence>
             {icpModels.map((model, index) => (
               <motion.div
@@ -155,8 +157,8 @@ export function PremiumICPConfiguration() {
                     <span>{model.config.employeeRange}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <DollarSign className="w-3 h-3 text-[#006239]" />
-                    <span>{model.config.annualRevenue}</span>
+                    <Package className="w-3 h-3 text-[#006239]" />
+                    <span>{model.config.productSettings?.productNames?.length || 0} products</span>
                   </div>
                 </div>
 
@@ -190,7 +192,7 @@ export function PremiumICPConfiguration() {
                 <Target className="w-6 h-6 text-gray-400 dark:text-[#6A6A6A]" />
               </div>
               <h3 className="font-semibold text-gray-900 dark:text-[#EDEDED] mb-1 text-sm">No ICP Models</h3>
-              <p className="text-xs text-gray-600 dark:text-[#9CA3AF]">Use the chat to create your first model</p>
+              <p className="text-xs text-gray-600 dark:text-[#9CA3AF]">Create your first model to get started</p>
             </motion.div>
           )}
         </div>
@@ -321,6 +323,22 @@ function ICPModelDetail({
       {/* Configuration Preview - UPDATED STYLING */}
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-4xl mx-auto space-y-8">
+          {/* Product Settings */}
+          {model.config.productSettings && (
+            <ConfigSection 
+              icon={Package}
+              title="Product Settings"
+              description="Your product's value proposition and unique selling points"
+            >
+              <div className="space-y-6">
+                <ConfigField label="Product Names" value={model.config.productSettings.productNames} type="chips" />
+                <ConfigField label="Value Proposition" value={model.config.productSettings.valueProposition} type="text" />
+                <ConfigField label="Unique Selling Points" value={model.config.productSettings.uniqueSellingPoints} type="chips" />
+                <ConfigField label="Pain Points Solved" value={model.config.productSettings.painPointsSolved} type="chips" />
+              </div>
+            </ConfigSection>
+          )}
+
           {/* Company Profile */}
           <ConfigSection 
             icon={Building2}
@@ -387,17 +405,19 @@ function ICPModelDetail({
             description="Relative importance of different criteria categories"
           >
             <div className="space-y-4">
-              {model.config.scoringWeights && Object.entries(model.config.scoringWeights)?.map(([category, weight]) => (
+              {model.config.scoringWeights && Object.entries(model.config.scoringWeights).map(([category, weight]) => (
                 <div key={category} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#1A1A1A] rounded-2xl border border-gray-200 dark:border-[#2A2A2A]">
                   <span className="font-medium text-gray-700 dark:text-[#EDEDED] capitalize">{category}</span>
                   <div className="flex items-center gap-3">
-                    <div className="bg-white dark:bg-[#2A2A2A] rounded-full h-2">
+                    <div className="w-32 bg-white dark:bg-[#2A2A2A] rounded-full h-2">
                       <div 
                         className="bg-[#006239] h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${(weight / 10) * 100}%` }}
+                        style={{ width: `${weight}%` }}
                       />
                     </div>
-                    <span className="text-sm font-medium text-gray-600 dark:text-[#9CA3AF] w-8">{weight}/10</span>
+                    <span className="text-sm font-medium text-gray-600 dark:text-[#9CA3AF] w-12 text-right">
+                      {weight}%
+                    </span>
                   </div>
                 </div>
               ))}
@@ -449,13 +469,15 @@ function ConfigField({
   value: any
   type?: 'text' | 'chips'
 }) {
+  const displayValue = value || (type === 'chips' ? [] : '')
+  
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 dark:text-[#9CA3AF] mb-2">{label}</label>
       {type === 'chips' ? (
         <div className="flex flex-wrap gap-2">
-          {Array.isArray(value) && value.length > 0 ? (
-            value.map((item, index) => (
+          {Array.isArray(displayValue) && displayValue.length > 0 ? (
+            displayValue.map((item, index) => (
               <span
                 key={index}
                 className="inline-flex items-center px-2.5 py-0.5 text-xs font-medium bg-[#006239]/10 text-[#006239] border border-[#006239]/20 rounded-lg"
@@ -468,7 +490,9 @@ function ConfigField({
           )}
         </div>
       ) : (
-        <p className="text-sm text-gray-900 dark:text-[#EDEDED]">{value || <span className="text-gray-500 dark:text-[#6A6A6A] italic">Not specified</span>}</p>
+        <p className="text-sm text-gray-900 dark:text-[#EDEDED]">
+          {displayValue || <span className="text-gray-500 dark:text-[#6A6A6A] italic">Not specified</span>}
+        </p>
       )}
     </div>
   )

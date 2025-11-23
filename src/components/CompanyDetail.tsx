@@ -37,6 +37,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Company } from '@/types';
 import { format } from 'date-fns';
+import { GTMIntelligenceReport } from './GTMIntelligenceReportProps ';
 
 // Brand Colors
 const ACCENT_GREEN = '#006239'
@@ -54,15 +55,17 @@ export function CompanyDetail({ company, onClose, onRefresh, onEdit }: CompanyDe
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Building2 },
+    { id: 'gtmintelligence', label: 'GTM Intelligence', icon: Target }, // Fixed typo and changed icon
     { id: 'employees', label: 'Employees', icon: Users },
     { id: 'financials', label: 'Financials', icon: DollarSign },
     { id: 'technologies', label: 'Technologies', icon: Code },
     { id: 'intent', label: 'Intent Signals', icon: TrendingUp },
     { id: 'relationships', label: 'Relationships', icon: Shield },
   ];
+  
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-[#0F0F0F]">
+    <div className="w-full h-full flex flex-col bg-white dark:bg-[#0F0F0F]">
       {/* Header */}
       <div className="p-6 border-b border-gray-200 dark:border-[#2A2A2A] bg-white dark:bg-[#0F0F0F]">
         <div className="flex items-center justify-between">
@@ -217,14 +220,20 @@ export function CompanyDetail({ company, onClose, onRefresh, onEdit }: CompanyDe
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
         <div className="p-6">
-          <AnimatedTabContent activeTab={activeTab}>
-            {activeTab === 'overview' && <OverviewTab company={company} />}
-            {activeTab === 'employees' && <EmployeesTab company={company} />}
-            {activeTab === 'financials' && <FinancialsTab company={company} />}
-            {activeTab === 'technologies' && <TechnologiesTab company={company} />}
-            {activeTab === 'intent' && <IntentTab company={company} />}
-            {activeTab === 'relationships' && <RelationshipsTab company={company} />}
-          </AnimatedTabContent>
+        <AnimatedTabContent activeTab={activeTab}>
+  {activeTab === 'overview' && <OverviewTab company={company} />}
+  {activeTab === 'gtmintelligence' && (
+    <GTMIntelligenceReport 
+      markdownContent={company.overview?.overview || company.description || 'No GTM intelligence report available.'} 
+      companyName={company.name} 
+    />
+  )}
+  {activeTab === 'employees' && <EmployeesTab company={company} />}
+  {activeTab === 'financials' && <FinancialsTab company={company} />}
+  {activeTab === 'technologies' && <TechnologiesTab company={company} />}
+  {activeTab === 'intent' && <IntentTab company={company} />}
+  {activeTab === 'relationships' && <RelationshipsTab company={company} />}
+</AnimatedTabContent>
         </div>
       </div>
     </div>
@@ -239,7 +248,7 @@ function AnimatedTabContent({ activeTab, children }: { activeTab: string; childr
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.2 }}
-      className="max-w-6xl mx-auto"
+      className="mx-auto"
     >
       {children}
     </motion.div>
@@ -247,8 +256,12 @@ function AnimatedTabContent({ activeTab, children }: { activeTab: string; childr
 }
 
 // Add the new EmployeesTab component
+// Add the new EmployeesTab component
 function EmployeesTab({ company }: { company: Company }) {
-  if (!company.employees || company.employees.length === 0) {
+  // Check if employees data exists and is an array
+  const hasEmployees = Array.isArray(company.employees) && company.employees.length > 0;
+  
+  if (!hasEmployees) {
     return (
       <div className="text-center py-12">
         <Users className="w-12 h-12 text-gray-400 dark:text-[#6A6A6A] mx-auto mb-4" />
@@ -256,14 +269,18 @@ function EmployeesTab({ company }: { company: Company }) {
           No Employee Data
         </h3>
         <p className="text-gray-600 dark:text-[#9CA3AF]">
-          Employee information not available for this company.
+          {company.employee_count ? 
+            `This company has ${company.employee_count.toLocaleString()} employees, but detailed profiles are not available.` :
+            'Employee information not available for this company.'
+          }
         </p>
       </div>
     );
   }
 
-  const currentEmployees = company.employees.filter(emp => emp.is_working);
-  const decisionMakers = company.employees.filter(emp => emp.is_decision_maker);
+  // Filter employees - use isWorking instead of is_working
+  const currentEmployees = company.employees.filter(emp => emp.isWorking !== false);
+  const decisionMakers = company.employees.filter(emp => emp.isDecisionMaker === true);
 
   return (
     <div className="space-y-8">
@@ -286,7 +303,7 @@ function EmployeesTab({ company }: { company: Company }) {
             color="purple"
           />
           <StatCard
-            value={Math.round(company.employees.reduce((acc, emp) => acc + (emp.connections_count || 0), 0) / company.employees.length).toString()}
+            value={Math.round(company.employees.reduce((acc, emp) => acc + (emp.connectionsCount || 0), 0) / company.employees.length).toString()}
             label="Avg Connections"
             color="orange"
           />
@@ -297,21 +314,21 @@ function EmployeesTab({ company }: { company: Company }) {
       <DetailSection icon={User} title="Employee Profiles">
         <div className="space-y-4">
           {company.employees.map((employee, index) => (
-            <EmployeeCard key={employee.id || index} employee={employee} />
+            <EmployeeCard key={employee.coresignalEmployeeId || employee._id || index} employee={employee} />
           ))}
         </div>
       </DetailSection>
 
       {/* Departments Breakdown */}
-      {company.employees.some(emp => emp.active_experience_department) && (
+      {company.employees.some(emp => emp.activeExperienceDepartment) && (
         <DetailSection icon={Building2} title="Departments">
           <div className="flex flex-wrap gap-2">
-            {Array.from(new Set(company.employees.map(emp => emp.active_experience_department).filter(Boolean))).map((dept, index) => (
+            {Array.from(new Set(company.employees.map(emp => emp.activeExperienceDepartment).filter(Boolean))).map((dept, index) => (
               <span
                 key={index}
                 className="inline-flex items-center px-3 py-1 text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg"
               >
-                {dept} ({company.employees.filter(emp => emp.active_experience_department === dept).length})
+                {dept} ({company.employees.filter(emp => emp.activeExperienceDepartment === dept).length})
               </span>
             ))}
           </div>
@@ -321,20 +338,46 @@ function EmployeesTab({ company }: { company: Company }) {
   );
 }
 
-// Employee Card Component
+// Updated Employee Card Component
+// Updated Employee Card Component with better error handling
 function EmployeeCard({ employee }: { employee: any }) {
   const [expanded, setExpanded] = useState(false);
+
+  // Safely access employee properties with fallbacks
+  const fullName = employee.fullName || `${employee.firstName || ''} ${employee.lastName || ''}`.trim();
+  const isDecisionMaker = employee.isDecisionMaker === true;
+  const isWorking = employee.isWorking !== false; // Default to true if not specified
+  const title = employee.activeExperienceTitle || employee.headline;
+  const department = employee.activeExperienceDepartment;
+  const connections = employee.connectionsCount || 0;
+  const followers = employee.followersCount || 0;
+  const experienceYears = employee.totalExperienceDurationMonths ? Math.round(employee.totalExperienceDurationMonths / 12) : null;
+
+  // Safely handle professionalEmails data structure
+  const getProfessionalEmails = () => {
+    if (!employee.professionalEmails) return [];
+    
+    // Handle both array of strings and array of objects
+    return employee.professionalEmails.map((email: any) => {
+      if (typeof email === 'string') return email;
+      if (typeof email === 'object' && email.professional_email) return email.professional_email;
+      if (typeof email === 'object' && email.professionalEmail) return email.professionalEmail;
+      return null;
+    }).filter(Boolean);
+  };
+
+  const professionalEmails = getProfessionalEmails();
 
   return (
     <div className="bg-gray-50 dark:bg-[#1A1A1A] border border-gray-300 dark:border-[#2A2A2A] rounded-2xl overflow-hidden">
       <div className="p-4">
         <div className="flex items-start gap-4">
           {/* Profile Image */}
-          {employee.picture_url ? (
+          {employee.pictureUrl ? (
             <img
-              src={employee.picture_url}
-              alt={employee.full_name}
-              className="w-12 h-12 rounded-xl border border-gray-300 dark:border-[#3A3A3A]"
+              src={employee.pictureUrl}
+              alt={fullName}
+              className="w-12 h-12 rounded-xl border border-gray-300 dark:border-[#3A3A3A] object-cover"
             />
           ) : (
             <div className="w-12 h-12 bg-[#006239] rounded-xl flex items-center justify-center">
@@ -345,38 +388,43 @@ function EmployeeCard({ employee }: { employee: any }) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1">
               <h3 className="font-medium text-gray-900 dark:text-[#EDEDED] truncate">
-                {employee.full_name}
+                {fullName}
               </h3>
-              {employee.is_decision_maker && (
+              {isDecisionMaker && (
                 <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800 rounded-lg">
                   Decision Maker
+                </span>
+              )}
+              {!isWorking && (
+                <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-700 rounded-lg">
+                  Former Employee
                 </span>
               )}
             </div>
 
             <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-[#9CA3AF] mb-2">
-              {employee.active_experience_title && (
+              {title && (
                 <div className="flex items-center gap-1">
                   <Briefcase className="w-4 h-4 text-[#006239]" />
-                  <span>{employee.active_experience_title}</span>
+                  <span>{title}</span>
                 </div>
               )}
-              {employee.active_experience_department && (
+              {department && (
                 <span className="bg-gray-200 dark:bg-[#2A2A2A] px-2 py-1 text-xs rounded-lg text-gray-700 dark:text-[#9CA3AF]">
-                  {employee.active_experience_department}
+                  {department}
                 </span>
               )}
             </div>
 
             <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-[#6A6A6A]">
-              {employee.connections_count && (
-                <span>{employee.connections_count.toLocaleString()} connections</span>
+              {connections > 0 && (
+                <span>{connections.toLocaleString()} connections</span>
               )}
-              {employee.followers_count && (
-                <span>{employee.followers_count.toLocaleString()} followers</span>
+              {followers > 0 && (
+                <span>{followers.toLocaleString()} followers</span>
               )}
-              {employee.total_experience_duration_months && (
-                <span>{Math.round(employee.total_experience_duration_months / 12)} years exp</span>
+              {experienceYears && experienceYears > 0 && (
+                <span>{experienceYears} years exp</span>
               )}
             </div>
 
@@ -388,9 +436,9 @@ function EmployeeCard({ employee }: { employee: any }) {
           </div>
 
           <div className="flex items-center gap-2">
-            {employee.linkedin_url && (
+            {employee.linkedinUrl && (
               <a
-                href={employee.linkedin_url}
+                href={employee.linkedinUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-2 text-gray-400 dark:text-[#9CA3AF] hover:text-[#006239] transition-colors hover:bg-gray-100 dark:hover:bg-[#2A2A2A] rounded-xl"
@@ -399,9 +447,9 @@ function EmployeeCard({ employee }: { employee: any }) {
                 <Linkedin className="w-4 h-4" />
               </a>
             )}
-            {employee.github_url && (
+            {employee.githubUrl && (
               <a
-                href={employee.github_url}
+                href={employee.githubUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-2 text-gray-400 dark:text-[#9CA3AF] hover:text-[#006239] transition-colors hover:bg-gray-100 dark:hover:bg-[#2A2A2A] rounded-xl"
@@ -431,28 +479,28 @@ function EmployeeCard({ employee }: { employee: any }) {
           >
             <div className="pt-4 space-y-4">
               {/* Contact Information */}
-              {(employee.primary_professional_email || employee.professional_emails) && (
+              {(employee.primaryProfessionalEmail || professionalEmails.length > 0) && (
                 <div>
                   <h4 className="font-medium text-gray-900 dark:text-[#EDEDED] mb-2 flex items-center gap-2">
                     <MailCheck className="w-4 h-4 text-[#006239]" />
                     Contact
                   </h4>
                   <div className="space-y-1">
-                    {employee.primary_professional_email && (
+                    {employee.primaryProfessionalEmail && (
                       <a
-                        href={`mailto:${employee.primary_professional_email}`}
+                        href={`mailto:${employee.primaryProfessionalEmail}`}
                         className="block text-sm text-[#006239] hover:text-[#006239] transition-colors"
                       >
-                        {employee.primary_professional_email}
+                        {employee.primaryProfessionalEmail}
                       </a>
                     )}
-                    {employee.professional_emails?.map((email: { professional_email: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; }, index: Key | null | undefined) => (
+                    {professionalEmails.map((email: string, index: number) => (
                       <a
                         key={index}
-                        href={`mailto:${email.professional_email}`}
+                        href={`mailto:${email}`}
                         className="block text-sm text-gray-600 dark:text-[#9CA3AF] hover:text-[#006239] transition-colors"
                       >
-                        {email.professional_email}
+                        {email}
                       </a>
                     ))}
                   </div>
@@ -460,11 +508,11 @@ function EmployeeCard({ employee }: { employee: any }) {
               )}
 
               {/* Skills */}
-              {employee.inferred_skills && employee.inferred_skills.length > 0 && (
+              {employee.inferredSkills && employee.inferredSkills.length > 0 && (
                 <div>
                   <h4 className="font-medium text-gray-900 dark:text-[#EDEDED] mb-2">Skills</h4>
                   <div className="flex flex-wrap gap-1">
-                    {employee.inferred_skills.slice(0, 10).map((skill: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined, index: Key | null | undefined) => (
+                    {employee.inferredSkills.slice(0, 10).map((skill: string, index: number) => (
                       <span
                         key={index}
                         className="inline-flex items-center px-2 py-1 text-xs bg-[#006239]/10 text-[#006239] border border-[#006239]/20 rounded-lg"
@@ -472,9 +520,9 @@ function EmployeeCard({ employee }: { employee: any }) {
                         {skill}
                       </span>
                     ))}
-                    {employee.inferred_skills.length > 10 && (
+                    {employee.inferredSkills.length > 10 && (
                       <span className="inline-flex items-center px-2 py-1 text-xs bg-gray-100 dark:bg-[#2A2A2A] text-gray-600 dark:text-[#9CA3AF] rounded-lg">
-                        +{employee.inferred_skills.length - 10} more
+                        +{employee.inferredSkills.length - 10} more
                       </span>
                     )}
                   </div>
@@ -489,12 +537,13 @@ function EmployeeCard({ employee }: { employee: any }) {
                     Languages
                   </h4>
                   <div className="flex flex-wrap gap-2">
-                    {employee.languages.map((lang: { language: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; proficiency: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; }, index: Key | null | undefined) => (
+                    {employee.languages.map((lang: any, index: number) => (
                       <span
                         key={index}
                         className="inline-flex items-center px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg"
                       >
-                        {lang.language} ({lang.proficiency})
+                        {typeof lang === 'string' ? lang : lang.language} 
+                        {typeof lang === 'object' && lang.proficiency ? ` (${lang.proficiency})` : ''}
                       </span>
                     ))}
                   </div>
@@ -502,19 +551,29 @@ function EmployeeCard({ employee }: { employee: any }) {
               )}
 
               {/* Education */}
-              {employee.education && employee.education.length > 0 && (
+              {employee.educationHistory && employee.educationHistory.length > 0 && (
                 <div>
                   <h4 className="font-medium text-gray-900 dark:text-[#EDEDED] mb-2 flex items-center gap-2">
                     <GraduationCap className="w-4 h-4 text-[#006239]" />
                     Education
                   </h4>
                   <div className="space-y-1">
-                    {employee.education.slice(0, 3).map((edu: { degree: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; institution_name: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; }, index: Key | null | undefined) => (
+                    {employee.educationHistory.slice(0, 3).map((edu: any, index: number) => (
                       <div key={index} className="text-sm text-gray-600 dark:text-[#9CA3AF]">
-                        {edu.degree} - {edu.institution_name}
+                        {edu.degree || 'Degree not specified'} - {edu.institutionName || edu.institution_name || 'Institution not specified'}
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Summary */}
+              {employee.summary && (
+                <div>
+                  <h4 className="font-medium text-gray-900 dark:text-[#EDEDED] mb-2">Summary</h4>
+                  <p className="text-sm text-gray-600 dark:text-[#9CA3AF] leading-relaxed">
+                    {employee.summary}
+                  </p>
                 </div>
               )}
             </div>

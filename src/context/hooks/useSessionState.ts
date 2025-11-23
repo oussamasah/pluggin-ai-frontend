@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { SearchSession, ICPModel } from '@/types'
+import { SearchSession, ICPModel, SearchStatus } from '@/types'
 
 const userID = process.env.NEXT_PUBLIC_MOCK_USER_ID
 
@@ -46,7 +46,19 @@ export function useSessionState() {
 
     loadInitialData()
   }, [])
-
+  const updateSessionStatus = useCallback((sessionId: string, status: Partial<SearchStatus>) => {
+    setSessions(prev => prev.map(session => {
+      if (session.id !== sessionId) return session;
+      
+      return {
+        ...session,
+        searchStatus: {
+          ...(session.searchStatus || {}),
+          ...status
+        } as SearchStatus
+      };
+    }));
+  }, []);
   const loadFromLocalStorage = useCallback(() => {
     const savedSessions = localStorage.getItem('icp-scout-sessions');
     const savedModels = localStorage.getItem('icp-scout-models');
@@ -317,7 +329,7 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
       await updateSessionQuery(sessionId, updatedQueries);
       
       // Start the search
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/search`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/search-companies`, {
         method: 'POST',
         headers: {
           'x-user-id': userID || '', // fallback to empty string if undefined
@@ -330,7 +342,7 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
           icpModelId
         })
       });
-
+      
       if (!response.ok) throw new Error('Search failed');
       
       const searchResults = await response.json();

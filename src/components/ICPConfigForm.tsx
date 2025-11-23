@@ -18,7 +18,14 @@ import {
   Filter,
   Sliders,
   Crown,
-  Sparkles
+  Sparkles,
+  Package,
+  BarChart3,
+  Lightbulb,
+  Zap,
+  Star,
+  Target as TargetIcon,
+  Heart
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ICPModel, ICPConfig } from '@/types'
@@ -53,6 +60,13 @@ const defaultConfig: ICPConfig = {
     technographic: 50,
     intent: 50,
     behavioral: 50
+  },
+  // Updated product settings fields
+  productSettings: {
+    productNames: [],
+    valueProposition: '',
+    uniqueSellingPoints: [],
+    painPointsSolved: []
   }
 }
 
@@ -67,12 +81,12 @@ const employeeRanges = [
 ]
 
 const annualRevenues = [
-"less than 1M$ ",
-"1M$ to 10M$",
-"10M$ to 50M$" ,
-"50M$ to 100M$",
-"100M$ to 500M$",
-"+500M$"
+  "less than 1M$ ",
+  "1M$ to 10M$",
+  "10M$ to 50M$",
+  "50M$ to 100M$",
+  "100M$ to 500M$",
+  "+500M$"
 ]
 
 const buyingTriggerOptions = {
@@ -154,6 +168,7 @@ export function ICPConfigForm({ model, onSave, onClose }: ICPConfigFormProps) {
         excludedTechnologies: model.config.excludedTechnologies || [],
         buyingTriggers: model.config.buyingTriggers || [],
         targetPersonas: model.config.targetPersonas || [],
+        productSettings: model.config.productSettings || defaultConfig.productSettings
       })
       setIsPrimary(model.isPrimary)
     }
@@ -167,6 +182,21 @@ export function ICPConfigForm({ model, onSave, onClose }: ICPConfigFormProps) {
       setConfig(prev => ({
         ...prev,
         [field]: [...(prev[field] as string[]), trimmedValue],
+      }));
+    }
+  };
+
+  const handleAddProductChip = (field: keyof typeof config.productSettings, value: string) => {
+    const trimmedValue = value.trim();
+    const currentField = config.productSettings[field];
+  
+    if (trimmedValue && Array.isArray(currentField) && !currentField.includes(trimmedValue)) {
+      setConfig(prev => ({
+        ...prev,
+        productSettings: {
+          ...prev.productSettings,
+          [field]: [...(prev.productSettings[field] as string[]), trimmedValue],
+        },
       }));
     }
   };
@@ -184,6 +214,16 @@ export function ICPConfigForm({ model, onSave, onClose }: ICPConfigFormProps) {
   
       return prev;
     });
+  };
+
+  const handleRemoveProductChip = (field: keyof typeof config.productSettings, index: number) => {
+    setConfig(prev => ({
+      ...prev,
+      productSettings: {
+        ...prev.productSettings,
+        [field]: (prev.productSettings[field] as string[]).filter((_, i) => i !== index),
+      },
+    }));
   };
   
   const handleSubmit = (e: React.FormEvent) => {
@@ -218,6 +258,16 @@ export function ICPConfigForm({ model, onSave, onClose }: ICPConfigFormProps) {
       }
     }))
   }
+
+  const updateProductSetting = (field: keyof typeof config.productSettings, value: string) => {
+    setConfig(prev => ({
+      ...prev,
+      productSettings: {
+        ...prev.productSettings,
+        [field]: value,
+      },
+    }));
+  };
 
   return (
     <motion.div
@@ -289,6 +339,90 @@ export function ICPConfigForm({ model, onSave, onClose }: ICPConfigFormProps) {
                 </div>
               </div>
 
+              {/* Product Settings - UPDATED WITH REQUESTED FIELDS */}
+              <FormSection 
+                icon={Package}
+                title="Product Settings"
+                description="Describe your product's value proposition and unique selling points"
+              >
+                <div className="space-y-6">
+                  {/* Product Names */}
+                  <div>
+                    <ChipInput
+                      label="Product Names *"
+                      chips={config.productSettings.productNames}
+                      onAdd={(value) => handleAddProductChip('productNames', value)}
+                      onRemove={(index) => handleRemoveProductChip('productNames', index)}
+                      placeholder="Add product name..."
+                    />
+                    <p className="text-xs text-gray-500 dark:text-[#9CA3AF] mt-2">
+                      Add all relevant product names and variations
+                    </p>
+                  </div>
+
+                  {/* Value Proposition */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-[#9CA3AF] mb-2">
+                      Value Proposition *
+                    </label>
+                    <textarea
+                      value={config.productSettings.valueProposition}
+                      onChange={(e) => updateProductSetting('valueProposition', e.target.value)}
+                      rows={3}
+                      className="w-full px-4 py-3 bg-white dark:bg-[#0F0F0F] border border-gray-300 dark:border-[#3A3A3A] focus:outline-none focus:ring-2 focus:ring-[#006239] focus:border-transparent text-gray-900 dark:text-[#EDEDED] placeholder-gray-500 dark:placeholder-[#9CA3AF] rounded-xl resize-none"
+                      placeholder="Describe the core value your product delivers to customers..."
+                    />
+                    <p className="text-xs text-gray-500 dark:text-[#9CA3AF] mt-2">
+                      What fundamental value do you provide to your customers?
+                    </p>
+                  </div>
+
+                  {/* Unique Selling Points */}
+                  <div>
+                    <ChipInput
+                      label="Unique Selling Points (USP) *"
+                      chips={config.productSettings.uniqueSellingPoints}
+                      onAdd={(value) => handleAddProductChip('uniqueSellingPoints', value)}
+                      onRemove={(index) => handleRemoveProductChip('uniqueSellingPoints', index)}
+                      placeholder="Add unique selling point..."
+                    />
+                    <p className="text-xs text-gray-500 dark:text-[#9CA3AF] mt-2">
+                      What makes your product different from competitors?
+                    </p>
+                  </div>
+
+                  {/* Pain Points Solved */}
+                  <div>
+                    <ChipInput
+                      label="Pain Points You Solve *"
+                      chips={config.productSettings.painPointsSolved}
+                      onAdd={(value) => handleAddProductChip('painPointsSolved', value)}
+                      onRemove={(index) => handleRemoveProductChip('painPointsSolved', index)}
+                      placeholder="Add pain point..."
+                    />
+                    <p className="text-xs text-gray-500 dark:text-[#9CA3AF] mt-2">
+                      What specific customer problems does your product address?
+                    </p>
+                  </div>
+
+                  {/* Help Text */}
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+                    <div className="flex items-start gap-3">
+                      <Lightbulb className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                      <div>
+                        <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
+                          How this helps generate better metrics
+                        </h4>
+                        <p className="text-xs text-blue-700 dark:text-blue-300">
+                          This information helps the LLM understand your product's core value and generate relevant metrics like:
+                          pain point alignment scores, value proposition match, and unique advantage recognition for each company.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </FormSection>
+
               {/* Company Profile - UPDATED STYLING */}
               <FormSection 
                 icon={Building2}
@@ -317,7 +451,7 @@ export function ICPConfigForm({ model, onSave, onClose }: ICPConfigFormProps) {
                     onChange={(value) => setConfig(prev => ({ ...prev, employeeRange: value }))}
                   />
                   <SelectInput
-                    label="Annuel Revenu ($) *"
+                    label="Annual Revenue ($) *"
                     value={config.annualRevenue}
                     options={annualRevenues}
                     onChange={(value) => setConfig(prev => ({ ...prev, annualRevenue: value }))}

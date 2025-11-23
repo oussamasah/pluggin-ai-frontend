@@ -26,7 +26,6 @@ import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
 import Link from 'next/link'
 import { ThemeToggle } from './ThemeToggle'
-import { WebGLShaderSidebar } from './ui/web-gl-shader-sidebar'
 import { useRouter } from 'next/navigation'
 
 // --- Color Constants for Plugging AI Brand ---
@@ -49,6 +48,22 @@ export function EnhancedSidebar() {
   const [newSessionName, setNewSessionName] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
 
+  // Add debugging to see session data
+  useEffect(() => {
+    console.log('🔍 Sidebar Sessions Debug:', {
+      totalSessions: sessions.length,
+      sessions: sessions.map(s => ({
+        id: s.id,
+        name: s.name,
+        resultsCount: s.resultsCount,
+        companiesCount: s.companies?.length,
+        query: s.query,
+        hasCompaniesArray: !!s.companies,
+        hasResultsCount: s.resultsCount > 0
+      }))
+    })
+  }, [sessions])
+
   const handleCreateSession = async () => {
     if (!newSessionName.trim()) return
     
@@ -62,12 +77,22 @@ export function EnhancedSidebar() {
     session.query?.join(' ').toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  // Mocked/Derived Stats
+  // Fixed stats calculation
   const stats = {
     totalSearches: sessions.length,
-    totalCompanies: sessions.reduce((sum, session) => sum + (session.resultsCount || 0), 0),
-    activeSessions: sessions.filter(s => s.companies && s.companies.length > 0).length
+    totalCompanies: sessions.reduce((sum, session) => {
+      // Prefer companies array length, fall back to resultsCount
+      const count = session.companies?.length || session.resultsCount || 0
+      return sum + count
+    }, 0),
+    activeSessions: sessions.filter(s => {
+      const hasCompanies = s.companies && s.companies.length > 0
+      const hasResults = s.resultsCount && s.resultsCount > 0
+      return hasCompanies || hasResults
+    }).length
   }
+
+  console.log('🔍 Final Stats:', stats)
 
   return (
     <div className={cn(
@@ -85,17 +110,20 @@ export function EnhancedSidebar() {
             <div className="flex items-center gap-3">
               <div 
                 className="w-10 h-10 rounded-lg flex items-center justify-center shadow-lg" 
-              
               >
-                           {theme=="dark"?<img 
-  src="/plauging-ai-dark.png" 
-  alt="Crown" 
-  className=""
-/>:<img 
-  src="/plauging-ai-light.png" 
-  alt="Crown" 
-  className=""
-/>}   
+                {theme === "dark" ? (
+                  <img 
+                    src="/plauging-ai-dark.png" 
+                    alt="Plugging AI Logo" 
+                    className="w-8 h-8"
+                  />
+                ) : (
+                  <img 
+                    src="/plauging-ai-light.png" 
+                    alt="Plugging AI Logo" 
+                    className="w-8 h-8"
+                  />
+                )}   
               </div>
               <div>
                 <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-[#EDEDED]">
@@ -128,21 +156,21 @@ export function EnhancedSidebar() {
           {/* Quick Stats */}
           <div className="grid grid-cols-3 gap-3 mb-4">
             {Object.entries(stats).map(([key, value]) => (
-                <div 
-                  key={key} 
-                  className={cn(
-                    "text-center p-2 rounded-lg border",
-                    "bg-gray-50 dark:bg-[#1A1A1A] border-gray-200 dark:border-[#2A2A2A]",
-                    "shadow-sm dark:shadow-none"
-                  )}
-                >
-                  <div className="text-sm font-semibold text-gray-900 dark:text-[#EDEDED]">
-                    {value}
-                  </div>
-                  <div className="text-xs font-light mt-0.5 text-gray-600 dark:text-[#9CA3AF]">
-                    {key.replace(/([A-Z])/g, ' $1').trim()}
-                  </div>
+              <div 
+                key={key} 
+                className={cn(
+                  "text-center p-2 rounded-lg border",
+                  "bg-gray-50 dark:bg-[#1A1A1A] border-gray-200 dark:border-[#2A2A2A]",
+                  "shadow-sm dark:shadow-none"
+                )}
+              >
+                <div className="text-sm font-semibold text-gray-900 dark:text-[#EDEDED]">
+                  {value}
                 </div>
+                <div className="text-xs font-light mt-0.5 text-gray-600 dark:text-[#9CA3AF]">
+                  {key.replace(/([A-Z])/g, ' $1').trim()}
+                </div>
+              </div>
             ))}
           </div>
 
@@ -156,7 +184,7 @@ export function EnhancedSidebar() {
             )}
             style={{ 
               backgroundColor: ACTIVE_GREEN,
-              boxShadow: `0 4px 10px rgba(0, 250, 100, ${theme =="dark" ? '0.3' : '0.4'})`
+              boxShadow: `0 4px 10px rgba(0, 250, 100, ${theme === "dark" ? '0.3' : '0.4'})`
             }}
           >
             <Plus className="w-4 h-4" />
@@ -244,97 +272,103 @@ export function EnhancedSidebar() {
 
         {/* Sessions List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {filteredSessions.map((session) => (
-            <motion.div
-              key={session.id}
-              initial={{ opacity: 0, y: 5 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2 }}
-              onClick={() => {
-                setCurrentSession(session.id);
-                router.push("/");
-              }}
-              className={cn(
-                "group p-4 cursor-pointer transition-all duration-300 rounded-xl border",
-                currentSession?.id === session.id
-                  ? "bg-[#006239] text-white border-transparent shadow-xl"
-                  : cn(
-                      "bg-gray-50 dark:bg-[#1E1E1E] text-gray-900 dark:text-[#EDEDED]",
-                      "border-gray-200 dark:border-[#2A2A2A] hover:shadow-md"
-                    )
-              )}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <h3 className={cn(
-                    "font-semibold text-sm mb-1 tracking-wide truncate",
-                    currentSession?.id === session.id ? "text-white" : "text-gray-900 dark:text-[#EDEDED]"
-                  )}>
-                    {session.name}
-                  </h3>
-                  <p className={cn(
-                    "text-xs truncate mb-2 font-light",
-                    currentSession?.id === session.id ? "text-white/80" : "text-gray-600 dark:text-[#9CA3AF]"
-                  )}>
-                    {session.query || 'No query yet'}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <span className={cn(
-                      "text-xs font-light",
-                      currentSession?.id === session.id ? "text-white/70" : "text-gray-500 dark:text-[#9CA3AF]"
+          {filteredSessions.map((session) => {
+            // Calculate the actual company count - this is the key fix
+            const companyCount = session.companies?.length || session.resultsCount || 0
+            const hasCompanies = companyCount > 0
+
+            return (
+              <motion.div
+                key={session.id}
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+                onClick={() => {
+                  setCurrentSession(session.id);
+                  router.push("/");
+                }}
+                className={cn(
+                  "group p-4 cursor-pointer transition-all duration-300 rounded-xl border",
+                  currentSession?.id === session.id
+                    ? "bg-[#006239] text-white border-transparent shadow-xl"
+                    : cn(
+                        "bg-gray-50 dark:bg-[#1E1E1E] text-gray-900 dark:text-[#EDEDED]",
+                        "border-gray-200 dark:border-[#2A2A2A] hover:shadow-md"
+                      )
+                )}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <h3 className={cn(
+                      "font-semibold text-sm mb-1 tracking-wide truncate",
+                      currentSession?.id === session.id ? "text-white" : "text-gray-900 dark:text-[#EDEDED]"
                     )}>
-                      {formatDistanceToNow(session.createdAt, { addSuffix: true })}
-                    </span>
-                    {session.resultsCount > 0 && (
-                      <>
-                        <span className={cn(
-                          "w-1 h-1 rounded-full",
-                          currentSession?.id === session.id ? "bg-white" : "bg-[#006239]"
-                        )} />
-                        <span className={cn(
-                          "text-xs px-2 py-0.5 font-medium rounded-full",
-                          currentSession?.id === session.id 
-                            ? "text-white border border-white/50" 
-                            : "text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20"
-                        )}>
-                          {session.resultsCount} found
-                        </span>
-                      </>
-                    )}
+                      {session.name}
+                    </h3>
+                    <p className={cn(
+                      "text-xs truncate mb-2 font-light",
+                      currentSession?.id === session.id ? "text-white/80" : "text-gray-600 dark:text-[#9CA3AF]"
+                    )}>
+                      {session.query?.[session.query.length - 1] || session.query?.[0] || 'No query yet'}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <span className={cn(
+                        "text-xs font-light",
+                        currentSession?.id === session.id ? "text-white/70" : "text-gray-500 dark:text-[#9CA3AF]"
+                      )}>
+                        {formatDistanceToNow(session.createdAt, { addSuffix: true })}
+                      </span>
+                      {hasCompanies && (
+                        <>
+                          <span className={cn(
+                            "w-1 h-1 rounded-full",
+                            currentSession?.id === session.id ? "bg-white" : "bg-[#006239]"
+                          )} />
+                          <span className={cn(
+                            "text-xs px-2 py-0.5 font-medium rounded-full",
+                            currentSession?.id === session.id 
+                              ? "text-white border border-white/50" 
+                              : "text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20"
+                          )}>
+                            {companyCount} found
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Action Buttons */}
+                  <div className={cn(
+                    "flex items-center gap-1 ml-2 transition-opacity duration-300",
+                    currentSession?.id === session.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  )}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        deleteSession(session.id)
+                      }}
+                      className={cn(
+                        "p-1 rounded-full transition-all duration-300",
+                        currentSession?.id === session.id 
+                          ? "hover:bg-red-600" 
+                          : "hover:bg-red-50 dark:hover:bg-red-900/20"
+                      )}>
+                      <Trash2 className={cn(
+                        "w-3.5 h-3.5",
+                        currentSession?.id === session.id 
+                          ? "text-white" 
+                          : "text-gray-400 hover:text-red-500"
+                      )} />
+                    </button>
+                    <ChevronRight className={cn(
+                      "w-4 h-4 ml-1",
+                      currentSession?.id === session.id ? "text-white" : "text-gray-400"
+                    )} />
                   </div>
                 </div>
-                
-                {/* Action Buttons */}
-                <div className={cn(
-                  "flex items-center gap-1 ml-2 transition-opacity duration-300",
-                  currentSession?.id === session.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                )}>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      deleteSession(session.id)
-                    }}
-                    className={cn(
-                      "p-1 rounded-full transition-all duration-300",
-                      currentSession?.id === session.id 
-                        ? "hover:bg-red-600" 
-                        : "hover:bg-red-50 dark:hover:bg-red-900/20"
-                    )}>
-                    <Trash2 className={cn(
-                      "w-3.5 h-3.5",
-                      currentSession?.id === session.id 
-                        ? "text-white" 
-                        : "text-gray-400 hover:text-red-500"
-                    )} />
-                  </button>
-                  <ChevronRight className={cn(
-                    "w-4 h-4 ml-1",
-                    currentSession?.id === session.id ? "text-white" : "text-gray-400"
-                  )} />
-                </div>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            )
+          })}
 
           {filteredSessions.length === 0 && (
             <div className="text-center py-12">
@@ -428,4 +462,4 @@ function NavButton({
       </span>
     </button>
   )
-}
+} 

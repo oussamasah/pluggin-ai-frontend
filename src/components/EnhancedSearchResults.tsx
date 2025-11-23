@@ -58,6 +58,7 @@ export function EnhancedSearchResults() {
 
   return (
     <>
+
       <div className="h-full flex flex-col bg-white dark:bg-[#0F0F0F]">
         {/* Header */}
         <div className={cn(

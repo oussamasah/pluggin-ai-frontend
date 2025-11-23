@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useSession } from '@/context/SessionContext';
 import { CheckCircle2, Circle, XCircle, Loader2, ChevronRight, Zap, Target, Users, TrendingUp } from 'lucide-react';
@@ -71,10 +71,31 @@ const WORKFLOW_PHASES = [
 
 export default function ProcessingWorkflow() {
   const { currentSession } = useSession();
+  
+  // Use useMemo to prevent unnecessary recalculations
+  const workflowData = useMemo(() => {
+    return currentSession?.searchStatus || null;
+  }, [currentSession?.searchStatus]);
+
+  const backendSubsteps = useMemo(() => {
+    return workflowData?.substeps || [];
+  }, [workflowData]);
+
+  // Only show if this session is actively processing
+  const shouldShow = useMemo(() => {
+    if (!currentSession) return false;
+    if (!workflowData) return false;
+    
+    const activeStages = ['searching', 'refine_search', 'processing'];
+    return activeStages.includes(workflowData.stage);
+  }, [currentSession, workflowData]);
+
+  // Reset local state when session changes
   const [workflowPhases, setWorkflowPhases] = useState(WORKFLOW_PHASES);
   
-  const workflowData = currentSession?.searchStatus as WorkflowStep | null;
-  const backendSubsteps = workflowData?.substeps || [];
+  useEffect(() => {
+    setWorkflowPhases(WORKFLOW_PHASES);
+  }, [currentSession?.id]); // Reset when session changes
 
   // Map backend substep status to frontend status
   const mapBackendStatus = (backendStatus: string) => {
@@ -87,14 +108,14 @@ export default function ProcessingWorkflow() {
     }
   };
 
-  // Update workflow phases based on backend data
+  // Update workflow phases based on backend data - ONLY for current session
   useEffect(() => {
-    if (!backendSubsteps.length) return;
+    if (!backendSubsteps.length || !shouldShow) return;
 
     const updatedPhases = WORKFLOW_PHASES.map(phase => ({
       ...phase,
       steps: phase.steps.map(step => {
-        const backendStep = backendSubsteps.find((s:any)=> s.id === step.id);
+        const backendStep = backendSubsteps.find((s: any) => s.id === step.id);
         return {
           ...step,
           status: backendStep ? mapBackendStatus(backendStep.status) : 'waiting'
@@ -103,7 +124,7 @@ export default function ProcessingWorkflow() {
     }));
 
     setWorkflowPhases(updatedPhases);
-  }, [backendSubsteps]);
+  }, [backendSubsteps, shouldShow]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -149,7 +170,9 @@ export default function ProcessingWorkflow() {
   if (!workflowData || backendSubsteps.length === 0) {
     return null;
   }
-
+  if (!shouldShow || !workflowData || backendSubsteps.length === 0) {
+    return null;
+  }
   return (
     <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-6 max-w-2xl border border-gray-200 dark:border-[#2A2A2A] shadow-sm">
       {/* Header - UPDATED STYLING */}
