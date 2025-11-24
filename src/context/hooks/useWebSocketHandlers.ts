@@ -3,6 +3,7 @@ import { SearchStatus, Substep } from '@/types'
 import { webSocketService } from '@/lib/services/WebSocketService'
 import { toast } from 'sonner'
 import { useSessionState } from './useSessionState'
+import { useSession } from '../SessionContext'
 
 export function useWebSocketHandlers(sessionState: any) {
   const {
@@ -16,9 +17,12 @@ export function useWebSocketHandlers(sessionState: any) {
 
   // Add this ref to track previous session ID
   const previousSessionId = useRef<string | null>(null)
-
+ 
   // Session switching logic
   const switchSession = useCallback(async (sessionId: string) => {
+  
+      
+    
     if (!webSocketService.isConnected) return
 
     // Leave previous session if it exists and is different
@@ -79,108 +83,115 @@ export function useWebSocketHandlers(sessionState: any) {
     }
   }, [currentSession?.id, switchSession])
 
-  // WebSocket event handlers
   const handleWorkflowStatusUpdate = useCallback((data: any) => {
     const { sessionId, data: statusData } = data;
     
     console.log('📊 Workflow status update for session:', sessionId, 'current session:', currentSession?.id);
     
-    // Only update if this is the current active session
-    if (currentSession?.id === sessionId) {
-      setSessions((prev: any[]) => prev.map((session: { id: any; searchStatus: SearchStatus }) => {
-        if (session.id !== sessionId) return session;
-
-        return {
-          ...session,
-          searchStatus: {
-            ...session.searchStatus,
-            ...statusData,
-            substeps: statusData.substeps || session.searchStatus?.substeps || []
-          } as SearchStatus
-        };
-      }));
+    // CRITICAL: Only update if this is the current active session
+    if (currentSession?.id !== sessionId) {
+      console.log('⏭️ Ignoring update for inactive session:', sessionId);
+      return;
     }
+    
+    setSessions((prev: any[]) => prev.map((session: { id: any; searchStatus: SearchStatus }) => {
+      if (session.id !== sessionId) return session;
+  
+      return {
+        ...session,
+        searchStatus: {
+          ...session.searchStatus,
+          ...statusData,
+          substeps: statusData.substeps || session.searchStatus?.substeps || []
+        } as SearchStatus
+      };
+    }));
   }, [currentSession?.id, setSessions]);
-
+  
   const handleSubstepUpdate = useCallback((data: any) => {
     const { sessionId, data: substepData } = data;
     
     console.log('📝 Substep update for session:', sessionId, 'current session:', currentSession?.id);
     
-    // Only update if this is the current active session
-    if (currentSession?.id === sessionId) {
-      setSessions((prev: any[]) => prev.map((session: { id: any; searchStatus: SearchStatus }) => {
-        if (session.id !== sessionId) return session;
-
-        const currentSubsteps: Substep[] = session.searchStatus?.substeps || [];
-        const stepId = substepData.stepId;
-        
-        if (!stepId) return session;
-
-        const existingIndex = currentSubsteps.findIndex((sub: Substep) => sub.id === stepId);
-        
-        let updatedSubsteps: Substep[];
-        if (existingIndex >= 0) {
-          updatedSubsteps = currentSubsteps.map((sub: Substep, index: number) => 
-            index === existingIndex ? { 
-              ...sub, 
-              ...substepData
-            } : sub
-          );
-        } else {
-          const newSubstep: Substep = {
-            id: stepId,
-            name: substepData.name || 'Unknown Step',
-            description: substepData.description || '',
-            status: substepData.status || 'pending',
-            ...substepData
-          };
-          updatedSubsteps = [...currentSubsteps, newSubstep];
-        }
-
-        return {
-          ...session,
-          searchStatus: {
-            ...session.searchStatus,
-            substeps: updatedSubsteps
-          } as SearchStatus
-        };
-      }));
+    // CRITICAL: Only update if this is the current active session
+    if (currentSession?.id !== sessionId) {
+      console.log('⏭️ Ignoring substep update for inactive session:', sessionId);
+      return;
     }
+    
+    setSessions((prev: any[]) => prev.map((session: { id: any; searchStatus: SearchStatus }) => {
+      if (session.id !== sessionId) return session;
+  
+      const currentSubsteps: Substep[] = session.searchStatus?.substeps || [];
+      const stepId = substepData.stepId;
+      
+      if (!stepId) return session;
+  
+      const existingIndex = currentSubsteps.findIndex((sub: Substep) => sub.id === stepId);
+      
+      let updatedSubsteps: Substep[];
+      if (existingIndex >= 0) {
+        updatedSubsteps = currentSubsteps.map((sub: Substep, index: number) => 
+          index === existingIndex ? { 
+            ...sub, 
+            ...substepData
+          } : sub
+        );
+      } else {
+        const newSubstep: Substep = {
+          id: stepId,
+          name: substepData.name || 'Unknown Step',
+          description: substepData.description || '',
+          status: substepData.status || 'pending',
+          ...substepData
+        };
+        updatedSubsteps = [...currentSubsteps, newSubstep];
+      }
+  
+      return {
+        ...session,
+        searchStatus: {
+          ...session.searchStatus,
+          substeps: updatedSubsteps
+        } as SearchStatus
+      };
+    }));
   }, [currentSession?.id, setSessions]);
-
+  
   const handleSearchComplete = useCallback(async(data: any) => {
     const { sessionId, companies, resultsCount, summary } = data;
     
     console.log('✅ Search complete for session:', sessionId, 'current session:', currentSession?.id);
     
-    // Only update if this is the current active session
-    if (currentSession?.id === sessionId) {
-      setSessions((prev: any[]) => prev.map(session => {
-        if (session.id !== sessionId) return session;
-     
-        return {
-          ...session,
-          query: [...(session.query || []), summary],
-          companies,
-          resultsCount,
-          searchStatus: {
-            stage: 'complete',
-            message: `Search completed! Found ${resultsCount} companies.`,
-            progress: 100,
-            currentStep: 4,
-            totalSteps: 4,
-            details: summary,
-            substeps: session.searchStatus?.substeps || []
-          } as SearchStatus
-        };
-      }));
-
-      setIsLoading(false);
-      toast.success(`Search completed! Found ${resultsCount} companies.`)
+    // CRITICAL: Only update if this is the current active session
+    if (currentSession?.id !== sessionId) {
+      console.log('⏭️ Ignoring search complete for inactive session:', sessionId);
+      return;
     }
+    
+    setSessions((prev: any[]) => prev.map(session => {
+      if (session.id !== sessionId) return session;
+   
+      return {
+        ...session,
+        query: [...(session.query || []), summary],
+        companies,
+        resultsCount,
+        searchStatus: {
+          stage: 'complete',
+          message: `Search completed! Found ${resultsCount} companies.`,
+          progress: 100,
+          currentStep: 4,
+          totalSteps: 4,
+          details: summary,
+          substeps: session.searchStatus?.substeps || []
+        } as SearchStatus
+      };
+    }));
+  
+    setIsLoading(false);
+    toast.success(`Search completed! Found ${resultsCount} companies.`)
   }, [currentSession?.id, setSessions, setIsLoading]);
-
   const handleSessionJoined = useCallback((data: any) => {
     console.log('✅ Session joined:', data.sessionId)
     toast.success('Connected to session')
@@ -252,6 +263,7 @@ export function useWebSocketHandlers(sessionState: any) {
     }))
     
     const userID = process.env.NEXT_PUBLIC_MOCK_USER_ID
+    let count = localStorage.getItem("searchcount") ?? "1";
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/search-companies`, {
         method: 'POST',
@@ -262,7 +274,8 @@ export function useWebSocketHandlers(sessionState: any) {
         body: JSON.stringify({
           sessionId,
           query,
-          icpModelId
+          icpModelId,
+          count
         })
       })
 

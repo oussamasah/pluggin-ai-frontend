@@ -1,7 +1,7 @@
 // components/PremiumChatInterface.tsx
 'use client'
 
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback, SetStateAction } from 'react'
 import { useSession } from '@/context/SessionContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -53,11 +53,20 @@ export function PremiumChatInterface() {
   const [searchType, setSearchType] = useState<string>(
     localStorage.getItem("searchType") ?? "search"
   )
+  const [searchCount, setSearchCount] = useState(  localStorage.getItem("searchcount") ?? "1"); // Default to 10
+
+// Add this handler function
+const handleSearchCountChange = (count: SetStateAction<string>) => {
+  localStorage.setItem(`searchcount`, count.toString());
+
+  setSearchCount(count);
+};
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([])
   const [showUploadAnimation, setShowUploadAnimation] = useState(false)
   const [activeCommandCategory, setActiveCommandCategory] = useState<string | null>(null)
   const [isTyping, setIsTyping] = useState(false)
  const { theme } = useTheme()
+ const { refreshSessions } = useSession()
   // Context hooks - KEEP ALL ORIGINAL FUNCTIONALITY
   const { 
     currentSession, 
@@ -112,10 +121,11 @@ export function PremiumChatInterface() {
     
     console.log('💬 Sending to backend:', updatedQueries);
     updateSessionQuery(currentSession.id, updatedQueries);
-    
   }, [currentSession, updateSessionQuery]);
 
   useEffect(() => {
+    refreshSessions()
+    
     if (currentSession?.query) {
       const queries = Array.isArray(currentSession.query) 
         ? currentSession.query 
@@ -574,10 +584,11 @@ export function PremiumChatInterface() {
                   </div>
                 </motion.div>
               )}
-
               {/* Current Processing Status - KEEP ORIGINAL */}
-              {(currentSession?.searchStatus?.stage === "searching" || currentSession?.searchStatus?.stage === "refine_search") && (
+              {(currentSession?.searchStatus?.stage === "searching" || 
+  currentSession?.searchStatus?.stage === "refine_search") && (
   <motion.div
+    key={`workflow-${currentSession?.id}`}  // Changed: Force complete re-render on session change
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     className="flex justify-start gap-4"
@@ -593,7 +604,7 @@ export function PremiumChatInterface() {
           </span>
         )}
       </div>
-      <ProcessingWorkflow key={currentSession?.id} /> {/* Add key to force re-render */}
+      <ProcessingWorkflow key={currentSession?.id} /> {/* Keep this key too */}
     </div>
   </motion.div>
 )}
@@ -806,6 +817,29 @@ export function PremiumChatInterface() {
               </span>
             </motion.div>
           )}
+            <div className="flex items-center gap-2 justify-center">
+    <span className="text-xs text-gray-600 dark:text-[#9CA3AF] font-medium">Results:</span>
+    <select
+      value={searchCount}
+      onChange={(e) => handleSearchCountChange(e.target.value)}
+      className={cn(
+        "px-2 py-1 text-xs font-medium tracking-wide transition-all duration-300 rounded-lg border",
+        "bg-white dark:bg-[#1E1E1E] text-gray-600 dark:text-[#9CA3AF]",
+        "border-gray-300 dark:border-[#2A2A2A] focus:border-green-300 focus:ring-1 focus:ring-green-300",
+        "focus:outline-none"
+      )}
+    >
+      <option value={"1"}>1</option>
+      <option value={"10"}>10</option>
+      <option value={"25"}>25</option>
+      <option value={"50"}>50</option>
+      <option value={"70"}>70</option>
+      <option value={"100"}>100</option>
+      <option value={"200"}>200</option>
+      <option value={"500"}>500</option>
+      <option value={"1000"}>1000</option>
+    </select>
+  </div>
   <div className="flex items-center gap-2 mt-2 justify-center">
             <button
               onClick={() => handleSearchTypeChange("search")}

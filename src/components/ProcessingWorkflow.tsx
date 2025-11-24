@@ -75,28 +75,34 @@ export default function ProcessingWorkflow() {
   // Use useMemo to prevent unnecessary recalculations
   const workflowData = useMemo(() => {
     return currentSession?.searchStatus || null;
-  }, [currentSession?.searchStatus]);
+  }, [currentSession?.id, currentSession?.searchStatus]);
 
   const backendSubsteps = useMemo(() => {
     return workflowData?.substeps || [];
-  }, [workflowData]);
+  }, [workflowData?.substeps]); // More specific dependency
 
   // Only show if this session is actively processing
   const shouldShow = useMemo(() => {
-    if (!currentSession) return false;
+    if (!currentSession?.id) return false; // Changed: check session ID first
     if (!workflowData) return false;
     
     const activeStages = ['searching', 'refine_search', 'processing'];
     return activeStages.includes(workflowData.stage);
-  }, [currentSession, workflowData]);
+  }, [currentSession?.id, workflowData?.stage]); // More specific dependencies
 
   // Reset local state when session changes
   const [workflowPhases, setWorkflowPhases] = useState(WORKFLOW_PHASES);
   
   useEffect(() => {
-    setWorkflowPhases(WORKFLOW_PHASES);
-  }, [currentSession?.id]); // Reset when session changes
-
+    console.log('🔄 Resetting workflow for session:', currentSession?.id);
+    setWorkflowPhases(WORKFLOW_PHASES.map(phase => ({
+      ...phase,
+      steps: phase.steps.map(step => ({
+        ...step,
+        status: 'waiting' // Reset all to waiting
+      }))
+    })));
+  }, [currentSession?.id]);
   // Map backend substep status to frontend status
   const mapBackendStatus = (backendStatus: string) => {
     switch (backendStatus) {
@@ -110,7 +116,9 @@ export default function ProcessingWorkflow() {
 
   // Update workflow phases based on backend data - ONLY for current session
   useEffect(() => {
-    if (!backendSubsteps.length || !shouldShow) return;
+    if (!backendSubsteps.length || !shouldShow || !currentSession?.id) return;
+
+    console.log('📊 Updating workflow phases for session:', currentSession.id, backendSubsteps);
 
     const updatedPhases = WORKFLOW_PHASES.map(phase => ({
       ...phase,
@@ -124,7 +132,8 @@ export default function ProcessingWorkflow() {
     }));
 
     setWorkflowPhases(updatedPhases);
-  }, [backendSubsteps, shouldShow]);
+  }, [currentSession?.id, backendSubsteps, shouldShow]); // Added currentSession?.id
+
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -166,13 +175,18 @@ export default function ProcessingWorkflow() {
     );
     return totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
   };
+  if (!currentSession?.id) {
+    console.log('❌ No current session');
+    return null;
+  }
 
-  if (!workflowData || backendSubsteps.length === 0) {
-    return null;
-  }
   if (!shouldShow || !workflowData || backendSubsteps.length === 0) {
+    console.log('❌ Should not show workflow:', { shouldShow, hasData: !!workflowData, substepsCount: backendSubsteps.length });
     return null;
   }
+
+  console.log('✅ Showing workflow for session:', currentSession.id);
+  
   return (
     <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-6 max-w-2xl border border-gray-200 dark:border-[#2A2A2A] shadow-sm">
       {/* Header - UPDATED STYLING */}

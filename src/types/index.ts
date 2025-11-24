@@ -176,7 +176,19 @@ export interface SessionContextType {
   closeICPConfigChat: () => void
   isICPConfigChatOpen: boolean
 }
-
+export interface SessionContextType {
+  // ... existing properties ...
+  
+  // NEW: Universal Session Update Methods
+  updateSession: (sessionId: string, updates: Partial<SearchSession>) => Promise<SearchSession>
+  updateSessionStatus: (sessionId: string, status: Partial<SearchStatus>) => void
+  updateMultipleSessions: (updates: Array<{ sessionId: string; updates: Partial<SearchSession> }>) => Promise<SearchSession[]>
+  updateAllSessions: (updates: Partial<SearchSession>) => Promise<void>
+  bulkUpdateSessions: (sessionIds: string[], updates: Partial<SearchSession>) => Promise<SearchSession[]>
+  refreshSessions: () => Promise<SearchSession[]>
+  optimisticUpdate: (sessionId: string, updates: Partial<SearchSession>) => void
+  optimisticBatchUpdate: (sessionIds: string[], updates: Partial<SearchSession>) => void
+}
 export interface Substep {
   id: string;
   name: string;
