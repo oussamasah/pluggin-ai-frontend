@@ -31,7 +31,7 @@ class WebSocketService {
   private onConnectionChangeCallbacks: ((connected: boolean) => void)[] = [];
   private onReconnectCallbacks: (() => void)[] = [];
 
-  constructor(private baseUrl: string = ""+ process.env.NEXT_PUBLIC_WS_URL) {
+  constructor(private baseUrl: string = ""+ process.env.NEXT_PUBLIC_API_URL) {
     // Development singleton
     if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
       if ((window as any).webSocketServiceInstance) {
