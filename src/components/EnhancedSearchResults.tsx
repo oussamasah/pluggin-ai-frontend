@@ -59,7 +59,7 @@ export function EnhancedSearchResults() {
   return (
     <>
 
-      <div className="h-full flex flex-col bg-white dark:bg-[#0F0F0F]">
+      <div className="h-full fixed overflow-y-scroll flex flex-col bg-white dark:bg-[#0F0F0F]">
         {/* Header */}
         <div className={cn(
           "p-4 border-b",

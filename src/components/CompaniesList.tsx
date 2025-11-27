@@ -108,8 +108,17 @@ export function CompaniesList() {
     minEmployees: 0,
     maxEmployees: 10000,
     fundingStage: 'all',
-    targetMarket: 'all'
-  })
+    targetMarket: 'all',
+    // Add these new filters that your backend supports
+    minRevenue: 0,
+    maxRevenue: 1000000000, // 1B default max
+    minFunding: 0,
+    maxFunding: 1000000000, // 1B default max
+    foundedAfter: 0,
+    foundedBefore: new Date().getFullYear(),
+    hasIntentSignals: false,
+    technologies: [] as string[]
+  });
   const [sortConfig, setSortConfig] = useState({
     field: 'created_at' as keyof Company,
     direction: 'desc' as 'asc' | 'desc'
@@ -149,101 +158,199 @@ export function CompaniesList() {
   const abortControllerRef = useRef<AbortController | null>(null)
 
   // Fetch companies - FIXED: Remove dependencies that cause recreations
-  const fetchCompanies = useCallback(async (page = 1, resetFilters = false) => {
-    // Prevent multiple simultaneous requests
-    if (isFetchingRef.current) {
-      console.log('⏸️ Already fetching, skipping request')
-      return
+// FIXED: Remove filters from dependencies to prevent infinite loops
+const fetchCompanies = useCallback(async (page = 1, resetFilters = false) => {
+  // Prevent multiple simultaneous requests
+  if (isFetchingRef.current) {
+    console.log('⏸️ Already fetching, skipping request');
+    return;
+  }
+
+  // Cancel previous request
+  if (abortControllerRef.current) {
+    abortControllerRef.current.abort();
+  }
+
+  try {
+    isFetchingRef.current = true;
+    setLoading(true);
+    setError(null);
+    
+    if (resetFilters) {
+      setSearchQuery('');
+      setFilters({
+        industry: 'all',
+        country: 'all',
+        minEmployees: 0,
+        maxEmployees: 10000,
+        fundingStage: 'all',
+        targetMarket: 'all',
+        minRevenue: 0,
+        maxRevenue: 1000000000,
+        minFunding: 0,
+        maxFunding: 1000000000,
+        foundedAfter: 0,
+        foundedBefore: new Date().getFullYear(),
+        hasIntentSignals: false,
+        technologies: []
+      });
+      setSelectedICP('all');
     }
 
-    // Cancel previous request
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
+    // Create new abort controller
+    abortControllerRef.current = new AbortController();
+
+    // Build params with current state values
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: pagination.limit.toString(),
+      sortBy: sortConfig.field,
+      sortOrder: sortConfig.direction
+    });
+
+    console.log('🔍 Building params with current state:', {
+      searchQuery,
+      selectedICP,
+      filters
+    });
+
+    // Text search
+    if (searchQuery) {
+      params.append('search', searchQuery);
+      console.log('✅ Added search:', searchQuery);
     }
 
-    try {
-      isFetchingRef.current = true
-      setLoading(true)
-      setError(null)
-      
-      if (resetFilters) {
-        setSearchQuery('')
-        setFilters({
-          industry: 'all',
-          country: 'all',
-          minEmployees: 0,
-          maxEmployees: 10000,
-          fundingStage: 'all',
-          targetMarket: 'all'
-        })
-        setSelectedICP('all')
-      }
-
-      // Create new abort controller
-      abortControllerRef.current = new AbortController()
-
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: pagination.limit.toString(),
-        sortBy: sortConfig.field,
-        sortOrder: sortConfig.direction
-      })
-
-      if (searchQuery) params.append('search', searchQuery)
-      if (selectedICP !== 'all') params.append('icpModelId', selectedICP)
-      if (filters.industry !== 'all') params.append('industry', filters.industry)
-      if (filters.country !== 'all') params.append('country', filters.country)
-      if (filters.minEmployees > 0) params.append('minEmployees', filters.minEmployees.toString())
-      if (filters.maxEmployees < 10000) params.append('maxEmployees', filters.maxEmployees.toString())
-      if (filters.fundingStage !== 'all') params.append('fundingStage', filters.fundingStage)
-      if (filters.targetMarket !== 'all') params.append('targetMarket', filters.targetMarket)
-
-      console.log('🔍 Fetching companies with params:', Object.fromEntries(params))
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/companies?${params}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': `${userID}`
-        },
-        signal: abortControllerRef.current.signal
-      })
-
-      if (!response.ok) throw new Error('Failed to fetch companies')
-
-      const data: CompaniesResponse = await response.json()
-      
-      if (data.success) {
-        setCompanies(data.companies)
-        setPagination(data.pagination)
-        if (data.filters) {
-          setAvailableFilters({
-            industries: data.filters.availableIndustries,
-            countries: data.filters.availableCountries,
-            technologies: data.filters.availableTechnologies
-          })
-        }
-      } else {
-        throw new Error(data?.error || 'Failed to fetch companies')
-      }
-    } catch (err: any) {
-      // Don't show error for aborted requests
-      if (err.name === 'AbortError') {
-        console.log('⏸️ Request was aborted')
-        return
-      }
-      console.error('Error fetching companies:', err)
-      setError(err instanceof Error ? err.message : 'Failed to fetch companies')
-    } finally {
-      isFetchingRef.current = false
-      setLoading(false)
+    // ICP Model filter
+    if (selectedICP !== 'all') {
+      params.append('icpModelId', selectedICP);
+      console.log('✅ Added icpModelId:', selectedICP);
     }
-  }, [
-    // Only include stable dependencies
-    userID,
-    // Remove filters and searchQuery from dependencies to prevent recreations
-  ])
 
+    // Basic filters
+    if (filters.industry !== 'all') {
+      params.append('industry', filters.industry);
+      console.log('✅ Added industry:', filters.industry);
+    }
+    
+    if (filters.country !== 'all') {
+      params.append('country', filters.country);
+      console.log('✅ Added country:', filters.country);
+    }
+    
+    if (filters.fundingStage !== 'all') {
+      params.append('fundingStage', filters.fundingStage);
+      console.log('✅ Added fundingStage:', filters.fundingStage);
+    }
+    
+    if (filters.targetMarket !== 'all') {
+      params.append('targetMarket', filters.targetMarket);
+      console.log('✅ Added targetMarket:', filters.targetMarket);
+    }
+
+    // Range filters
+    if (filters.minEmployees > 0) {
+      params.append('minEmployees', filters.minEmployees.toString());
+      console.log('✅ Added minEmployees:', filters.minEmployees);
+    }
+    
+    if (filters.maxEmployees < 10000) {
+      params.append('maxEmployees', filters.maxEmployees.toString());
+      console.log('✅ Added maxEmployees:', filters.maxEmployees);
+    }
+    
+    if (filters.minRevenue > 0) {
+      params.append('minRevenue', filters.minRevenue.toString());
+      console.log('✅ Added minRevenue:', filters.minRevenue);
+    }
+    
+    if (filters.maxRevenue < 1000000000) {
+      params.append('maxRevenue', filters.maxRevenue.toString());
+      console.log('✅ Added maxRevenue:', filters.maxRevenue);
+    }
+    
+    if (filters.minFunding > 0) {
+      params.append('minFunding', filters.minFunding.toString());
+      console.log('✅ Added minFunding:', filters.minFunding);
+    }
+    
+    if (filters.maxFunding < 1000000000) {
+      params.append('maxFunding', filters.maxFunding.toString());
+      console.log('✅ Added maxFunding:', filters.maxFunding);
+    }
+
+    // Year filters
+    if (filters.foundedAfter > 0) {
+      params.append('foundedAfter', filters.foundedAfter.toString());
+      console.log('✅ Added foundedAfter:', filters.foundedAfter);
+    }
+    
+    if (filters.foundedBefore < new Date().getFullYear()) {
+      params.append('foundedBefore', filters.foundedBefore.toString());
+      console.log('✅ Added foundedBefore:', filters.foundedBefore);
+    }
+
+    // Boolean filters
+    if (filters.hasIntentSignals) {
+      params.append('hasIntentSignals', 'true');
+      console.log('✅ Added hasIntentSignals: true');
+    }
+
+    // Technologies filter
+    if (filters.technologies.length > 0) {
+      params.append('technologies', filters.technologies.join(','));
+      console.log('✅ Added technologies:', filters.technologies);
+    }
+
+    console.log('📤 Final API URL params:', Object.fromEntries(params));
+
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/companies?${params}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': `${userID}`
+      },
+      signal: abortControllerRef.current.signal
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch companies');
+
+    const data: CompaniesResponse = await response.json();
+    
+    if (data.success) {
+      setCompanies(data.companies);
+      setPagination(data.pagination);
+      if (data.filters) {
+        setAvailableFilters({
+          industries: data.filters.availableIndustries,
+          countries: data.filters.availableCountries,
+          technologies: data.filters.availableTechnologies
+        });
+      }
+    } else {
+      throw new Error(data?.error || 'Failed to fetch companies');
+    }
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      console.log('⏸️ Request was aborted');
+      return;
+    }
+    console.error('Error fetching companies:', err);
+    setError(err instanceof Error ? err.message : 'Failed to fetch companies');
+  } finally {
+    isFetchingRef.current = false;
+    setLoading(false);
+  }
+}, [
+  // Only include stable dependencies that won't cause infinite re-renders
+  userID,
+  selectedICP,
+  searchQuery,
+  filters,
+  pagination.limit,
+  sortConfig.field,
+  sortConfig.direction
+  // REMOVED: searchQuery, selectedICP, filters - these cause infinite loops
+]);
   // Fetch statistics - FIXED: Stable function
   const fetchStats = useCallback(async () => {
     try {
@@ -351,21 +458,30 @@ export function CompaniesList() {
 
   // Reset all filters
   const resetFilters = () => {
-    console.log('🔄 Resetting filters')
-    setSearchQuery('')
-    setSelectedICP('all')
+    console.log('🔄 Resetting all filters');
+    setSearchQuery('');
+    setSelectedICP('all');
     setFilters({
       industry: 'all',
       country: 'all',
       minEmployees: 0,
       maxEmployees: 10000,
       fundingStage: 'all',
-      targetMarket: 'all'
-    })
-    setSortConfig({ field: 'created_at', direction: 'desc' })
+      targetMarket: 'all',
+      minRevenue: 0,
+      maxRevenue: 1000000000,
+      minFunding: 0,
+      maxFunding: 1000000000,
+      foundedAfter: 0,
+      foundedBefore: new Date().getFullYear(),
+      hasIntentSignals: false,
+      technologies: []
+    });
+    setSortConfig({ field: 'created_at', direction: 'desc' });
+    
     // Trigger fetch after reset
-    setTimeout(() => fetchCompanies(1, true), 0)
-  }
+    setTimeout(() => fetchCompanies(1, true), 0);
+  };
 
   // Format currency
   const formatCurrency = (amount: number, currency: string = 'USD'): string => {
@@ -549,78 +665,204 @@ export function CompaniesList() {
           </div>
 
           {/* Advanced Filters */}
-          <AnimatePresence>
-            {showFilters && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="overflow-hidden"
-              >
-                <div className="mt-4 p-4 bg-gray-50 dark:bg-[#2A2A2A] rounded-xl border border-gray-300 dark:border-[#3A3A3A] grid grid-cols-4 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-[#9CA3AF] mb-2">Industry</label>
-                    <select
-                      value={filters.industry}
-                      onChange={(e) => setFilters(prev => ({ ...prev, industry: e.target.value }))}
-                      className="w-full px-3 py-2 bg-white dark:bg-[#1A1A1A] border border-gray-300 dark:border-[#3A3A3A] text-gray-900 dark:text-[#EDEDED] focus:outline-none focus:ring-1 focus:ring-[#006239] rounded-lg"
-                    >
-                      <option value="all">All Industries</option>
-                      {availableFilters.industries.map(industry => (
-                        <option key={industry} value={industry}>{industry}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-[#9CA3AF] mb-2">Country</label>
-                    <select
-                      value={filters.country}
-                      onChange={(e) => setFilters(prev => ({ ...prev, country: e.target.value }))}
-                      className="w-full px-3 py-2 bg-white dark:bg-[#1A1A1A] border border-gray-300 dark:border-[#3A3A3A] text-gray-900 dark:text-[#EDEDED] focus:outline-none focus:ring-1 focus:ring-[#006239] rounded-lg"
-                    >
-                      <option value="all">All Countries</option>
-                      {availableFilters.countries.map(country => (
-                        <option key={country} value={country}>{country}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-[#9CA3AF] mb-2">Employees Range</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="number"
-                        placeholder="Min"
-                        value={filters.minEmployees}
-                        onChange={(e) => setFilters(prev => ({ ...prev, minEmployees: parseInt(e.target.value) || 0 }))}
-                        className="w-full px-3 py-2 bg-white dark:bg-[#1A1A1A] border border-gray-300 dark:border-[#3A3A3A] text-gray-900 dark:text-[#EDEDED] focus:outline-none focus:ring-1 focus:ring-[#006239] rounded-lg"
-                      />
-                      <input
-                        type="number"
-                        placeholder="Max"
-                        value={filters.maxEmployees}
-                        onChange={(e) => setFilters(prev => ({ ...prev, maxEmployees: parseInt(e.target.value) || 10000 }))}
-                        className="w-full px-3 py-2 bg-white dark:bg-[#1A1A1A] border border-gray-300 dark:border-[#3A3A3A] text-gray-900 dark:text-[#EDEDED] focus:outline-none focus:ring-1 focus:ring-[#006239] rounded-lg"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex items-end">
-                    <button
-                      onClick={resetFilters}
-                      disabled={loading}
-                      className={cn(
-                        "w-full px-4 py-2 border transition-colors rounded-lg",
-                        loading
-                          ? "bg-gray-100 dark:bg-[#1A1A1A] text-gray-400 dark:text-[#6A6A6A] cursor-not-allowed"
-                          : "bg-white dark:bg-[#1A1A1A] border-gray-300 dark:border-[#3A3A3A] text-gray-700 dark:text-[#9CA3AF] hover:bg-gray-50 dark:hover:bg-[#2A2A2A]"
-                      )}
-                    >
-                      Reset Filters
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
+{/* Enhanced Advanced Filters */}
+<AnimatePresence>
+  {showFilters && (
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: 'auto' }}
+      exit={{ opacity: 0, height: 0 }}
+      className="overflow-hidden"
+    >
+      <div className="mt-4 p-4 bg-gray-50 dark:bg-[#2A2A2A] rounded-xl border border-gray-300 dark:border-[#3A3A3A] grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Industry Filter */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-[#9CA3AF] mb-2">
+            Industry
+          </label>
+          <select
+            value={filters.industry}
+            onChange={(e) => setFilters(prev => ({ ...prev, industry: e.target.value }))}
+            className="w-full px-3 py-2 bg-white dark:bg-[#1A1A1A] border border-gray-300 dark:border-[#3A3A3A] text-gray-900 dark:text-[#EDEDED] focus:outline-none focus:ring-1 focus:ring-[#006239] rounded-lg"
+          >
+            <option value="all">All Industries</option>
+            {availableFilters.industries.map(industry => (
+              <option key={industry} value={industry}>{industry}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Country Filter */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-[#9CA3AF] mb-2">
+            Country
+          </label>
+          <select
+            value={filters.country}
+            onChange={(e) => setFilters(prev => ({ ...prev, country: e.target.value }))}
+            className="w-full px-3 py-2 bg-white dark:bg-[#1A1A1A] border border-gray-300 dark:border-[#3A3A3A] text-gray-900 dark:text-[#EDEDED] focus:outline-none focus:ring-1 focus:ring-[#006239] rounded-lg"
+          >
+            <option value="all">All Countries</option>
+            {availableFilters.countries.map(country => (
+              <option key={country} value={country}>{country}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Employee Range */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-[#9CA3AF] mb-2">
+            Employees Range
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="number"
+              placeholder="Min"
+              value={filters.minEmployees}
+              onChange={(e) => setFilters(prev => ({ ...prev, minEmployees: parseInt(e.target.value) || 0 }))}
+              className="w-full px-3 py-2 bg-white dark:bg-[#1A1A1A] border border-gray-300 dark:border-[#3A3A3A] text-gray-900 dark:text-[#EDEDED] focus:outline-none focus:ring-1 focus:ring-[#006239] rounded-lg"
+            />
+            <input
+              type="number"
+              placeholder="Max"
+              value={filters.maxEmployees}
+              onChange={(e) => setFilters(prev => ({ ...prev, maxEmployees: parseInt(e.target.value) || 10000 }))}
+              className="w-full px-3 py-2 bg-white dark:bg-[#1A1A1A] border border-gray-300 dark:border-[#3A3A3A] text-gray-900 dark:text-[#EDEDED] focus:outline-none focus:ring-1 focus:ring-[#006239] rounded-lg"
+            />
+          </div>
+        </div>
+
+        {/* Funding Stage */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-[#9CA3AF] mb-2">
+            Funding Stage
+          </label>
+          <select
+            value={filters.fundingStage}
+            onChange={(e) => setFilters(prev => ({ ...prev, fundingStage: e.target.value }))}
+            className="w-full px-3 py-2 bg-white dark:bg-[#1A1A1A] border border-gray-300 dark:border-[#3A3A3A] text-gray-900 dark:text-[#EDEDED] focus:outline-none focus:ring-1 focus:ring-[#006239] rounded-lg"
+          >
+            <option value="all">All Stages</option>
+            <option value="Seed">Seed</option>
+            <option value="Series A">Series A</option>
+            <option value="Series B">Series B</option>
+            <option value="Series C">Series C</option>
+            <option value="Public">Public</option>
+            <option value="Bootstrapped">Bootstrapped</option>
+          </select>
+        </div>
+
+        {/* Revenue Range */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-[#9CA3AF] mb-2">
+            Revenue Range ($)
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="number"
+              placeholder="Min Revenue"
+              value={filters.minRevenue}
+              onChange={(e) => setFilters(prev => ({ ...prev, minRevenue: parseInt(e.target.value) || 0 }))}
+              className="w-full px-3 py-2 bg-white dark:bg-[#1A1A1A] border border-gray-300 dark:border-[#3A3A3A] text-gray-900 dark:text-[#EDEDED] focus:outline-none focus:ring-1 focus:ring-[#006239] rounded-lg"
+            />
+            <input
+              type="number"
+              placeholder="Max Revenue"
+              value={filters.maxRevenue}
+              onChange={(e) => setFilters(prev => ({ ...prev, maxRevenue: parseInt(e.target.value) || 1000000000 }))}
+              className="w-full px-3 py-2 bg-white dark:bg-[#1A1A1A] border border-gray-300 dark:border-[#3A3A3A] text-gray-900 dark:text-[#EDEDED] focus:outline-none focus:ring-1 focus:ring-[#006239] rounded-lg"
+            />
+          </div>
+        </div>
+
+        {/* Funding Amount Range */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-[#9CA3AF] mb-2">
+            Funding Amount ($)
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="number"
+              placeholder="Min Funding"
+              value={filters.minFunding}
+              onChange={(e) => setFilters(prev => ({ ...prev, minFunding: parseInt(e.target.value) || 0 }))}
+              className="w-full px-3 py-2 bg-white dark:bg-[#1A1A1A] border border-gray-300 dark:border-[#3A3A3A] text-gray-900 dark:text-[#EDEDED] focus:outline-none focus:ring-1 focus:ring-[#006239] rounded-lg"
+            />
+            <input
+              type="number"
+              placeholder="Max Funding"
+              value={filters.maxFunding}
+              onChange={(e) => setFilters(prev => ({ ...prev, maxFunding: parseInt(e.target.value) || 1000000000 }))}
+              className="w-full px-3 py-2 bg-white dark:bg-[#1A1A1A] border border-gray-300 dark:border-[#3A3A3A] text-gray-900 dark:text-[#EDEDED] focus:outline-none focus:ring-1 focus:ring-[#006239] rounded-lg"
+            />
+          </div>
+        </div>
+
+        {/* Founded Year Range */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-[#9CA3AF] mb-2">
+            Founded Year
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="number"
+              placeholder="After Year"
+              min="1900"
+              max={new Date().getFullYear()}
+              value={filters.foundedAfter}
+              onChange={(e) => setFilters(prev => ({ ...prev, foundedAfter: parseInt(e.target.value) || 0 }))}
+              className="w-full px-3 py-2 bg-white dark:bg-[#1A1A1A] border border-gray-300 dark:border-[#3A3A3A] text-gray-900 dark:text-[#EDEDED] focus:outline-none focus:ring-1 focus:ring-[#006239] rounded-lg"
+            />
+            <input
+              type="number"
+              placeholder="Before Year"
+              min="1900"
+              max={new Date().getFullYear()}
+              value={filters.foundedBefore}
+              onChange={(e) => setFilters(prev => ({ ...prev, foundedBefore: parseInt(e.target.value) || new Date().getFullYear() }))}
+              className="w-full px-3 py-2 bg-white dark:bg-[#1A1A1A] border border-gray-300 dark:border-[#3A3A3A] text-gray-900 dark:text-[#EDEDED] focus:outline-none focus:ring-1 focus:ring-[#006239] rounded-lg"
+            />
+          </div>
+        </div>
+
+        {/* Intent Signals Filter */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-[#9CA3AF] mb-2">
+            Intent Signals
+          </label>
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="hasIntentSignals"
+              checked={filters.hasIntentSignals}
+              onChange={(e) => setFilters(prev => ({ ...prev, hasIntentSignals: e.target.checked }))}
+              className="w-4 h-4 text-[#006239] bg-gray-100 border-gray-300 rounded focus:ring-[#006239] focus:ring-2"
+            />
+            <label htmlFor="hasIntentSignals" className="ml-2 text-sm text-gray-900 dark:text-[#EDEDED]">
+              Has Intent Signals
+            </label>
+          </div>
+        </div>
+
+        {/* Reset Filters */}
+        <div className="flex items-end">
+          <button
+            onClick={resetFilters}
+            disabled={loading}
+            className={cn(
+              "w-full px-4 py-2 border transition-colors rounded-lg",
+              loading
+                ? "bg-gray-100 dark:bg-[#1A1A1A] text-gray-400 dark:text-[#6A6A6A] cursor-not-allowed"
+                : "bg-white dark:bg-[#1A1A1A] border-gray-300 dark:border-[#3A3A3A] text-gray-700 dark:text-[#9CA3AF] hover:bg-gray-50 dark:hover:bg-[#2A2A2A] hover:text-[#006239]"
             )}
-          </AnimatePresence>
+          >
+            Reset All Filters
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  )}
+</AnimatePresence>
         </div>
       </div>
 

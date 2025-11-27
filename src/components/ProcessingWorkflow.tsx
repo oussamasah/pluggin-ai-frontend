@@ -1,6 +1,7 @@
+// components/ProcessingWorkflow.tsx
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import { useSession } from '@/context/SessionContext';
 import { CheckCircle2, Circle, XCircle, Loader2, ChevronRight, Zap, Target, Users, TrendingUp } from 'lucide-react';
@@ -13,14 +14,6 @@ interface WorkflowSubstep {
   category?: string;
 }
 
-interface WorkflowStep {
-  substeps: WorkflowSubstep[];
-}
-
-// Brand Colors
-const ACCENT_GREEN = '#006239'
-const ACTIVE_GREEN = '#006239'
-
 // Define the phase structure that matches your backend workflow
 const WORKFLOW_PHASES = [
   {
@@ -28,9 +21,9 @@ const WORKFLOW_PHASES = [
     title: "Dynamic ICP Discovery",
     stepIds: ['1.1', '1.2', '1.3'],
     steps: [
-      { name: "Generate hypotheses", id: '1.1',status:"Pending" },
-      { name: "Market Discovery", id: '1.2',status:"Pending" },
-      { name: "Clean and validate data", id: '1.3',status:"Pending" }
+      { name: "Generate hypotheses", id: '1.1', status: "waiting" },
+      { name: "Market Discovery", id: '1.2', status: "waiting" },
+      { name: "Clean and validate data", id: '1.3', status: "waiting" }
     ],
     icon: Target
   },
@@ -39,9 +32,9 @@ const WORKFLOW_PHASES = [
     title: "Account Intelligence",
     stepIds: ['2.1', '2.2', '2.3'],
     steps: [
-      { name: "Enrich multi-source data", id: '2.1',status:"Pending"  },
-      { name: "Score fit", id: '2.2',status:"Pending"  },
-      { name: "Explain reasoning", id: '2.3',status:"Pending"  }
+      { name: "Enrich multi-source data", id: '2.1', status: "waiting" },
+      { name: "Score fit", id: '2.2', status: "waiting" },
+      { name: "Explain reasoning", id: '2.3', status: "waiting" }
     ],
     icon: Users
   },
@@ -50,9 +43,9 @@ const WORKFLOW_PHASES = [
     title: "Persona Intelligence",
     stepIds: ['3.1', '3.2', '3.3'],
     steps: [
-      { name: "Identify relevant personas", id: '3.1' ,status:"Pending" },
-      { name: "Map psychographic data", id: '3.2',status:"Pending"  },
-      { name: "Enrich contact information", id: '3.3',status:"Pending"  }
+      { name: "Identify relevant personas", id: '3.1', status: "waiting" },
+      { name: "Map psychographic data", id: '3.2', status: "waiting" },
+      { name: "Enrich contact information", id: '3.3', status: "waiting" }
     ],
     icon: Users
   },
@@ -61,17 +54,38 @@ const WORKFLOW_PHASES = [
     title: "Intent & Timing Intelligence",
     stepIds: ['4.1', '4.2', '4.3'],
     steps: [
-      { name: "Detect buying signals", id: '4.1',status:"Pending"  },
-      { name: "Score intent", id: '4.2',status:"Pending"  },
-      { name: "Summarize reasoning", id: '4.3',status:"Pending"  }
+      { name: "Detect buying signals", id: '4.1', status: "waiting" },
+      { name: "Score intent", id: '4.2', status: "waiting" },
+      { name: "Summarize reasoning", id: '4.3', status: "waiting" }
     ],
     icon: TrendingUp
   }
 ];
 
 export default function ProcessingWorkflow() {
-  const { currentSession } = useSession();
-  
+  const { currentSession, refreshSessions } = useSession();
+  const refresh = useCallback(async () => {
+    try {
+      await refreshSessions();
+      console.log('Sessions refreshed');
+    } catch (error) {
+      console.error('Error refreshing sessions:', error);
+    }
+  }, [refreshSessions]); // ← Add refreshSessions to dependencies
+
+  // Move the interval effect to the top
+  useEffect(() => {
+    // Only set up interval if we should show the workflow
+    if (currentSession?.id) {
+      const intervalId = setInterval(() => {
+        refresh();
+      }, 10000); // Every 10 seconds
+
+      return () => {
+        clearInterval(intervalId);
+      };
+    }
+  }, [currentSession?.id, refresh]); 
   // Use useMemo to prevent unnecessary recalculations
   const workflowData = useMemo(() => {
     return currentSession?.searchStatus || null;
@@ -79,32 +93,40 @@ export default function ProcessingWorkflow() {
 
   const backendSubsteps = useMemo(() => {
     return workflowData?.substeps || [];
-  }, [workflowData?.substeps]); // More specific dependency
+  }, [workflowData?.substeps]);
 
   // Only show if this session is actively processing
   const shouldShow = useMemo(() => {
-    if (!currentSession?.id) return false; // Changed: check session ID first
+    if (!currentSession?.id) return false;
     if (!workflowData) return false;
     
     const activeStages = ['searching', 'refine_search', 'processing'];
     return activeStages.includes(workflowData.stage);
-  }, [currentSession?.id, workflowData?.stage]); // More specific dependencies
+  }, [currentSession?.id, workflowData?.stage]);
 
-  // Reset local state when session changes
-  const [workflowPhases, setWorkflowPhases] = useState(WORKFLOW_PHASES);
+  // Track previous session ID to detect changes
+  const previousSessionIdRef = useRef<string | null>(null);
   
+  // Refresh session data when switching sessions
   useEffect(() => {
-    console.log('🔄 Resetting workflow for session:', currentSession?.id);
-    setWorkflowPhases(WORKFLOW_PHASES.map(phase => ({
-      ...phase,
-      steps: phase.steps.map(step => ({
-        ...step,
-        status: 'waiting' // Reset all to waiting
-      }))
-    })));
-  }, [currentSession?.id]);
+    const currentSessionId = currentSession?.id;
+    
+    if (currentSessionId && currentSessionId !== previousSessionIdRef.current) {
+      console.log('🔄 Session changed, refreshing data:', currentSessionId);
+      
+      // Refresh sessions to get latest data from backend
+      refreshSessions().then(() => {
+        console.log('✅ Sessions refreshed for session:', currentSessionId);
+      }).catch(error => {
+        console.error('❌ Failed to refresh sessions:', error);
+      });
+      
+      previousSessionIdRef.current = currentSessionId;
+    }
+  }, [currentSession?.id, refreshSessions]);
+
   // Map backend substep status to frontend status
-  const mapBackendStatus = (backendStatus: string) => {
+  const mapBackendStatus = useCallback((backendStatus: string) => {
     switch (backendStatus) {
       case 'completed': return 'done';
       case 'in-progress': return 'processing';
@@ -112,30 +134,36 @@ export default function ProcessingWorkflow() {
       case 'error': return 'failed';
       default: return 'waiting';
     }
-  };
+  }, []);
 
-  // Update workflow phases based on backend data - ONLY for current session
-  useEffect(() => {
-    if (!backendSubsteps.length || !shouldShow || !currentSession?.id) return;
+  // Derive workflow phases directly from backend data - no local state needed
+  const workflowPhases = useMemo(() => {
+    if (!backendSubsteps.length) {
+      console.log('📊 No backend substeps, using default workflow');
+      return WORKFLOW_PHASES;
+    }
 
-    console.log('📊 Updating workflow phases for session:', currentSession.id, backendSubsteps);
+    console.log('📊 Building workflow from backend substeps:', backendSubsteps);
 
     const updatedPhases = WORKFLOW_PHASES.map(phase => ({
       ...phase,
       steps: phase.steps.map(step => {
         const backendStep = backendSubsteps.find((s: any) => s.id === step.id);
+        const status = backendStep ? mapBackendStatus(backendStep.status) : 'waiting';
+        
+        console.log(`📝 Step ${step.id}: ${status} (backend: ${backendStep?.status})`);
+        
         return {
           ...step,
-          status: backendStep ? mapBackendStatus(backendStep.status) : 'waiting'
+          status
         };
       })
     }));
 
-    setWorkflowPhases(updatedPhases);
-  }, [currentSession?.id, backendSubsteps, shouldShow]); // Added currentSession?.id
+    return updatedPhases;
+  }, [backendSubsteps, mapBackendStatus]);
 
-
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = useCallback((status: string) => {
     switch (status) {
       case 'done':
         return <CheckCircle2 className="w-4 h-4 text-[#006239]" fill="currentColor" />;
@@ -146,9 +174,9 @@ export default function ProcessingWorkflow() {
       default:
         return <Circle className="w-4 h-4 text-gray-400 dark:text-[#6A6A6A]" />;
     }
-  };
+  }, []);
 
-  const getStepTextColor = (status: string) => {
+  const getStepTextColor = useCallback((status: string) => {
     switch (status) {
       case 'done':
         return 'text-gray-700 dark:text-[#EDEDED]';
@@ -159,37 +187,55 @@ export default function ProcessingWorkflow() {
       default:
         return 'text-gray-500 dark:text-[#9CA3AF]';
     }
-  };
+  }, []);
 
-  const getPhaseStatus = (steps: any[]) => {
-    if (steps.every((s:any)=> s.status === 'done')) return 'done';
-    if (steps.some((s:any)=> s.status === 'processing')) return 'processing';
-    if (steps.some((s:any)=> s.status === 'failed')) return 'failed';
+  const getPhaseStatus = useCallback((steps: any[]) => {
+    if (steps.every((s: any) => s.status === 'done')) return 'done';
+    if (steps.some((s: any) => s.status === 'processing')) return 'processing';
+    if (steps.some((s: any) => s.status === 'failed')) return 'failed';
     return 'waiting';
-  };
+  }, []);
 
-  const getProgressPercentage = () => {
+  const getProgressPercentage = useCallback(() => {
     const totalSteps = workflowPhases.reduce((acc, phase) => acc + phase.steps.length, 0);
     const completedSteps = workflowPhases.reduce((acc, phase) => 
-      acc + phase.steps.filter((s:any)=> s.status === 'done').length, 0
+      acc + phase.steps.filter((s: any) => s.status === 'done').length, 0
     );
     return totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
-  };
+  }, [workflowPhases]);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('🔍 Workflow Debug:', {
+      sessionId: currentSession?.id,
+      shouldShow,
+      hasWorkflowData: !!workflowData,
+      backendSubstepsCount: backendSubsteps.length,
+      workflowPhases: workflowPhases.map(p => ({
+        title: p.title,
+        steps: p.steps.map(s => ({ id: s.id, status: s.status }))
+      }))
+    });
+  }, [currentSession?.id, shouldShow, workflowData, backendSubsteps, workflowPhases]);
+
   if (!currentSession?.id) {
     console.log('❌ No current session');
     return null;
   }
 
-  if (!shouldShow || !workflowData || backendSubsteps.length === 0) {
-    console.log('❌ Should not show workflow:', { shouldShow, hasData: !!workflowData, substepsCount: backendSubsteps.length });
+  if (!shouldShow) {
+    console.log('❌ Should not show workflow - not in active stage:', {
+      sessionId: currentSession.id,
+      stage: workflowData?.stage
+    });
     return null;
   }
-
-  console.log('✅ Showing workflow for session:', currentSession.id);
   
+  console.log('✅ Showing workflow for session:', currentSession.id);
+
   return (
     <div className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-6 max-w-2xl border border-gray-200 dark:border-[#2A2A2A] shadow-sm">
-      {/* Header - UPDATED STYLING */}
+      {/* Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
@@ -207,7 +253,7 @@ export default function ProcessingWorkflow() {
         </div>
       </div>
 
-      {/* Timeline - UPDATED STYLING */}
+      {/* Timeline */}
       <div className="relative">
         {workflowPhases.map((phase, phaseIndex) => {
           const PhaseIcon = phase.icon;
@@ -248,7 +294,7 @@ export default function ProcessingWorkflow() {
                   <div className="flex-1 pt-1">
                     <h3 className="text-sm font-semibold text-gray-900 dark:text-[#EDEDED] mb-1">{phase.title}</h3>
                     <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-[#9CA3AF]">
-                      <span>{phase.steps.filter((s:any)=> s.status === 'done').length}/{phase.steps.length} completed</span>
+                      <span>{phase.steps.filter((s: any) => s.status === 'done').length}/{phase.steps.length} completed</span>
                       {phaseStatus === 'processing' && (
                         <>
                           <ChevronRight className="w-3 h-3" />
@@ -265,9 +311,9 @@ export default function ProcessingWorkflow() {
                   </div>
                 </div>
 
-                {/* Steps - UPDATED STYLING */}
+                {/* Steps */}
                 <div className="ml-14 space-y-2">
-                  {phase.steps.map((step, stepIndex)=> (
+                  {phase.steps.map((step, stepIndex) => (
                     <motion.div 
                       key={step.id}
                       className={`flex items-center gap-3 group py-2 px-3 -mx-3 rounded-xl transition-all
@@ -309,33 +355,33 @@ export default function ProcessingWorkflow() {
         })}
       </div>
 
-      {/* Footer Stats - UPDATED STYLING */}
+      {/* Footer Stats */}
       <div className="mt-6 pt-4 border-t border-gray-200 dark:border-[#2A2A2A]">
         <div className="flex items-center justify-between text-sm">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-[#006239]" />
               <span className="text-gray-600 dark:text-[#9CA3AF]">
-                {workflowPhases.reduce((acc, p) => acc + p.steps.filter((s:any)=> s.status === 'done').length, 0)} Done
+                {workflowPhases.reduce((acc, p) => acc + p.steps.filter((s: any) => s.status === 'done').length, 0)} Done
               </span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-[#006239] animate-pulse" />
               <span className="text-gray-600 dark:text-[#9CA3AF]">
-                {workflowPhases.reduce((acc, p) => acc + p.steps.filter((s:any)=> s.status === 'processing').length, 0)} Active
+                {workflowPhases.reduce((acc, p) => acc + p.steps.filter((s: any) => s.status === 'processing').length, 0)} Active
               </span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-gray-400 dark:bg-[#6A6A6A]" />
               <span className="text-gray-600 dark:text-[#9CA3AF]">
-                {workflowPhases.reduce((acc, p) => acc + p.steps.filter((s:any)=> s.status === 'waiting').length, 0)} Pending
+                {workflowPhases.reduce((acc, p) => acc + p.steps.filter((s: any) => s.status === 'waiting').length, 0)} Pending
               </span>
             </div>
-            {workflowPhases.some(p => p.steps.some((s:any)=> s.status === 'failed')) && (
+            {workflowPhases.some(p => p.steps.some((s: any) => s.status === 'failed')) && (
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-red-500" />
                 <span className="text-gray-600 dark:text-[#9CA3AF]">
-                  {workflowPhases.reduce((acc, p) => acc + p.steps.filter((s:any)=> s.status === 'failed').length, 0)} Failed
+                  {workflowPhases.reduce((acc, p) => acc + p.steps.filter((s: any) => s.status === 'failed').length, 0)} Failed
                 </span>
               </div>
             )}

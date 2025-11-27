@@ -17,11 +17,34 @@ export function useWebSocketHandlers(sessionState: any) {
 
   // Add this ref to track previous session ID
   const previousSessionId = useRef<string | null>(null)
+ const refreshSessions = useCallback(async () => {
+   try {
+     console.log('🔄 Refreshing sessions from backend...');
+     
+     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sessions`, {
+       headers: {
+         'x-user-id': userID || ''
+       }
+     });
  
+     if (!response.ok) {
+       const errorText = await response.text();
+       throw new Error(`Failed to refresh sessions: ${errorText}`);
+     }
+ 
+     const { sessions: refreshedSessions } = await response.json();
+     setSessions(refreshedSessions || []);
+     
+     console.log('✅ Sessions refreshed:', refreshedSessions.length);
+     return refreshedSessions;
+   } catch (error) {
+     console.error('❌ Error refreshing sessions:', error);
+     throw error;
+   }
+ }, [setSessions]);
   // Session switching logic
   const switchSession = useCallback(async (sessionId: string) => {
   
-      
     
     if (!webSocketService.isConnected) return
 

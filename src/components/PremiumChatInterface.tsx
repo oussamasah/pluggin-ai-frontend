@@ -55,6 +55,8 @@ export function PremiumChatInterface() {
   )
   const [searchCount, setSearchCount] = useState(  localStorage.getItem("searchcount") ?? "1"); // Default to 10
 
+
+ 
 // Add this handler function
 const handleSearchCountChange = (count: SetStateAction<string>) => {
   localStorage.setItem(`searchcount`, count.toString());
@@ -177,7 +179,7 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
 
   useEffect(() => {
     scrollToBottom()
-  }, [chatMessages, currentSession?.searchStatus, scrollToBottom])
+  }, [chatMessages, scrollToBottom])
 
   useEffect(() => {
     if (!isLoading && textareaRef.current) {
@@ -237,6 +239,9 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
         default:
           console.warn('Unknown action type:', action.type)
       }
+      setTimeout(()=>{
+        refreshSessions()
+      },4000)
     } catch (error) {
       console.error('Error executing action:', error)
     }
@@ -298,8 +303,8 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
       await new Promise(resolve => setTimeout(resolve, 1000));
       setIsTyping(false);
       
-      addMessageToChat('assistant', aiResponse)
-      updateConversationContext(classification)
+      await addMessageToChat('assistant', aiResponse)
+      await updateConversationContext(classification)
       await executeAction(action, classification, currentSession.id)
       
     } catch (error) {
@@ -425,8 +430,8 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
   return (
     <div className="flex-1 flex flex-col h-full bg-white dark:bg-[#0F0F0F] min-h-screen">
       <ConversationDebug />
-      
-      {/* Premium Header - UPDATED STYLE */}
+   
+      {/**JSON.stringify(currentSession)**/}
       {hasMessages && (
         <div className={cn(
           "px-6 py-4 border-b backdrop-blur-sm",
@@ -657,7 +662,7 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
 
       {/* Input Area - UPDATED STYLE */}
       <div className={cn(
-        "border-0 bg-white dark:bg-[#0F0F0F] sticky bottom-0",
+        "border-0 bg-white dark:bg-[#0F0F0F] sticky bottom-0 z-50",
         "border-gray-200 dark:border-0",
         hasMessages ? "pt-4 pb-6" : "pt-8 pb-8"
       )}>

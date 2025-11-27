@@ -645,6 +645,33 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
     ).join('\n');
   };
 
+  // In your SessionContext or useSession hook
+const refreshSessions = useCallback(async () => {
+  try {
+    console.log('🔄 Refreshing sessions from backend...');
+    
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sessions`, {
+      headers: {
+        'x-user-id': userID || ''
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to refresh sessions: ${errorText}`);
+    }
+
+    const { sessions: refreshedSessions } = await response.json();
+    setSessions(refreshedSessions || []);
+    
+    console.log('✅ Sessions refreshed:', refreshedSessions.length);
+    return refreshedSessions;
+  } catch (error) {
+    console.error('❌ Error refreshing sessions:', error);
+    throw error;
+  }
+}, [setSessions]);
+
   // RETURN ALL FUNCTIONS
   return {
     // State
@@ -658,7 +685,7 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
     setSessions,
     setIcpModels,
     setIsConnected,
-    
+    refreshSessions,
     // Session methods
     setCurrentSession,
     createNewSession,
