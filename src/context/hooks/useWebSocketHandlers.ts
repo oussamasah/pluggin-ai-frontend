@@ -4,6 +4,7 @@ import { webSocketService } from '@/lib/services/WebSocketService'
 import { toast } from 'sonner'
 import { useSessionState } from './useSessionState'
 import { useSession } from '../SessionContext'
+const userID = process.env.NEXT_PUBLIC_MOCK_USER_ID
 
 export function useWebSocketHandlers(sessionState: any) {
   const {
@@ -14,7 +15,7 @@ export function useWebSocketHandlers(sessionState: any) {
     currentSession,
     updateSessionQuery
   } = sessionState
-
+ 
   // Add this ref to track previous session ID
   const previousSessionId = useRef<string | null>(null)
  const refreshSessions = useCallback(async () => {
