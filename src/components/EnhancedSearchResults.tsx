@@ -39,7 +39,7 @@ export function EnhancedSearchResults() {
     })
   }, [])
 
-  if (!currentSession?.companies || currentSession.companies.length === 0) {
+  if (!currentSession?.companies || currentSession?.companies?.length === 0) {
     return (
       <div className="h-full flex items-center justify-center p-8 bg-white dark:bg-[#0F0F0F]">
         <div className="text-center">
@@ -59,7 +59,7 @@ export function EnhancedSearchResults() {
   return (
     <>
 
-      <div className="h-full fixed overflow-y-scroll flex flex-col bg-white dark:bg-[#0F0F0F]">
+      <div className="h-full fixed overflow-y-scroll overflow-x-hidden w-100 flex flex-col bg-white dark:bg-[#0F0F0F]">
         {/* Header */}
         <div className={cn(
           "p-4 border-b",
@@ -69,7 +69,7 @@ export function EnhancedSearchResults() {
             <div>
               <h2 className="text-sm font-medium text-gray-900 dark:text-[#EDEDED]">Matching Companies</h2>
               <p className="text-xs text-gray-500 dark:text-[#9CA3AF] font-light">
-                {currentSession.companies.length} companies found • {savedCompanies.size} saved
+                {currentSession?.companies?.length} companies found • {savedCompanies?.size} saved
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -88,7 +88,7 @@ export function EnhancedSearchResults() {
         <div className="flex-1 overflow-y-auto">
           <div className="p-4 space-y-4">
             <AnimatePresence>
-              {currentSession.companies.map((company, index) => (
+              {currentSession?.companies?.map((company, index) => (
                 <motion.div
                   key={company.company_id || `${company.name}-${index}`}
                   initial={{ opacity: 0, y: 20 }}
@@ -99,7 +99,7 @@ export function EnhancedSearchResults() {
                     company={company} 
                     onViewDetails={() => setSelectedCompany(company)}
                     onSaveCompany={handleSaveCompany}
-                    isSaved={savedCompanies.has(company.company_id)}
+                    isSaved={savedCompanies.has(company?.company_id)}
                   />
                 </motion.div>
               ))}
@@ -115,7 +115,7 @@ export function EnhancedSearchResults() {
             company={selectedCompany}
             onClose={() => setSelectedCompany(null)}
             onSaveCompany={handleSaveCompany}
-            isSaved={savedCompanies.has(selectedCompany.company_id)}
+            isSaved={savedCompanies.has(selectedCompany?.company_id)}
           />
         )}
       </AnimatePresence>
@@ -147,8 +147,8 @@ function CompanyCard({ company, onViewDetails, onSaveCompany, isSaved }: Company
   }, []);
 
   const formattedTechnologies = useMemo(() => 
-    company.technologies?.slice(0, 3) || [], 
-    [company.technologies]
+    company?.technologies?.slice(0, 3) || [], 
+    [company?.technologies]
   );
 
   return (
@@ -158,10 +158,10 @@ function CompanyCard({ company, onViewDetails, onSaveCompany, isSaved }: Company
       "hover:border-[#006239]/30"
     )}>
       <div className="flex items-start gap-3 mb-4">
-        {company.logo_url ? (
+        {company?.logo_url ? (
           <img
-            src={company.logo_url}
-            alt={`${company.name} logo`}
+            src={company?.logo_url}
+            alt={`${company?.name} logo`}
             className="w-12 h-12 rounded-xl object-cover border border-gray-300 dark:border-[#2A2A2A]"
           />
         ) : (
@@ -176,19 +176,19 @@ function CompanyCard({ company, onViewDetails, onSaveCompany, isSaved }: Company
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-gray-900 dark:text-[#EDEDED] truncate">{company.name}</h3>
-              {company.funding_stage && (
+              <h3 className="font-semibold text-gray-900 dark:text-[#EDEDED] truncate">{company?.name}</h3>
+              {company?.funding_stage && (
                 <span className={cn(
                   "px-2 py-1 rounded-lg text-xs font-semibold border",
                   "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700"
                 )}>
-                  {company.funding_stage}
+                  {company?.funding_stage}
                 </span>
               )}
             </div>
-            {company.website && (
+            {company?.website && (
               <a 
-                href={company.website} 
+                href={company?.website} 
                 target='_blank' 
                 rel="noopener noreferrer" 
                 className="opacity-0 group-hover:opacity-100 transition-all duration-300 p-1.5 rounded-lg text-gray-400 hover:text-[#006239] hover:bg-gray-100 dark:hover:bg-[#2A2A2A]"
@@ -200,15 +200,15 @@ function CompanyCard({ company, onViewDetails, onSaveCompany, isSaved }: Company
           
           <div className="flex items-center gap-2 mt-1">
             <Globe className="w-3 h-3 text-[#006239]" />
-            <span className="text-xs text-gray-600 dark:text-[#9CA3AF] font-light">{company.domain}</span>
+            <span className="text-xs text-gray-600 dark:text-[#9CA3AF] font-light">{company?.domain}</span>
           </div>
         </div>
       </div>
 
       {/* Description */}
-      {company.description && (
+      {company?.description && (
         <p className="text-sm text-gray-600 dark:text-[#9CA3AF] font-light leading-relaxed line-clamp-2 mb-4">
-          {company.description}
+          {company?.description}
         </p>
       )}
 
@@ -217,11 +217,11 @@ function CompanyCard({ company, onViewDetails, onSaveCompany, isSaved }: Company
         {/* Location */}
         <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-[#9CA3AF] font-light">
           <MapPin className="w-3.5 h-3.5 text-[#006239]" />
-          <span>{company.location.country != undefined && company?.location?.country} {company.location.city != undefined && " - " + company.location.city}</span>
+          <span>{company?.location?.country != undefined && company?.location?.country} {company?.location?.city != undefined && " - " + company?.location?.city}</span>
         </div>
 
         {/* Employees */}
-        {company.employee_count && (
+        {company?.employee_count && (
           <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-[#9CA3AF] font-light">
             <Users className="w-3.5 h-3.5 text-[#006239]" />
             <span>{company.employee_count.toLocaleString()} employees</span>
@@ -545,9 +545,9 @@ function CompanyDetailsModal({ company, onClose, onSaveCompany, isSaved }: Compa
                 {/* Location Information */}
                 <Section title="Location" icon={<MapPin className="w-5 h-5" />}>
                   <div className="space-y-3">
-                    <InfoRow label="City" value={company.location.city} />
-                    <InfoRow label="Country" value={company.location.country} />
-                    <InfoRow label="Country Code" value={company.location.country_code} />
+                    <InfoRow label="City" value={company?.location?.city} />
+                    <InfoRow label="Country" value={company?.location?.country} />
+                    <InfoRow label="Country Code" value={company?.location?.country_code} />
                   </div>
                 </Section>
               </div>
@@ -559,44 +559,44 @@ function CompanyDetailsModal({ company, onClose, onSaveCompany, isSaved }: Compa
                   <div className="space-y-3">
                     <InfoRow 
                       label="Annual Revenue" 
-                      value={company.annual_revenue ? formatCurrency(company.annual_revenue, company.annual_revenue_currency) : 'Not specified'}
+                      value={company?.annual_revenue ? formatCurrency(company?.annual_revenue, company?.annual_revenue_currency) : 'Not specified'}
                     />
                     <InfoRow 
                       label="Total Funding" 
-                      value={company.total_funding ? formatCurrency(company.total_funding, 'USD') : 'Not specified'}
+                      value={company?.total_funding ? formatCurrency(company?.total_funding, 'USD') : 'Not specified'}
                     />
-                    <InfoRow label="Employee Count" value={company.employee_count?.toLocaleString()} />
-                    <InfoRow label="Founded Year" value={company.founded_year} />
+                    <InfoRow label="Employee Count" value={company?.employee_count?.toLocaleString()} />
+                    <InfoRow label="Founded Year" value={company?.founded_year} />
                   </div>
                 </Section>
 
                 {/* Contact Information */}
                 <Section title="Contact Information" icon={<PhoneCall className="w-5 h-5" />}>
                   <div className="space-y-3">
-                    <InfoRow label="Email" value={company.contact_email} />
-                    <InfoRow label="Phone" value={company.contact_phone} />
-                    <InfoRow label="Website" value={company.website} isLink />
+                    <InfoRow label="Email" value={company?.contact_email} />
+                    <InfoRow label="Phone" value={company?.contact_phone} />
+                    <InfoRow label="Website" value={company?.website} isLink />
                   </div>
                 </Section>
 
                 {/* Social Profiles */}
                 <Section title="Social Profiles" icon={<Network className="w-5 h-5" />}>
                   <div className="space-y-2">
-                    <SocialLink href={company.linkedin_url} platform="LinkedIn" />
-                    <SocialLink href={company.twitter_url} platform="Twitter" />
-                    <SocialLink href={company.facebook_url} platform="Facebook" />
-                    <SocialLink href={company.instagram_url} platform="Instagram" />
-                    <SocialLink href={company.crunchbase_url} platform="Crunchbase" />
+                    <SocialLink href={company?.linkedin_url} platform="LinkedIn" />
+                    <SocialLink href={company?.twitter_url} platform="Twitter" />
+                    <SocialLink href={company?.facebook_url} platform="Facebook" />
+                    <SocialLink href={company?.instagram_url} platform="Instagram" />
+                    <SocialLink href={company?.crunchbase_url} platform="Crunchbase" />
                   </div>
                 </Section>
               </div>
             </div>
 
             {/* Technology Stack */}
-            {company.technologies && company.technologies.length > 0 && (
+            {company?.technologies && company?.technologies?.length > 0 && (
               <Section title="Technology Stack" icon={<Cpu className="w-5 h-5" />}>
                 <div className="flex flex-wrap gap-2">
-                  {company.technologies.map((tech, index) => (
+                  {company?.technologies?.map((tech, index) => (
                     <span
                       key={index}
                       className={cn(
@@ -612,34 +612,34 @@ function CompanyDetailsModal({ company, onClose, onSaveCompany, isSaved }: Compa
             )}
 
             {/* Scoring Metrics */}
-            {company.scoring_metrics && (
+            {company?.scoring_metrics && (
               <Section title="Scoring Metrics" icon={<BarChart3 className="w-5 h-5" />}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {company.scoring_metrics.fit_score && (
+                  {company?.scoring_metrics?.fit_score && (
                     <div className={cn(
                       "p-4 border rounded-2xl",
                       "bg-[#F9FAFB] dark:bg-[#1A1A1A] border-gray-200 dark:border-[#2A2A2A]"
                     )}>
                       <h4 className="text-gray-900 dark:text-[#EDEDED] font-semibold mb-3">ICP Fit Score</h4>
                       <div className="space-y-2">
-                        <InfoRow label="Score" value={`${company.scoring_metrics.fit_score.score}%`} />
-                        <InfoRow label="Reason" value={company.scoring_metrics.fit_score.reason} />
-                        <InfoRow label="Confidence" value={`${company.scoring_metrics.fit_score.confidence}%`} />
-                        <InfoRow label="Factors" value={company.scoring_metrics.fit_score.factors} />
+                        <InfoRow label="Score" value={`${company?.scoring_metrics?.fit_score?.score}%`} />
+                        <InfoRow label="Reason" value={company?.scoring_metrics?.fit_score?.reason} />
+                        <InfoRow label="Confidence" value={`${company?.scoring_metrics?.fit_score?.confidence}%`} />
+                        <InfoRow label="Factors" value={company?.scoring_metrics?.fit_score?.factors} />
                       </div>
                     </div>
                   )}
-                  {company.scoring_metrics.intent_score && (
+                  {company?.scoring_metrics?.intent_score && (
                     <div className={cn(
                       "p-4 border rounded-2xl",
                       "bg-[#F9FAFB] dark:bg-[#1A1A1A] border-gray-200 dark:border-[#2A2A2A]"
                     )}>
                       <h4 className="text-gray-900 dark:text-[#EDEDED] font-semibold mb-3">Intent Score</h4>
                       <div className="space-y-2">
-                        <InfoRow label="Score" value={`${company.scoring_metrics.intent_score.score}%`} />
-                        <InfoRow label="Reason" value={company.scoring_metrics.intent_score.reason} />
-                        <InfoRow label="Confidence" value={`${company.scoring_metrics.intent_score.confidence}%`} />
-                        <InfoRow label="Factors" value={company.scoring_metrics.intent_score.factors} />
+                        <InfoRow label="Score" value={`${company?.scoring_metrics?.intent_score?.score}%`} />
+                        <InfoRow label="Reason" value={company?.scoring_metrics?.intent_score?.reason} />
+                        <InfoRow label="Confidence" value={`${company?.scoring_metrics?.intent_score?.confidence}%`} />
+                        <InfoRow label="Factors" value={company?.scoring_metrics?.intent_score?.factors} />
                       </div>
                     </div>
                   )}
@@ -648,25 +648,25 @@ function CompanyDetailsModal({ company, onClose, onSaveCompany, isSaved }: Compa
             )}
 
             {/* Intent Signals */}
-            {company.intent_signals && (
+            {company?.intent_signals && (
               <Section title="Intent Signals" icon={<Crosshair className="w-5 h-5" />}>
                 <pre className={cn(
                   "p-4 text-xs font-mono overflow-x-auto border rounded-2xl",
                   "bg-[#F9FAFB] dark:bg-[#1A1A1A] border-gray-200 dark:border-[#2A2A2A] text-gray-600 dark:text-[#9CA3AF]"
                 )}>
-                  {formatJSON(company.intent_signals)}
+                  {formatJSON(company?.intent_signals)}
                 </pre>
               </Section>
             )}
 
             {/* Relationships */}
-            {company.relationships && (
+            {company?.relationships && (
               <Section title="Relationships" icon={<Users2 className="w-5 h-5" />}>
                 <pre className={cn(
                   "p-4 text-xs font-mono overflow-x-auto border rounded-2xl",
                   "bg-[#F9FAFB] dark:bg-[#1A1A1A] border-gray-200 dark:border-[#2A2A2A] text-gray-600 dark:text-[#9CA3AF]"
                 )}>
-                  {formatJSON(company.relationships)}
+                  {formatJSON(company?.relationships)}
                 </pre>
               </Section>
             )}
@@ -674,11 +674,11 @@ function CompanyDetailsModal({ company, onClose, onSaveCompany, isSaved }: Compa
             {/* Metadata */}
             <Section title="Metadata" icon={<Layers className="w-5 h-5" />}>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <InfoRow label="Company ID" value={company.company_id} />
-                <InfoRow label="Session ID" value={company.session_id} />
-                <InfoRow label="ICP Model ID" value={company.icp_model_id} />
-                <InfoRow label="Created At" value={new Date(company.created_at).toLocaleString()} />
-                <InfoRow label="Updated At" value={new Date(company.updated_at).toLocaleString()} />
+                <InfoRow label="Company ID" value={company?.company_id} />
+                <InfoRow label="Session ID" value={company?.session_id} />
+                <InfoRow label="ICP Model ID" value={company?.icp_model_id} />
+                <InfoRow label="Created At" value={new Date(company?.created_at).toLocaleString()} />
+                <InfoRow label="Updated At" value={new Date(company?.updated_at).toLocaleString()} />
               </div>
             </Section>
           </div>

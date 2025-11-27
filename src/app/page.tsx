@@ -13,7 +13,7 @@ import PremiumLogoBackground from '@/components/ui/PremiumLogoBackground'
 export default function Home() {
   const { currentSession, sessions, isConnected } = useSession()
   useEffect(() => {
-    console.log("----------------",currentSession)
+ 
 
   }, [currentSession])
   useEffect(() => {

@@ -31,7 +31,7 @@ class WebSocketService {
   private onConnectionChangeCallbacks: ((connected: boolean) => void)[] = [];
   private onReconnectCallbacks: (() => void)[] = [];
 
-  constructor(private baseUrl: string = 'wss://' + process.env.NEXT_PUBLIC_WS_URL) {
+  constructor(private baseUrl: string = 'ws://' + process.env.NEXT_PUBLIC_WS_URL) {
     // Development singleton
     if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
       if ((window as any).webSocketServiceInstance) {
@@ -300,7 +300,7 @@ class WebSocketService {
   private async checkBackendHealth(): Promise<boolean> {
     try {
       // Try to fetch a simple health endpoint
-      const response = await fetch('/api/health', {
+      const response = await fetch(process.env.NEXT_PUBLIC_API_URL+'/api/health', {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
