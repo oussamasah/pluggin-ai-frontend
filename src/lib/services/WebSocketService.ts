@@ -31,7 +31,7 @@ class WebSocketService {
   private onConnectionChangeCallbacks: ((connected: boolean) => void)[] = [];
   private onReconnectCallbacks: (() => void)[] = [];
 
-  constructor(private baseUrl: string = 'ws://' + process.env.NEXT_PUBLIC_WS_URL) {
+  constructor(private baseUrl: string = ""+ process.env.NEXT_PUBLIC_WS_URL) {
     // Development singleton
     if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
       if ((window as any).webSocketServiceInstance) {
@@ -53,38 +53,41 @@ class WebSocketService {
       console.log('⏸️ Backend unavailable, skipping connection attempt');
       return;
     }
-
+  
     if (this.connectionPromise) {
       console.log('🔄 Returning existing connection promise');
       return this.connectionPromise;
     }
-
+  
     if (this.isConnected) {
       console.log('✅ WebSocket already connected');
       return;
     }
-
+  
     if (this.isConnecting) {
       console.log('⏳ WebSocket connection in progress');
       return;
     }
-
+  
     // Clear any pending reconnect
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);
       this.reconnectTimeout = null;
     }
-
+  
     this.isConnecting = true;
     this.userId = userId || undefined;
     
+    const wsUrl = `${this.baseUrl}/ws`;
+    
     console.log('🔗 Attempting WebSocket connection...', {
+      url: wsUrl,
       userId,
       reconnectAttempt: this.reconnectAttempts + 1,
       maxAttempts: this.maxReconnectAttempts,
       backendAvailable: this.isBackendAvailable
     });
-
+  
     this.connectionPromise = new Promise((resolve, reject) => {
       try {
         // Clean up existing connection
@@ -92,8 +95,9 @@ class WebSocketService {
           this.ws.close();
           this.ws = null;
         }
-
-        this.ws = new WebSocket(`${this.baseUrl}/ws`);
+  
+        console.log('🔄 Creating WebSocket connection to:', wsUrl);
+        this.ws = new WebSocket(wsUrl);
         
         // Set connection timeout (10 seconds)
         const connectionTimeout = setTimeout(() => {
@@ -104,14 +108,14 @@ class WebSocketService {
             reject(new Error('Connection timeout'));
           }
         }, 10000);
-
+  
         this.ws.onopen = (event) => {
           clearTimeout(connectionTimeout);
-          console.log('✅ WebSocket connected successfully');
+          console.log('✅ WebSocket connected successfully to:', wsUrl);
           this.handleConnectionSuccess();
           resolve();
         };
-
+  
         this.ws.onmessage = (event) => {
           try {
             const data: WebSocketMessage = JSON.parse(event.data);
@@ -128,10 +132,11 @@ class WebSocketService {
             console.error('❌ Error parsing WebSocket message:', error);
           }
         };
-
+  
         this.ws.onclose = (event) => {
           clearTimeout(connectionTimeout);
           console.log('🔌 WebSocket disconnected:', {
+            url: wsUrl,
             code: event.code,
             reason: event.reason,
             wasClean: event.wasClean
@@ -139,20 +144,21 @@ class WebSocketService {
           
           this.handleConnectionFailure('WebSocket closed', event.code);
         };
-
+  
         this.ws.onerror = (error) => {
           clearTimeout(connectionTimeout);
-          console.error('❌ WebSocket error:', error);
+          console.error('❌ WebSocket connection error for URL:', wsUrl, error);
           this.handleConnectionFailure('WebSocket error');
           reject(error);
         };
-
+  
       } catch (error) {
+        console.error('❌ WebSocket connection setup error:', error);
         this.handleConnectionFailure('Connection error');
         reject(error);
       }
     });
-
+  
     return this.connectionPromise;
   }
 
