@@ -181,7 +181,7 @@ export interface SessionContextType {
   
   // NEW: Universal Session Update Methods
   updateSession: (sessionId: string, updates: Partial<SearchSession>) => Promise<SearchSession>
-  updateSessionStatus: (sessionId: string, status: Partial<SearchStatus>) => void
+    updateSessionStatus: (sessionId: string, status: Partial<SearchStatus>) => void
   updateMultipleSessions: (updates: Array<{ sessionId: string; updates: Partial<SearchSession> }>) => Promise<SearchSession[]>
   updateAllSessions: (updates: Partial<SearchSession>) => Promise<void>
   bulkUpdateSessions: (sessionIds: string[], updates: Partial<SearchSession>) => Promise<SearchSession[]>
