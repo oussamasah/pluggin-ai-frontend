@@ -144,7 +144,7 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
       
       setLocalConversation(messages);
     }
-  }, [currentSession?.id,currentSession?.query]);
+  }, [currentSession]);
 
   const updateConversationContext = useCallback((classification: any) => {
     if (currentSession?.id) {
