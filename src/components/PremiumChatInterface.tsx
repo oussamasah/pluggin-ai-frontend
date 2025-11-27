@@ -144,7 +144,7 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
       
       setLocalConversation(messages);
     }
-  }, [currentSession]);
+  }, [currentSession?.id]);
 
   const updateConversationContext = useCallback((classification: any) => {
     if (currentSession?.id) {
@@ -415,6 +415,7 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
 
   useEffect(() => {
     const handleSearchComplete = async(data: any) => {
+      refreshSessions()
       const { sessionId, companies, resultsCount, summary } = data;
       console.log('✅ Search complete:', { sessionId, resultsCount })
       addMessageToChat('assistant', summary);
