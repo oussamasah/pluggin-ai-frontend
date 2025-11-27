@@ -415,10 +415,11 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
 
   useEffect(() => {
     const handleSearchComplete = async(data: any) => {
-      refreshSessions()
+    
       const { sessionId, companies, resultsCount, summary } = data;
       console.log('✅ Search complete:', { sessionId, resultsCount })
       addMessageToChat('assistant', summary);
+      await refreshSessions()
     };
   
     webSocketService.on('search-complete', handleSearchComplete);
