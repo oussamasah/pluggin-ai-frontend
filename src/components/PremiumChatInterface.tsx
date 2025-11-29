@@ -124,9 +124,7 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
     console.log('💬 Sending to backend:', updatedQueries);
     updateSessionQuery(currentSession.id, updatedQueries);
   }, [currentSession, updateSessionQuery]);
-  useEffect(() => {
-    refreshSessions()
-  }, [refreshSessions])
+
   useEffect(() => {
    
     
@@ -146,7 +144,7 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
       
       setLocalConversation(messages);
     }
-  }, [currentSession?.id,currentSession?.query]);
+  }, [currentSession?.id]);
 
   const updateConversationContext = useCallback((classification: any) => {
     if (currentSession?.id) {
@@ -242,7 +240,9 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
           console.warn('Unknown action type:', action.type)
       }
     
-      await refreshSessions()
+   
+      
+   
     
     } catch (error) {
       console.error('Error executing action:', error)
@@ -421,7 +421,7 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
       const { sessionId, companies, resultsCount, summary } = data;
       console.log('✅ Search complete:', { sessionId, resultsCount })
       addMessageToChat('assistant', summary);
-      await refreshSessions()
+     
     };
   
     webSocketService.on('search-complete', handleSearchComplete);
@@ -435,7 +435,7 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
     <div className="flex-1 flex flex-col h-full bg-white dark:bg-[#0F0F0F] min-h-screen">
       <ConversationDebug />
    
-      {JSON.stringify(currentSession)}
+      {/***JSON.stringify(currentSession)**/}
       {hasMessages && (
         <div className={cn(
           "px-6 py-4 border-b backdrop-blur-sm",

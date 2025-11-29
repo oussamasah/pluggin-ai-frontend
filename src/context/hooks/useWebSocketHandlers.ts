@@ -142,44 +142,7 @@ export function useWebSocketHandlers(sessionState: any) {
       console.log('⏭️ Ignoring substep update for inactive session:', sessionId);
       return;
     }
-    
-    setSessions((prev: any[]) => prev.map((session: { id: any; searchStatus: SearchStatus }) => {
-      if (session.id !== sessionId) return session;
-  
-      const currentSubsteps: Substep[] = session.searchStatus?.substeps || [];
-      const stepId = substepData.stepId;
-      
-      if (!stepId) return session;
-  
-      const existingIndex = currentSubsteps.findIndex((sub: Substep) => sub.id === stepId);
-      
-      let updatedSubsteps: Substep[];
-      if (existingIndex >= 0) {
-        updatedSubsteps = currentSubsteps.map((sub: Substep, index: number) => 
-          index === existingIndex ? { 
-            ...sub, 
-            ...substepData
-          } : sub
-        );
-      } else {
-        const newSubstep: Substep = {
-          id: stepId,
-          name: substepData.name || 'Unknown Step',
-          description: substepData.description || '',
-          status: substepData.status || 'pending',
-          ...substepData
-        };
-        updatedSubsteps = [...currentSubsteps, newSubstep];
-      }
-  
-      return {
-        ...session,
-        searchStatus: {
-          ...session.searchStatus,
-          substeps: updatedSubsteps
-        } as SearchStatus
-      };
-    }));
+    refreshSessions()
   }, [currentSession?.id, setSessions]);
   
   const handleSearchComplete = useCallback(async(data: any) => {
@@ -192,26 +155,8 @@ export function useWebSocketHandlers(sessionState: any) {
       console.log('⏭️ Ignoring search complete for inactive session:', sessionId);
       return;
     }
-    
-    setSessions((prev: any[]) => prev.map(session => {
-      if (session.id !== sessionId) return session;
-   
-      return {
-        ...session,
-        query: [...(session.query || []), summary],
-        companies,
-        resultsCount,
-        searchStatus: {
-          stage: 'complete',
-          message: `Search completed! Found ${resultsCount} companies.`,
-          progress: 100,
-          currentStep: 4,
-          totalSteps: 4,
-          details: summary,
-          substeps: session.searchStatus?.substeps || []
-        } as SearchStatus
-      };
-    }));
+    refreshSessions()
+
   
     setIsLoading(false);
     toast.success(`Search completed! Found ${resultsCount} companies.`)

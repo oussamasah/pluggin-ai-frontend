@@ -64,28 +64,7 @@ const WORKFLOW_PHASES = [
 
 export default function ProcessingWorkflow() {
   const { currentSession, refreshSessions } = useSession();
-  const refresh = useCallback(async () => {
-    try {
-      await refreshSessions();
-      console.log('Sessions refreshed');
-    } catch (error) {
-      console.error('Error refreshing sessions:', error);
-    }
-  }, [refreshSessions]); // ← Add refreshSessions to dependencies
 
-  // Move the interval effect to the top
-  useEffect(() => {
-    // Only set up interval if we should show the workflow
-    if (currentSession?.id) {
-      const intervalId = setInterval(() => {
-        refresh();
-      }, 10000); // Every 10 seconds
-
-      return () => {
-        clearInterval(intervalId);
-      };
-    }
-  }, [currentSession?.id, refresh]); 
   // Use useMemo to prevent unnecessary recalculations
   const workflowData = useMemo(() => {
     return currentSession?.searchStatus || null;
