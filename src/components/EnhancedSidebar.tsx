@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import { useSession } from '@/context/SessionContext'
 import { useTheme } from '@/context/ThemeContext'
+import { OrganizationSwitcher, SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs'
 
 import { 
   Search, 
@@ -136,6 +137,32 @@ export function EnhancedSidebar() {
             </div>
             <ThemeToggle />
           </div>
+
+          <SignedIn>
+            <div className="flex items-center gap-3 mb-4">
+              <OrganizationSwitcher
+                afterCreateOrganizationUrl="/organizations"
+                afterLeaveOrganizationUrl="/"
+                hidePersonal={true}
+                appearance={{
+                  elements: {
+                    organizationSwitcherTrigger:
+                      'flex-1 justify-between border border-gray-200 dark:border-[#2A2A2A] rounded-lg px-3 py-2',
+                  },
+                }}
+              />
+              <div className="rounded-full border border-gray-200 dark:border-[#2A2A2A] p-1">
+                <UserButton afterSignOutUrl="/sign-in" />
+              </div>
+            </div>
+          </SignedIn>
+          <SignedOut>
+            <SignInButton mode="modal">
+              <button className="mb-4 w-full rounded-lg border border-dashed border-gray-300 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-600 transition hover:border-gray-400">
+                Sign in
+              </button>
+            </SignInButton>
+          </SignedOut>
 
           {/* Search Bar */}
           <div className="relative mb-4">
@@ -399,11 +426,12 @@ export function EnhancedSidebar() {
               label="Company Database" 
             />
           </Link>
-          <NavButton 
-            icon={Users} 
-            label="Prospects" 
-            onClick={() => {/* Add navigation */}}
-          />
+          <Link href="/organizations" className="block">
+            <NavButton 
+              icon={Users} 
+              label="Organizations" 
+            />
+          </Link>
           <NavButton 
             icon={BarChart3} 
             label="Analytics" 

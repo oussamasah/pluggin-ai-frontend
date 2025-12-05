@@ -26,3 +26,17 @@ export function debounce<T extends (...args: any[]) => any>(
     timeout = setTimeout(() => func(...args), wait)
   }
 }
+
+export function toSlug(value: string): string {
+  const normalized = value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+  if (normalized) {
+    return normalized.slice(0, 40)
+  }
+
+  return `workspace-${Math.random().toString(36).slice(2, 8)}`
+}

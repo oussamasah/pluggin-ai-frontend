@@ -34,3 +34,22 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Clerk configuration
+
+This workspace now relies on [Clerk](https://clerk.com) for authentication, organization creation, and invitation workflows. Add the following variables to your `.env.local` (or the environment of your choice) before running `npm run dev`:
+
+```
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxx
+CLERK_SECRET_KEY=sk_test_xxx
+CLERK_SIGNING_SECRET=whsec_xxx # only required if you add Clerk webhooks
+```
+
+Restart the dev server so Next.js can pick up the new environment variables.
+
+## Workspace & plan management
+
+- Visit `/organizations` to create organizations mapped to the Starter, Growth, or Scale plans defined in `src/lib/constants.ts`.
+- Each organization stores its plan metadata inside Clerk `publicMetadata`, which is enforced by the API routes located under `src/app/api/organizations`.
+- Inviting members via the UI (or directly hitting `POST /api/organizations/:id/invite`) will block the request when it would exceed the selected plan's seat limit.
+- Use the organization switcher in the left sidebar to activate an existing workspace, create new ones, or jump between teams.
