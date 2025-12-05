@@ -51,6 +51,7 @@ Restart the dev server so Next.js can pick up the new environment variables.
 
 - Visit `/organizations` to create organizations mapped to the Starter, Growth, or Scale plans defined in `src/lib/constants.ts`.
 - Each organization stores its plan metadata inside Clerk `publicMetadata`, which is enforced by the API routes located under `src/app/api/organizations`.
+- If a workspace is created through Clerk’s default onboarding flow, open `/organizations`, pick a plan, and click “Assign plan to active workspace” to sync metadata and lift Clerk’s default one-seat limit.
 - Inviting members via the UI (or directly hitting `POST /api/organizations/:id/invite`) will block the request when it would exceed the selected plan's seat limit.
 - Use the organization switcher in the left sidebar to activate an existing workspace, create new ones, or jump between teams.
 

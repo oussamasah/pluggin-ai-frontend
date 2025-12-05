@@ -27,6 +27,7 @@ export function OrganizationManager() {
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState('basic_member')
   const [isInviting, setIsInviting] = useState(false)
+  const [isAssigningPlan, setIsAssigningPlan] = useState(false)
 
   const [planSummary, setPlanSummary] = useState<OrganizationPlanSummary | null>(null)
   const [isSummaryLoading, setIsSummaryLoading] = useState(false)
@@ -141,6 +142,39 @@ export function OrganizationManager() {
     }
   }
 
+  const handleAssignPlan = async () => {
+    if (!activeOrganizationId) {
+      toast.error('Select an active workspace first')
+      return
+    }
+
+    try {
+      setIsAssigningPlan(true)
+      const response = await fetch(`/api/organizations/${activeOrganizationId}/plan`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          plan: selectedPlan,
+        }),
+      })
+
+      const payload = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(payload.error || 'Unable to update plan')
+      }
+
+      toast.success(`${ORG_PLANS[selectedPlan].label} plan applied to your workspace`)
+      await refreshPlanSummary()
+    } catch (error: any) {
+      toast.error(error.message || 'Unable to update plan')
+    } finally {
+      setIsAssigningPlan(false)
+    }
+  }
+
   const activePlanDefinition = useMemo(() => {
     if (planSummary) {
       return ORG_PLANS[planSummary.plan]
@@ -150,6 +184,7 @@ export function OrganizationManager() {
 
   const seatsUsed = planSummary ? planSummary.memberCount + planSummary.pendingInvites : 0
   const seatsTotal = planSummary ? planSummary.limits.maxSeats : ORG_PLANS[selectedPlan].limits.maxSeats
+  const planNeedsAssignment = !!planSummary && !planSummary.planAssigned
 
   return (
     <div className="space-y-8">
@@ -169,7 +204,11 @@ export function OrganizationManager() {
               <div>
                 <dt className="text-gray-500">Plan</dt>
                 <dd className="font-medium text-gray-900 dark:text-white">
-                  {activePlanDefinition?.label || planSummary?.plan || 'Not set'}
+                  {planSummary
+                    ? planSummary.planAssigned
+                      ? activePlanDefinition?.label
+                      : `${activePlanDefinition?.label} (unassigned)`
+                    : 'Not set'}
                 </dd>
               </div>
               <div>
@@ -189,6 +228,12 @@ export function OrganizationManager() {
                 </dd>
               </div>
             </dl>
+          )}
+          {planSummary && !planSummary.planAssigned && (
+            <div className="mt-4 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-900/20 dark:text-amber-100">
+              <p>This workspace was created without selecting a GTM plan. Clerk caps it at 1 member until a plan is assigned.</p>
+              <p className="mt-1 text-xs">Pick a plan below and click &ldquo;Assign plan to active workspace&rdquo; to unlock the correct limits.</p>
+            </div>
           )}
           {!organization && (
             <p className="text-sm text-gray-500 mt-4">
@@ -312,6 +357,30 @@ export function OrganizationManager() {
             </button>
           </div>
         </form>
+        {activeOrganizationId && (
+          <div className="mt-4 flex flex-col gap-2 md:flex-row md:items-center">
+            <button
+              type="button"
+              onClick={handleAssignPlan}
+              disabled={isAssigningPlan}
+              className={cn(
+                'rounded-2xl border px-4 py-3 text-sm font-semibold uppercase tracking-wide transition',
+                'border-[#006239] text-[#006239] hover:bg-emerald-50 disabled:opacity-60 dark:border-emerald-400 dark:text-emerald-200 dark:hover:bg-emerald-900/20'
+              )}
+            >
+              {isAssigningPlan
+                ? 'Applying plan...'
+                : planNeedsAssignment
+                  ? 'Assign plan to active workspace'
+                  : 'Update plan for active workspace'}
+            </button>
+            {planNeedsAssignment && (
+              <p className="text-xs text-amber-600 dark:text-amber-300">
+                Assigning a plan raises Clerk&rsquo;s default seat cap from 1 to your selected limit.
+              </p>
+            )}
+          </div>
+        )}
       </section>
 
       <section className="rounded-3xl border border-gray-200 bg-white/90 p-6 shadow-sm backdrop-blur dark:border-[#2A2A2A] dark:bg-[#0f0f0f]/90">

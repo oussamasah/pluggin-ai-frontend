@@ -55,6 +55,7 @@ export async function POST(req: Request) {
       name,
       slug: candidateSlug,
       createdBy: userId,
+      maxAllowedMemberships: planDefinition.limits.maxSeats,
       publicMetadata: {
         plan,
         limits: planDefinition.limits,

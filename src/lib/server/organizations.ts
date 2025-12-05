@@ -2,29 +2,37 @@ import { clerkClient } from '@clerk/nextjs/server'
 import { ORG_PLANS } from '@/lib/constants'
 import { OrgPlanId, OrganizationPlanSummary } from '@/types/organization'
 
-export function resolvePlan(planKey?: unknown): OrgPlanId {
+export function resolvePlan(planKey?: unknown): { plan: OrgPlanId; isFallback: boolean } {
   if (typeof planKey === 'string' && planKey in ORG_PLANS) {
-    return planKey as OrgPlanId
+    return { plan: planKey as OrgPlanId, isFallback: false }
   }
-  return 'starter'
+  return { plan: 'starter', isFallback: true }
 }
 
 function buildSummary(args: {
   organizationId: string
   organizationName: string
   plan: OrgPlanId
+  planAssigned: boolean
   memberCount: number
   pendingInvites: number
+  maxSeatsOverride?: number | null
 }): OrganizationPlanSummary {
-  const { organizationId, organizationName, plan, memberCount, pendingInvites } = args
+  const { organizationId, organizationName, plan, planAssigned, memberCount, pendingInvites, maxSeatsOverride } = args
   const planDefinition = ORG_PLANS[plan]
-  const seatsRemaining = Math.max(planDefinition.limits.maxSeats - memberCount, 0)
+  const effectiveMaxSeats = maxSeatsOverride ?? planDefinition.limits.maxSeats
+  const limits = {
+    ...planDefinition.limits,
+    maxSeats: effectiveMaxSeats,
+  }
+  const seatsRemaining = Math.max(effectiveMaxSeats - memberCount, 0)
 
   return {
     organizationId,
     organizationName,
     plan,
-    limits: planDefinition.limits,
+    planAssigned,
+    limits,
     memberCount,
     pendingInvites,
     seatsRemaining,
@@ -42,13 +50,15 @@ export async function fetchPlanSummary(organizationId: string) {
 
   const memberCount = memberships.totalCount ?? memberships.data.length
   const pendingInvites = invitations.totalCount ?? invitations.data.length
-  const plan = resolvePlan(organization.publicMetadata?.plan)
+  const { plan, isFallback } = resolvePlan(organization.publicMetadata?.plan)
 
   return buildSummary({
     organizationId: organization.id,
     organizationName: organization.name,
     plan,
+    planAssigned: !isFallback,
     memberCount,
     pendingInvites,
+    maxSeatsOverride: organization.maxAllowedMemberships ?? undefined,
   })
 }

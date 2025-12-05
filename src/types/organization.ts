@@ -20,6 +20,7 @@ export interface OrganizationPlanSummary {
   organizationId: string
   organizationName: string
   plan: OrgPlanId
+  planAssigned: boolean
   limits: OrgPlanLimits
   memberCount: number
   pendingInvites: number
