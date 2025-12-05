@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import { useSession } from '@/context/SessionContext'
 import { useTheme } from '@/context/ThemeContext'
+import { OrganizationSwitcher, SignedIn, SignedOut, SignInButton, SignOutButton, UserButton } from '@clerk/nextjs'
 
 import { 
   Search, 
@@ -20,7 +21,9 @@ import {
   Filter,
   Crown,
   Zap,
-  Target
+  Target,
+  LogOut,
+  User as UserIcon
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
@@ -136,6 +139,32 @@ export function EnhancedSidebar() {
             </div>
             <ThemeToggle />
           </div>
+
+          <SignedIn>
+            <div className="flex items-center gap-3 mb-4">
+              <OrganizationSwitcher
+                afterCreateOrganizationUrl="/organizations"
+                afterLeaveOrganizationUrl="/"
+                hidePersonal={true}
+                appearance={{
+                  elements: {
+                    organizationSwitcherTrigger:
+                      'flex-1 justify-between border border-gray-200 dark:border-[#2A2A2A] rounded-lg px-3 py-2',
+                  },
+                }}
+              />
+              <div className="rounded-full border border-gray-200 dark:border-[#2A2A2A] p-1">
+                <UserButton afterSignOutUrl="/sign-in" />
+              </div>
+            </div>
+          </SignedIn>
+          <SignedOut>
+            <SignInButton mode="modal">
+              <button className="mb-4 w-full rounded-lg border border-dashed border-gray-300 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-600 transition hover:border-gray-400">
+                Sign in
+              </button>
+            </SignInButton>
+          </SignedOut>
 
           {/* Search Bar */}
           <div className="relative mb-4">
@@ -399,11 +428,12 @@ export function EnhancedSidebar() {
               label="Company Database" 
             />
           </Link>
-          <NavButton 
-            icon={Users} 
-            label="Prospects" 
-            onClick={() => {/* Add navigation */}}
-          />
+          <Link href="/organizations" className="block">
+            <NavButton 
+              icon={Users} 
+              label="Organizations" 
+            />
+          </Link>
           <NavButton 
             icon={BarChart3} 
             label="Analytics" 
@@ -415,6 +445,29 @@ export function EnhancedSidebar() {
               label="Configuration" 
             />
           </Link>
+          <Link href="/profile" className="block">
+            <NavButton 
+              icon={UserIcon} 
+              label="My Profile" 
+            />
+          </Link>
+          <SignedIn>
+            <SignOutButton redirectUrl="/sign-in">
+              <button
+                type="button"
+                className={cn(
+                  "mt-2 w-full flex items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold tracking-wide transition",
+                  "bg-white dark:bg-[#0F0F0F]",
+                  "border-gray-200 dark:border-[#2A2A2A]",
+                  "text-gray-900 dark:text-[#EDEDED]",
+                  "hover:border-gray-300 dark:hover:border-[#3A3A3A]"
+                )}
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </button>
+            </SignOutButton>
+          </SignedIn>
         </div>
       </div>
     </div>
