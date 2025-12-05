@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import { useSession } from '@/context/SessionContext'
 import { useTheme } from '@/context/ThemeContext'
-import { OrganizationSwitcher, SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs'
+import { OrganizationSwitcher, SignedIn, SignedOut, SignInButton, SignOutButton, UserButton } from '@clerk/nextjs'
 
 import { 
   Search, 
@@ -21,7 +21,9 @@ import {
   Filter,
   Crown,
   Zap,
-  Target
+  Target,
+  LogOut,
+  User as UserIcon
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
@@ -443,6 +445,29 @@ export function EnhancedSidebar() {
               label="Configuration" 
             />
           </Link>
+          <Link href="/profile" className="block">
+            <NavButton 
+              icon={UserIcon} 
+              label="My Profile" 
+            />
+          </Link>
+          <SignedIn>
+            <SignOutButton redirectUrl="/sign-in">
+              <button
+                type="button"
+                className={cn(
+                  "mt-2 w-full flex items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold tracking-wide transition",
+                  "bg-white dark:bg-[#0F0F0F]",
+                  "border-gray-200 dark:border-[#2A2A2A]",
+                  "text-gray-900 dark:text-[#EDEDED]",
+                  "hover:border-gray-300 dark:hover:border-[#3A3A3A]"
+                )}
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </button>
+            </SignOutButton>
+          </SignedIn>
         </div>
       </div>
     </div>
