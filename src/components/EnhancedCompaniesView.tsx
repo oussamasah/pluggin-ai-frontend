@@ -46,6 +46,8 @@ import { Company } from '@/types'
 import { EnhancedSearchResults } from './EnhancedSearchResults'
 import { CompanyDetail } from './CompanyDetail'
 
+import { useUser } from '@clerk/nextjs'
+
 // Brand Colors
 const ACCENT_GREEN = '#006239'
 const ACTIVE_GREEN = '#006239'
@@ -59,8 +61,10 @@ interface CompanyStats {
   byCountry: Record<string, number>;
 }
 
-export function EnhancedCompaniesView() {
-  const userID = process.env.NEXT_PUBLIC_MOCK_USER_ID
+export  function EnhancedCompaniesView() {
+  const { user } = useUser();
+
+  const userId = user?.id;
   const { currentSession, icpModels } = useSession()
   
   // Data State
@@ -127,7 +131,7 @@ export function EnhancedCompaniesView() {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': `${userID}`
+          'x-user-id': `${userId}`
         },
       })
 
@@ -153,7 +157,7 @@ export function EnhancedCompaniesView() {
     } finally {
       setLoading(false)
     }
-  }, [currentSession, searchQuery, selectedICP, filters, sortConfig, userID])
+  }, [currentSession, searchQuery, selectedICP, filters, sortConfig, userId])
 
   // Calculate statistics
   useEffect(() => {
@@ -240,7 +244,7 @@ export function EnhancedCompaniesView() {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/companies/export?${params}`, {
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': `${userID}`
+          'x-user-id': `${userId}`
         }
       })
       if (response.ok) {

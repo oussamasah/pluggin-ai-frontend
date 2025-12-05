@@ -1,11 +1,8 @@
 // app/layout.tsx
-import { SessionProvider } from '@/context/SessionContext'
-import { EnhancedSidebar } from '@/components/EnhancedSidebar'
-import { Toaster } from 'sonner'
 import './globals.css'
-import { BackendHealthCheck } from '@/components/BackendHealthCheck'
+import { ClerkProvider } from '@clerk/nextjs'
+import { Toaster } from 'sonner'
 
-import { ThemeProvider } from '@/context/ThemeContext'
 export const metadata = {
   title: 'ICP Scout - AI-Powered Company Discovery',
   description: 'Find your ideal customers with AI-powered search and ICP matching',
@@ -17,28 +14,24 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className="h-full">
-      <body className="h-full bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/20">
-    
-        <SessionProvider>
-        <ThemeProvider>
-          <div className="flex h-full">
-            <div className=" relative bg-white dark:bg-[#0F0F0F]">
-            <EnhancedSidebar />
-            </div>
-            <main className="ml-64 md:ml-80  w-full">
-
-              {children}
-            </main>
-          </div>
+    <html lang="en" className="h-full" suppressHydrationWarning>
+      <body className="h-full bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/20 dark:from-[#0F0F0F] dark:via-[#0F0F0F] dark:to-[#0F0F0F]">
+        <ClerkProvider
+          appearance={{
+            variables: {
+              colorPrimary: '#006239',
+              colorTextOnPrimaryBackground: '#ffffff',
+            },
+          }}
+        >
+          {children}
           <Toaster 
             position="top-right"
             toastOptions={{
-              className: 'bg-white border border-gray-200 shadow-lg',
+              className: 'bg-white dark:bg-[#1A1A1A] border border-gray-200 dark:border-[#2A2A2A] shadow-lg text-gray-900 dark:text-[#EDEDED]',
             }}
           />
-        </ThemeProvider>
-        </SessionProvider>
+        </ClerkProvider>
       </body>
     </html>
   )

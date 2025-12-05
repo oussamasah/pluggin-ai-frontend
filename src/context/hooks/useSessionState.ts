@@ -1,9 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { SearchSession, ICPModel, SearchStatus } from '@/types'
 
-const userID = process.env.NEXT_PUBLIC_MOCK_USER_ID
+import { useUser } from '@clerk/nextjs';
+
 
 export function useSessionState() {
+  const { user, isLoaded, isSignedIn } = useUser();
+  const userId = isLoaded && isSignedIn ? user.id : null;
+  console.log(userId)
   const [sessions, setSessions] = useState<SearchSession[]>([])
   const [icpModels, setIcpModels] = useState<ICPModel[]>([])
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
@@ -15,41 +19,51 @@ export function useSessionState() {
 
   // Load initial data
   useEffect(() => {
+    if (!isLoaded || !userId) return; // 🚨 WAIT for Clerk
+  
     const loadInitialData = async () => {
       try {
-        // Load sessions
-        const sessionsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sessions`, {
-          headers: {
-            'x-user-id': userID || ''
+        const sessionsResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/sessions`,
+          {
+            headers: {
+              'x-user-id': userId
+            }
           }
-        })
+        );
+  
         if (sessionsResponse.ok) {
-          const sessionsData = await sessionsResponse.json()
-          setSessions(sessionsData.sessions || [])
+          const sessionsData = await sessionsResponse.json();
+          setSessions(sessionsData.sessions || []);
         }
-
-        // Load ICP models
-        const modelsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/icp-models`, {
-          headers: {
-            'x-user-id': userID || ''
+  
+        const modelsResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/icp-models`,
+          {
+            headers: {
+              'x-user-id': userId
+            }
           }
-        })
+        );
+  
         if (modelsResponse.ok) {
-          const modelsData = await modelsResponse.json()
-          setIcpModels(modelsData.models || [])
+          const modelsData = await modelsResponse.json();
+          setIcpModels(modelsData.models || []);
         }
+  
       } catch (error) {
-        console.error('Error loading initial data:', error)
-        loadFromLocalStorage()
+        console.error('Error loading initial data:', error);
+        loadFromLocalStorage();
       }
-    }
-
-    loadInitialData()
-  }, [])
+    };
+  
+    loadInitialData();
+  }, [isLoaded, userId]); 
+  
   const updateSessionStatus = useCallback((sessionId: string, status: Partial<SearchStatus>) => {
     setSessions(prev => prev.map(session => {
       if (session.id !== sessionId) return session;
-      
+
       return {
         ...session,
         searchStatus: {
@@ -62,7 +76,7 @@ export function useSessionState() {
   const loadFromLocalStorage = useCallback(() => {
     const savedSessions = localStorage.getItem('icp-scout-sessions');
     const savedModels = localStorage.getItem('icp-scout-models');
-    
+
     if (savedSessions) {
       try {
         setSessions(JSON.parse(savedSessions, (key, value) => {
@@ -80,7 +94,7 @@ export function useSessionState() {
         console.error('Error loading sessions from localStorage:', error);
       }
     }
-    
+
     if (savedModels) {
       try {
         setIcpModels(JSON.parse(savedModels, (key, value) => {
@@ -96,13 +110,17 @@ export function useSessionState() {
   // Session management methods
   const createNewSession = useCallback(async (name: string) => {
     try {
+      
+      if(!userId) return;
+      console.log("createe session for userId")
+      console.log(userId)
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sessions`, {
         method: 'POST',
         headers: {
-          'x-user-id': userID || '', // fallback to empty string if undefined
+          'x-user-id': userId || '', // fallback to empty string if undefined
           'Content-Type': 'application/json'
         },
-        
+
         body: JSON.stringify({ name })
       })
 
@@ -111,7 +129,7 @@ export function useSessionState() {
       const { session } = await response.json()
       setSessions(prev => [session, ...prev])
       setCurrentSessionId(session.id)
-      
+
     } catch (error) {
       console.error('Error creating session:', error)
       // Fallback to local storage
@@ -119,7 +137,7 @@ export function useSessionState() {
         id: Date.now().toString(),
         name,
         createdAt: new Date(),
-        query:[],
+        query: [],
         resultsCount: 0
       }
       setSessions(prev => [newSession, ...prev])
@@ -129,67 +147,67 @@ export function useSessionState() {
 
   const setCurrentSession = useCallback((sessionId: string) => {
     setCurrentSessionId(sessionId)
-  }, [])  
-  
- // In your useSessionState hook - FIXED VERSION
-const updateSessionQuery = useCallback(async (sessionId: string, query: string | string[]) => {
-  try {
-    const currentSession = sessions.find(s => s.id === sessionId);
-    const currentQueries = currentSession?.query || [];
-    
-    console.log('🔄 updateSessionQuery called:', { sessionId, query, currentQueries });
-    
-    let newQueries: string[];
-    if (Array.isArray(query)) {
-      // If query is an array, use it directly (this should be the case for chat)
-      newQueries = query;
-    } else {
-      // If query is a string, append it (for backward compatibility)
-      newQueries = [...currentQueries, query];
+  }, [])
+
+  // In your useSessionState hook - FIXED VERSION
+  const updateSessionQuery = useCallback(async (sessionId: string, query: string | string[]) => {
+    try {
+      const currentSession = sessions.find(s => s.id === sessionId);
+      const currentQueries = currentSession?.query || [];
+
+      console.log('🔄 updateSessionQuery called:', { sessionId, query, currentQueries });
+
+      let newQueries: string[];
+      if (Array.isArray(query)) {
+        // If query is an array, use it directly (this should be the case for chat)
+        newQueries = query;
+      } else {
+        // If query is a string, append it (for backward compatibility)
+        newQueries = [...currentQueries, query];
+      }
+
+      console.log('🔄 Final newQueries:', newQueries);
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sessions/${sessionId}/query`, {
+        method: 'PATCH',
+        headers: {
+          'x-user-id': userId || '', // fallback to empty string if undefined
+          'Content-Type': 'application/json'
+        },
+
+        body: JSON.stringify({ query: newQueries })
+      });
+
+      if (!response.ok) throw new Error('Failed to update query');
+
+      // Update local state
+      setSessions(prev => prev.map(s =>
+        s.id === sessionId ? { ...s, query: newQueries } : s
+      ));
+
+      console.log('✅ Successfully updated session queries');
+
+    } catch (error) {
+      console.error('Error updating query:', error);
+
+      // Fallback: update local state only
+      const currentSession = sessions.find(s => s.id === sessionId);
+      const currentQueries = currentSession?.query || [];
+
+      let newQueries: string[];
+      if (Array.isArray(query)) {
+        newQueries = query;
+      } else {
+        newQueries = [...currentQueries, query];
+      }
+
+      setSessions(prev => prev.map(session =>
+        session.id === sessionId ? { ...session, query: newQueries } : session
+      ));
+
+      console.log('🔄 Fallback: Updated local state only');
     }
-
-    console.log('🔄 Final newQueries:', newQueries);
-
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sessions/${sessionId}/query`, {
-      method: 'PATCH',
-      headers: {
-        'x-user-id': userID || '', // fallback to empty string if undefined
-        'Content-Type': 'application/json'
-      },
-      
-      body: JSON.stringify({ query: newQueries })
-    });
-
-    if (!response.ok) throw new Error('Failed to update query');
-
-    // Update local state
-    setSessions(prev => prev.map(s =>
-      s.id === sessionId ? { ...s, query: newQueries } : s
-    ));
-    
-    console.log('✅ Successfully updated session queries');
-    
-  } catch (error) {
-    console.error('Error updating query:', error);
-    
-    // Fallback: update local state only
-    const currentSession = sessions.find(s => s.id === sessionId);
-    const currentQueries = currentSession?.query || [];
-    
-    let newQueries: string[];
-    if (Array.isArray(query)) {
-      newQueries = query;
-    } else {
-      newQueries = [...currentQueries, query];
-    }
-
-    setSessions(prev => prev.map(session =>
-      session.id === sessionId ? { ...session, query: newQueries } : session
-    ));
-    
-    console.log('🔄 Fallback: Updated local state only');
-  }
-}, [sessions]);
+  }, [sessions]);
 
   // Add a function to clear the conversation
   const clearSessionQuery = useCallback(async (sessionId: string) => {
@@ -210,10 +228,10 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sessions/${sessionId}`, {
         method: 'DELETE',
         headers: {
-          'x-user-id': userID || '', // fallback to empty string if undefined
+          'x-user-id': userId || '', // fallback to empty string if undefined
           'Content-Type': 'application/json'
         },
-        
+
       })
 
       if (!response.ok) throw new Error('Failed to delete session')
@@ -237,10 +255,10 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/icp-models`, {
         method: 'POST',
         headers: {
-          'x-user-id': userID || '', // fallback to empty string if undefined
+          'x-user-id': userId || '', // fallback to empty string if undefined
           'Content-Type': 'application/json'
         },
-        
+
         body: JSON.stringify(modelData)
       })
 
@@ -248,7 +266,7 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
 
       const { model } = await response.json()
       setIcpModels(prev => {
-        const updatedModels = modelData.isPrimary 
+        const updatedModels = modelData.isPrimary
           ? prev.map(m => ({ ...m, isPrimary: false }))
           : prev
         return [...updatedModels, model]
@@ -263,7 +281,7 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
         updatedAt: now
       }
       setIcpModels(prev => {
-        const updatedModels = modelData.isPrimary 
+        const updatedModels = modelData.isPrimary
           ? prev.map(model => ({ ...model, isPrimary: false }))
           : prev
         return [...updatedModels, newModel]
@@ -275,16 +293,16 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/icp-models/${modelId}/primary`, {
         headers: {
-          'x-user-id': userID || '', // fallback to empty string if undefined
-         
+          'x-user-id': userId || '', // fallback to empty string if undefined
+
         },
-        
+
         method: 'PATCH'
       })
 
       if (!response.ok) throw new Error('Failed to set primary model')
 
-      setIcpModels(prev => 
+      setIcpModels(prev =>
         prev.map(model => ({
           ...model,
           isPrimary: model.id === modelId
@@ -292,7 +310,7 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
       )
     } catch (error) {
       console.error('Error setting primary model:', error)
-      setIcpModels(prev => 
+      setIcpModels(prev =>
         prev.map(model => ({
           ...model,
           isPrimary: model.id === modelId
@@ -320,33 +338,33 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
   const startSearch = useCallback(async (sessionId: string, query: string, icpModelId?: string) => {
     try {
       setIsLoading(true);
-      
+
       // Update session query first
       const currentSession = sessions.find(s => s.id === sessionId);
       const currentQueries = currentSession?.query || [];
       const updatedQueries = [...currentQueries, query];
-      
+
       await updateSessionQuery(sessionId, updatedQueries);
-      
+
       // Start the search
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/search-companies`, {
         method: 'POST',
         headers: {
-          'x-user-id': userID || '', // fallback to empty string if undefined
+          'x-user-id': userId || '', // fallback to empty string if undefined
           'Content-Type': 'application/json'
         },
-        
+
         body: JSON.stringify({
           sessionId,
           query,
           icpModelId
         })
       });
-      
+
       if (!response.ok) throw new Error('Search failed');
-      
+
       const searchResults = await response.json();
-      
+
       // Update sessions with search results
       setSessions(prev => prev.map(session =>
         session.id === sessionId ? {
@@ -361,7 +379,7 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
           }
         } : session
       ));
-      
+
     } catch (error) {
       console.error('Error starting search:', error);
       throw error;
@@ -374,26 +392,26 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
   const refineSearch = useCallback(async (sessionId: string, newQuery: string, previousQuery?: string) => {
     try {
       setIsLoading(true);
-      
+
       // Merge with previous query if provided
-      const finalQuery = previousQuery ? 
-        await mergeQueries(previousQuery, newQuery) : 
+      const finalQuery = previousQuery ?
+        await mergeQueries(previousQuery, newQuery) :
         newQuery;
 
       // Update session query
       const currentSession = sessions.find(s => s.id === sessionId);
       const currentQueries = currentSession?.query || [];
       const updatedQueries = [...currentQueries, finalQuery];
-      
+
       await updateSessionQuery(sessionId, updatedQueries);
-      
+
       // Start the refined search
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/search`, {
         headers: {
-          'x-user-id': userID || '', // fallback to empty string if undefined
+          'x-user-id': userId || '', // fallback to empty string if undefined
           'Content-Type': 'application/json'
         },
-        
+
         body: JSON.stringify({
           sessionId,
           query: finalQuery,
@@ -403,9 +421,9 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
       });
 
       if (!response.ok) throw new Error('Search refinement failed');
-      
+
       const searchResults = await response.json();
-      
+
       // Update sessions with new results
       setSessions(prev => prev.map(session =>
         session.id === sessionId ? {
@@ -415,7 +433,7 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
           companies: searchResults.companies || []
         } : session
       ));
-      
+
     } catch (error) {
       console.error('Error refining search:', error);
       throw error;
@@ -427,14 +445,14 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
   const analyzeSignals = useCallback(async (sessionId: string, scope: string = 'general') => {
     try {
       setIsLoading(true);
-      
+
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/analyze-signals`, {
         method: 'POST',
         headers: {
-          'x-user-id': userID || '', // fallback to empty string if undefined
+          'x-user-id': userId || '', // fallback to empty string if undefined
           'Content-Type': 'application/json'
         },
-        
+
         body: JSON.stringify({
           sessionId,
           scope,
@@ -443,29 +461,29 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
       });
 
       if (!response.ok) throw new Error('Signals analysis failed');
-      
+
       const signalsData = await response.json();
-      
+
       // Update session with signals analysis
       setSessions(prev => prev.map(session =>
         session.id === sessionId
           ? {
-              ...session,
-              searchStatus: {
-                ...(session.searchStatus ?? {}), // default to empty object if undefined
-                stage: 'complete',
-                message: 'Signals analysis completed',
-                details: signalsData.analysis,
-                progress: session.searchStatus?.progress ?? 0,
-                currentStep: session.searchStatus?.currentStep ?? 0,
-                totalSteps: session.searchStatus?.totalSteps ?? 0,
-                substeps: session.searchStatus?.substeps ?? []
-              }
+            ...session,
+            searchStatus: {
+              ...(session.searchStatus ?? {}), // default to empty object if undefined
+              stage: 'complete',
+              message: 'Signals analysis completed',
+              details: signalsData.analysis,
+              progress: session.searchStatus?.progress ?? 0,
+              currentStep: session.searchStatus?.currentStep ?? 0,
+              totalSteps: session.searchStatus?.totalSteps ?? 0,
+              substeps: session.searchStatus?.substeps ?? []
             }
+          }
           : session
       ));
-      
-      
+
+
     } catch (error) {
       console.error('Error analyzing signals:', error);
       throw error;
@@ -478,38 +496,38 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
     try {
       const currentSession = sessions.find(s => s.id === sessionId);
       if (!currentSession) return;
-  
+
       const companies = currentSession.companies ?? []; // default to empty array
-  
+
       switch (actionType) {
         case 'export':
           await exportResults(sessionId, companies);
           break;
-  
+
         case 'compare':
           await compareCompanies(sessionId, companies);
           break;
-  
+
         case 'analyze':
           await analyzeResults(sessionId, companies);
           break;
-  
+
         default:
           console.log('Unknown results action:', actionType);
       }
-  
+
     } catch (error) {
       console.error('Error handling results action:', error);
       throw error;
     }
   }, [sessions]);
-  
+
 
   // Helper functions for results actions
   const exportResults = async (sessionId: string, companies: any[]) => {
     // Convert companies to CSV
     const csvContent = convertToCSV(companies);
-    
+
     // Create download link
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -530,7 +548,7 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/analyze-comparison`, {
       method: 'POST',
       headers: {
-        'x-user-id': userID || '', // fallback to empty string if undefined
+        'x-user-id': userId || '', // fallback to empty string if undefined
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -541,25 +559,25 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
     });
 
     if (!response.ok) throw new Error('Comparison analysis failed');
-    
+
     const comparisonData = await response.json();
-    
+
     // Update session with comparison results
     setSessions(prev => prev.map(session =>
       session.id === sessionId
         ? {
-            ...session,
-            searchStatus: {
-              ...(session.searchStatus ?? {}), // default to empty object if undefined
-              stage: 'complete',
-              message: 'Company comparison completed',
-              details: comparisonData.analysis,
-              progress: session.searchStatus?.progress ?? 0,
-              currentStep: session.searchStatus?.currentStep ?? 0,
-              totalSteps: session.searchStatus?.totalSteps ?? 0,
-              substeps: session.searchStatus?.substeps ?? []
-            }
+          ...session,
+          searchStatus: {
+            ...(session.searchStatus ?? {}), // default to empty object if undefined
+            stage: 'complete',
+            message: 'Company comparison completed',
+            details: comparisonData.analysis,
+            progress: session.searchStatus?.progress ?? 0,
+            currentStep: session.searchStatus?.currentStep ?? 0,
+            totalSteps: session.searchStatus?.totalSteps ?? 0,
+            substeps: session.searchStatus?.substeps ?? []
           }
+        }
         : session
     ));
   }
@@ -568,7 +586,7 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/analyze-results`, {
       method: 'POST',
       headers: {
-        'x-user-id': userID || '', // fallback to empty string if undefined
+        'x-user-id': userId || '', // fallback to empty string if undefined
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -579,27 +597,27 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
     });
 
     if (!response.ok) throw new Error('Detailed analysis failed');
-    
+
     const analysisData = await response.json();
-    
+
     setSessions(prev => prev.map(session =>
       session.id === sessionId
         ? {
-            ...session,
-            searchStatus: {
-              ...(session.searchStatus ?? {}), // default to empty object if undefined
-              stage: 'complete',
-              message: 'Detailed analysis completed',
-              details: analysisData.analysis,
-              progress: session.searchStatus?.progress ?? 0,
-              currentStep: session.searchStatus?.currentStep ?? 0,
-              totalSteps: session.searchStatus?.totalSteps ?? 0,
-              substeps: session.searchStatus?.substeps ?? []
-            }
+          ...session,
+          searchStatus: {
+            ...(session.searchStatus ?? {}), // default to empty object if undefined
+            stage: 'complete',
+            message: 'Detailed analysis completed',
+            details: analysisData.analysis,
+            progress: session.searchStatus?.progress ?? 0,
+            currentStep: session.searchStatus?.currentStep ?? 0,
+            totalSteps: session.searchStatus?.totalSteps ?? 0,
+            substeps: session.searchStatus?.substeps ?? []
           }
+        }
         : session
     ));
-    
+
   };
 
   // Helper function to merge queries
@@ -608,7 +626,7 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/merge-queries`, {
         method: 'POST',
         headers: {
-          'x-user-id': userID || '', // fallback to empty string if undefined
+          'x-user-id': userId || '', // fallback to empty string if undefined
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -618,7 +636,7 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
       });
 
       if (!response.ok) throw new Error('Query merge failed');
-      
+
       const { mergedQuery } = await response.json();
       return mergedQuery;
     } catch (error) {
@@ -639,38 +657,38 @@ const updateSessionQuery = useCallback(async (sessionId: string, query: string |
       company.intentScore || '',
       company.website || ''
     ]);
-    
-    return [headers, ...rows].map(row => 
+
+    return [headers, ...rows].map(row =>
       row.map(field => `"${field}"`).join(',')
     ).join('\n');
   };
 
   // In your SessionContext or useSession hook
-const refreshSessions = useCallback(async () => {
-  try {
-    console.log('🔄 Refreshing sessions from backend...');
-    
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sessions`, {
-      headers: {
-        'x-user-id': userID || ''
+  const refreshSessions = useCallback(async () => {
+    try {
+      console.log('🔄 Refreshing sessions from backend...');
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sessions`, {
+        headers: {
+          'x-user-id': userId || ''
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to refresh sessions: ${errorText}`);
       }
-    });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to refresh sessions: ${errorText}`);
+      const { sessions: refreshedSessions } = await response.json();
+      setSessions(refreshedSessions || []);
+
+      console.log('✅ Sessions refreshed:', refreshedSessions.length);
+      return refreshedSessions;
+    } catch (error) {
+      console.error('❌ Error refreshing sessions:', error);
+      throw error;
     }
-
-    const { sessions: refreshedSessions } = await response.json();
-    setSessions(refreshedSessions || []);
-    
-    console.log('✅ Sessions refreshed:', refreshedSessions.length);
-    return refreshedSessions;
-  } catch (error) {
-    console.error('❌ Error refreshing sessions:', error);
-    throw error;
-  }
-}, [setSessions]);
+  }, [setSessions]);
 
   // RETURN ALL FUNCTIONS
   return {
@@ -692,16 +710,16 @@ const refreshSessions = useCallback(async () => {
     updateSessionQuery,
     deleteSession,
     startSearch, // ADDED
-    
+
     // Query management
     clearSessionQuery,
     removeQueryMessage,
-    
+
     // Search actions
     refineSearch,
     analyzeSignals,
     handleResultsAction,
-    
+
     // ICP Model methods
     saveIcpModel,
     setPrimaryModel,

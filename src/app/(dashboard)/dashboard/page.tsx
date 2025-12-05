@@ -1,4 +1,3 @@
-// app/page.tsx
 'use client'
 
 import { useSession } from '@/context/SessionContext'
@@ -7,15 +6,10 @@ import { EnhancedSearchResults } from '@/components/EnhancedSearchResults'
 import { WelcomeScreen } from '@/components/WelcomeScreen'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useEffect } from 'react'
-import ShaderBackground from '@/components/ui/web-gl-shader'
-import PremiumLogoBackground from '@/components/ui/PremiumLogoBackground'
 
-export default function Home() {
+export default function DashboardPage() {
   const { currentSession, sessions, isConnected } = useSession()
-  useEffect(() => {
- 
-
-  }, [currentSession])
+  
   useEffect(() => {
     console.log("🔍 Session Context Debug:", {
       currentSession,
@@ -24,12 +18,10 @@ export default function Home() {
       currentSessionId: currentSession?.id
     });
   }, [currentSession, sessions, isConnected]);
+  
   return (
-    <div className="flex-1 flex flex-col ">
-        
-          
-
-      <div className=" flex-1 flex">
+    <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex">
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col min-w-0">
           <AnimatePresence mode="wait">
@@ -65,7 +57,7 @@ export default function Home() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
-              className="w-100 border-l  border-gray-200 dark:border-[#2A2A2A]"
+              className="w-100 border-l border-gray-200 dark:border-[#2A2A2A]"
             >
               <EnhancedSearchResults />
             </motion.div>

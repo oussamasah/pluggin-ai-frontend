@@ -1,6 +1,5 @@
-// app/icp-configuration/page.tsx
 import { PremiumICPConfiguration } from "@/components/PremiumICPConfiguration";
 
-export default function ICPConfigPage() {
+export default function SettingsPage() {
   return <PremiumICPConfiguration />
 }

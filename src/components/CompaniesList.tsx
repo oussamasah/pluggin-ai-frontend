@@ -45,6 +45,8 @@ import { format } from 'date-fns'
 import Link from 'next/link'
 import { CompanyDetail } from './CompanyDetail'
 
+import { useUser } from '@clerk/nextjs'
+
 // Brand Colors
 const ACCENT_GREEN = '#006239'
 const ACTIVE_GREEN = '#006239'
@@ -88,8 +90,10 @@ interface ColumnConfig {
   width?: string;
 }
 
-export function CompaniesList() {
-  const userID = process.env.NEXT_PUBLIC_MOCK_USER_ID
+export  function CompaniesList() {
+  const { user } = useUser();
+
+  const userId = user?.id;
   const { icpModels, primaryModel } = useSession()
   
   // Data State
@@ -307,7 +311,7 @@ const fetchCompanies = useCallback(async (page = 1, resetFilters = false) => {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'x-user-id': `${userID}`
+        'x-user-id': `${userId}`
       },
       signal: abortControllerRef.current.signal
     });
@@ -342,7 +346,7 @@ const fetchCompanies = useCallback(async (page = 1, resetFilters = false) => {
   }
 }, [
   // Only include stable dependencies that won't cause infinite re-renders
-  userID,
+  userId,
   selectedICP,
   searchQuery,
   filters,
@@ -357,7 +361,7 @@ const fetchCompanies = useCallback(async (page = 1, resetFilters = false) => {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/companies/stats`, {
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': `${userID}`
+          'x-user-id': `${userId}`
         }
       })
       if (response.ok) {
@@ -369,7 +373,7 @@ const fetchCompanies = useCallback(async (page = 1, resetFilters = false) => {
     } catch (err) {
       console.error('Error fetching stats:', err)
     }
-  }, [userID])
+  }, [userId])
 
   // Initial data fetch - FIXED: Only run once
   useEffect(() => {
@@ -437,7 +441,7 @@ const fetchCompanies = useCallback(async (page = 1, resetFilters = false) => {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/companies/export?${params}`, {
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': `${userID}`
+          'x-user-id': `${userId}`
         }
       })
       if (response.ok) {
@@ -641,7 +645,7 @@ const fetchCompanies = useCallback(async (page = 1, resetFilters = false) => {
               className="px-4 py-3 bg-gray-50 dark:bg-[#2A2A2A] border border-gray-300 dark:border-[#3A3A3A] text-gray-900 dark:text-[#EDEDED] focus:outline-none focus:ring-2 focus:ring-[#006239] rounded-xl"
             >
               <option value="all">All ICP Models</option>
-              {icpModels.map(model => (
+              {icpModels?.map(model => (
                 <option key={model.id} value={model.id}>
                   {model.name} {model.isPrimary && '⭐'}
                 </option>

@@ -4,36 +4,41 @@ import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import { useSession } from '@/context/SessionContext'
 import { useTheme } from '@/context/ThemeContext'
+import { useUser, useClerk, useOrganization } from '@clerk/nextjs'
 
 import { 
   Search, 
   Plus, 
   Settings, 
   Trash2, 
-  MessageSquare,
   Building2,
   Users,
   BarChart3,
   ChevronRight,
-  Sparkles,
   X,
   Filter,
-  Crown,
-  Zap,
-  Target
+  Target,
+  LogOut,
+  User,
+  Crown
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
 import Link from 'next/link'
 import { ThemeToggle } from './ThemeToggle'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 
 // --- Color Constants for Plugging AI Brand ---
 const ACCENT_GREEN = '#006239' // The core brand green (used for gradients/logos)
 const ACTIVE_GREEN = '#006239' // The bright green (used for highlights/active text)
 
 export function EnhancedSidebar() {
-  const router = useRouter();
+  const router = useRouter()
+  const pathname = usePathname()
+  const { user, isLoaded: isUserLoaded } = useUser()
+  const { signOut } = useClerk()
+  const { organization } = useOrganization()
+  
   const { 
     sessions, 
     currentSession, 
@@ -47,6 +52,7 @@ export function EnhancedSidebar() {
   const [isCreating, setIsCreating] = useState(false)
   const [newSessionName, setNewSessionName] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+  const [showUserMenu, setShowUserMenu] = useState(false)
 
   // Add debugging to see session data
   useEffect(() => {
@@ -72,6 +78,11 @@ export function EnhancedSidebar() {
     setIsCreating(false)
   }
 
+  const handleSignOut = async () => {
+    await signOut()
+    router.push('/')
+  }
+
   const filteredSessions = sessions.filter(session =>
     session.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     session.query?.join(' ').toLowerCase().includes(searchTerm.toLowerCase())
@@ -92,7 +103,10 @@ export function EnhancedSidebar() {
     }).length
   }
 
-  console.log('🔍 Final Stats:', stats)
+  // Get user's plan info
+  const userPlan = user?.publicMetadata?.plan as { name?: string } | undefined
+  const orgPlan = organization?.publicMetadata?.plan as { name?: string } | undefined
+  const currentPlan = organization ? orgPlan?.name : userPlan?.name
 
   return (
     <div className={cn(
@@ -107,7 +121,7 @@ export function EnhancedSidebar() {
             
           {/* Logo & Brand */}
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
+            <Link href="/dashboard" className="flex items-center gap-3">
               <div 
                 className="w-10 h-10 rounded-lg flex items-center justify-center shadow-lg" 
               >
@@ -133,7 +147,7 @@ export function EnhancedSidebar() {
                   Powered by Plugging AI
                 </p>
               </div>
-            </div>
+            </Link>
             <ThemeToggle />
           </div>
 
@@ -221,7 +235,7 @@ export function EnhancedSidebar() {
                   "focus:ring-1 focus:ring-[#006239] focus:border-transparent"
                 )}
                 autoFocus
-                onKeyPress={(e) => e.key === 'Enter' && handleCreateSession()}
+                onKeyDown={(e) => e.key === 'Enter' && handleCreateSession()}
               />
               <div className="flex gap-2 mt-3">
                 <button
@@ -285,7 +299,7 @@ export function EnhancedSidebar() {
                 transition={{ duration: 0.2 }}
                 onClick={() => {
                   setCurrentSession(session.id);
-                  router.push("/");
+                  router.push("/dashboard");
                 }}
                 className={cn(
                   "group p-4 cursor-pointer transition-all duration-300 rounded-xl border",
@@ -393,28 +407,148 @@ export function EnhancedSidebar() {
           "p-4 space-y-1 border-t",
           "bg-white dark:bg-[#0F0F0F] border-gray-200 dark:border-[#2A2A2A]"
         )}>
-          <Link href="/companies" className="block">
+          <Link href="/dashboard/companies" className="block">
             <NavButton 
               icon={Building2} 
-              label="Company Database" 
+              label="Companies" 
+              active={pathname === '/dashboard/companies'}
             />
           </Link>
-          <NavButton 
-            icon={Users} 
-            label="Prospects" 
-            onClick={() => {/* Add navigation */}}
-          />
-          <NavButton 
-            icon={BarChart3} 
-            label="Analytics" 
-            onClick={() => {/* Add navigation */}}
-          />
-          <Link href="/icp-configuration" className="block">
+          <Link href="/dashboard/team" className="block">
+            <NavButton 
+              icon={Users} 
+              label="Team" 
+              active={pathname === '/dashboard/team'}
+            />
+          </Link>
+
+          <Link href="/dashboard/settings" className="block">
             <NavButton 
               icon={Settings} 
-              label="Configuration" 
+              label="ICP Models" 
+              active={pathname === '/dashboard/settings'}
             />
           </Link>
+        </div>
+
+        {/* User Menu Section */}
+        <div className={cn(
+          "p-4 border-t",
+          "bg-gray-50 dark:bg-[#1A1A1A] border-gray-200 dark:border-[#2A2A2A]"
+        )}>
+          {isUserLoaded && user ? (
+            <div className="relative">
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className={cn(
+                  "w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-300",
+                  "hover:bg-white dark:hover:bg-[#2A2A2A]",
+                  showUserMenu && "bg-white dark:bg-[#2A2A2A]"
+                )}
+              >
+                {/* User Avatar */}
+                {user.imageUrl ? (
+                  <img 
+                    src={user.imageUrl} 
+                    alt={user.firstName || 'User'} 
+                    className="w-10 h-10 rounded-full object-cover border-2 border-[#006239]/20"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-[#006239] flex items-center justify-center">
+                    <span className="text-white font-semibold">
+                      {user.firstName?.[0] || user.emailAddresses[0]?.emailAddress[0]?.toUpperCase() || 'U'}
+                    </span>
+                  </div>
+                )}
+                
+                {/* User Info */}
+                <div className="flex-1 text-left min-w-0">
+                  <p className="font-semibold text-sm text-gray-900 dark:text-[#EDEDED] truncate">
+                    {user.firstName} {user.lastName}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-[#9CA3AF] truncate flex items-center gap-1">
+                    {organization ? (
+                      <>
+                        <Building2 className="w-3 h-3" />
+                        {organization.name}
+                      </>
+                    ) : currentPlan ? (
+                      <>
+                        <Crown className="w-3 h-3" />
+                        {currentPlan} Plan
+                      </>
+                    ) : (
+                      user.primaryEmailAddress?.emailAddress
+                    )}
+                  </p>
+                </div>
+
+                <ChevronRight className={cn(
+                  "w-4 h-4 text-gray-400 transition-transform duration-200",
+                  showUserMenu && "rotate-90"
+                )} />
+              </button>
+
+              {/* Dropdown Menu */}
+              {showUserMenu && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={cn(
+                    "absolute bottom-full left-0 right-0 mb-2 p-2 rounded-xl shadow-xl border z-50",
+                    "bg-white dark:bg-[#1A1A1A] border-gray-200 dark:border-[#2A2A2A]"
+                  )}
+                >
+                  <Link 
+                    href="/dashboard/profile"
+                    onClick={() => setShowUserMenu(false)}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-lg transition-colors duration-200",
+                      "text-gray-700 dark:text-[#EDEDED] hover:bg-gray-100 dark:hover:bg-[#2A2A2A]"
+                    )}
+                  >
+                    <User className="w-4 h-4" />
+                    <span className="text-sm font-medium">Profile</span>
+                  </Link>
+
+                  {organization && (
+                    <Link 
+                      href="/dashboard/team"
+                      onClick={() => setShowUserMenu(false)}
+                      className={cn(
+                        "flex items-center gap-3 p-3 rounded-lg transition-colors duration-200",
+                        "text-gray-700 dark:text-[#EDEDED] hover:bg-gray-100 dark:hover:bg-[#2A2A2A]"
+                      )}
+                    >
+                      <Users className="w-4 h-4" />
+                      <span className="text-sm font-medium">Team Settings</span>
+                    </Link>
+                  )}
+
+                  <div className="h-px bg-gray-200 dark:bg-[#2A2A2A] my-1" />
+
+                  <button
+                    onClick={handleSignOut}
+                    className={cn(
+                      "w-full flex items-center gap-3 p-3 rounded-lg transition-colors duration-200",
+                      "text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    )}
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span className="text-sm font-medium">Sign Out</span>
+                  </button>
+                </motion.div>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 p-3">
+              <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-[#2A2A2A] animate-pulse" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 bg-gray-200 dark:bg-[#2A2A2A] rounded animate-pulse w-24" />
+                <div className="h-3 bg-gray-200 dark:bg-[#2A2A2A] rounded animate-pulse w-32" />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -462,4 +596,4 @@ function NavButton({
       </span>
     </button>
   )
-} 
+}

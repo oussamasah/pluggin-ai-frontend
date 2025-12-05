@@ -2,16 +2,18 @@
 import { useCallback } from 'react'
 import { SearchSession, SearchStatus } from '@/types'
 
-const userID = process.env.NEXT_PUBLIC_MOCK_USER_ID
+import { useUser } from '@clerk/nextjs'
 
 interface SessionStateProps {
   setSessions: React.Dispatch<React.SetStateAction<SearchSession[]>>
   sessions: SearchSession[]
 }
 
-export function useSessionUpdater(sessionState: SessionStateProps) {
+export async function useSessionUpdater(sessionState: SessionStateProps) {
   const { setSessions, sessions } = sessionState
+  const { user } = useUser();
 
+  const userId = user?.id; // ✅ Clerk UUID
   // Update a single session
   const updateSession = useCallback(async (sessionId: string, updates: Partial<SearchSession>) => {
     try {
@@ -20,7 +22,7 @@ export function useSessionUpdater(sessionState: SessionStateProps) {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sessions/${sessionId}`, {
         method: 'PATCH',
         headers: {
-          'x-user-id': userID || '',
+          'x-user-id': userId || '',
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(updates)
@@ -77,7 +79,7 @@ export function useSessionUpdater(sessionState: SessionStateProps) {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sessions/bulk-update`, {
         method: 'PATCH',
         headers: {
-          'x-user-id': userID || '',
+          'x-user-id': userId || '',
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ updates })
@@ -119,7 +121,7 @@ export function useSessionUpdater(sessionState: SessionStateProps) {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sessions/update-all`, {
         method: 'PATCH',
         headers: {
-          'x-user-id': userID || '',
+          'x-user-id': userId || '',
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ updates })
@@ -161,7 +163,7 @@ export function useSessionUpdater(sessionState: SessionStateProps) {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sessions/bulk-update-ids`, {
         method: 'PATCH',
         headers: {
-          'x-user-id': userID || '',
+          'x-user-id': userId || '',
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ sessionIds, updates })
@@ -201,7 +203,7 @@ export function useSessionUpdater(sessionState: SessionStateProps) {
       
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sessions`, {
         headers: {
-          'x-user-id': userID || ''
+          'x-user-id': userId || ''
         }
       })
 

@@ -4,7 +4,8 @@ import { webSocketService } from '@/lib/services/WebSocketService'
 import { toast } from 'sonner'
 import { useSessionState } from './useSessionState'
 import { useSession } from '../SessionContext'
-const userID = process.env.NEXT_PUBLIC_MOCK_USER_ID
+
+import { useUser } from '@clerk/nextjs'
 
 export function useWebSocketHandlers(sessionState: any) {
   const {
@@ -15,7 +16,9 @@ export function useWebSocketHandlers(sessionState: any) {
     currentSession,
     updateSessionQuery
   } = sessionState
- 
+  const { user } = useUser();
+
+  const userId = user?.id;
   // Add this ref to track previous session ID
   const previousSessionId = useRef<string | null>(null)
  const refreshSessions = useCallback(async () => {
@@ -24,7 +27,7 @@ export function useWebSocketHandlers(sessionState: any) {
      
      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sessions`, {
        headers: {
-         'x-user-id': userID || ''
+         'x-user-id':  user?.id || ''
        }
      });
  
@@ -63,7 +66,7 @@ export function useWebSocketHandlers(sessionState: any) {
     webSocketService.send({
       type: 'join-session',
       sessionId: sessionId,
-      token: 'demo-token'
+      token: userId
     })
     
     previousSessionId.current = sessionId
@@ -230,15 +233,13 @@ export function useWebSocketHandlers(sessionState: any) {
         icpModelId
       }
     }))
-    
-    const userID = process.env.NEXT_PUBLIC_MOCK_USER_ID
     let count = localStorage.getItem("searchcount") ?? "1";
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/search-companies`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id':`${userID}`
+          'x-user-id':`${userId}`
         },
         body: JSON.stringify({
           sessionId,

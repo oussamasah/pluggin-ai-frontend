@@ -29,6 +29,7 @@ import { searchModeTexts } from '@/types'
 import { formatAIText } from '@/context/hooks/formatAIText'
 import { webSocketService } from '@/lib/services/WebSocketService'
 import { useTheme } from '@/context/ThemeContext'
+import { useUser } from '@clerk/nextjs'
 
 interface FormattingOptions {
   preserveLineBreaks?: boolean;
@@ -47,6 +48,8 @@ const ACCENT_GREEN = '#006239' // Primary brand green
 const ACTIVE_GREEN = '#006239' // User chat bubbles & active states
 
 export function PremiumChatInterface() {
+  const { user, isLoaded, isSignedIn } = useUser();
+  const userId = isLoaded && isSignedIn ? user.id : null;
   // State hooks - KEEP ALL ORIGINAL FEATURES
   const [message, setMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -279,12 +282,12 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
       }
 
       console.log('📤 Sending to backend with context:', context);
-
+ 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/classify-intent`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': 'demo-user'
+          'x-user-id': userId
         },
         body: JSON.stringify({
           message: userMessage,
