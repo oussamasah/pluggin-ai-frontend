@@ -53,3 +53,7 @@ Restart the dev server so Next.js can pick up the new environment variables.
 - Each organization stores its plan metadata inside Clerk `publicMetadata`, which is enforced by the API routes located under `src/app/api/organizations`.
 - Inviting members via the UI (or directly hitting `POST /api/organizations/:id/invite`) will block the request when it would exceed the selected plan's seat limit.
 - Use the organization switcher in the left sidebar to activate an existing workspace, create new ones, or jump between teams.
+
+## Route protection
+
+The Clerk middleware now forces authentication across every route in the app. Unauthenticated visitors are automatically redirected to `/sign-in`, while `/sign-up` stays public so new teammates can register.
