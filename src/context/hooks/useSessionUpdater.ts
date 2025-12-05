@@ -9,7 +9,7 @@ interface SessionStateProps {
   sessions: SearchSession[]
 }
 
-export async function useSessionUpdater(sessionState: SessionStateProps) {
+export function useSessionUpdater(sessionState: SessionStateProps) {
   const { setSessions, sessions } = sessionState
   const { user } = useUser();
 
