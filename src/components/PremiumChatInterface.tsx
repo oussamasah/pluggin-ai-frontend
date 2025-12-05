@@ -287,7 +287,7 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': userId
+          'x-user-id': userId ?? ''
         },
         body: JSON.stringify({
           message: userMessage,
