@@ -7,7 +7,7 @@ import { useUser } from '@clerk/nextjs';
 export function useSessionState() {
   const { user, isLoaded, isSignedIn } = useUser();
   const userId = isLoaded && isSignedIn ? user.id : null;
-  console.log(userId)
+
   const [sessions, setSessions] = useState<SearchSession[]>([])
   const [icpModels, setIcpModels] = useState<ICPModel[]>([])
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
@@ -110,10 +110,10 @@ export function useSessionState() {
   // Session management methods
   const createNewSession = useCallback(async (name: string) => {
     try {
-      
-      if(!userId) return;
       console.log("createe session for userId")
       console.log(userId)
+      if(!userId) return;
+
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sessions`, {
         method: 'POST',
         headers: {
