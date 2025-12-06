@@ -156,13 +156,14 @@ export async function sendOrganizationInvitation(
       throw new Error('Member limit reached. Please upgrade your plan.')
     }
   }
+  const host = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
 
   const invitation = await client.organizations.createOrganizationInvitation({
     organizationId,
     emailAddress,
     role: role === 'admin' ? 'org:admin' : 'org:member',
     inviterUserId: userId,
-    redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`
+    redirectUrl: `${host}/dashboard`
   })
 
   return { 
