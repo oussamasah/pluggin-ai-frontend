@@ -58,7 +58,7 @@ export function useSessionState() {
     };
   
     loadInitialData();
-  }, [isLoaded, userId]); 
+  }, [isLoaded, user]); 
   
   const updateSessionStatus = useCallback((sessionId: string, status: Partial<SearchStatus>) => {
     setSessions(prev => prev.map(session => {
@@ -110,6 +110,7 @@ export function useSessionState() {
   // Session management methods
   const createNewSession = useCallback(async (name: string) => {
     try {
+      const userId = isLoaded && isSignedIn ? user.id : null;
       console.log("createe session for userId")
       console.log(userId)
       if(!userId) return;
