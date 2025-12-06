@@ -16,10 +16,8 @@ export function useSessionState() {
 
   const currentSession = sessions.find(s => s.id === currentSessionId) || null
   const primaryModel = icpModels.find(model => model.isPrimary) || null
-
-  // Load initial data
   useEffect(() => {
-    if (!isLoaded || !userId) return; // 🚨 WAIT for Clerk
+    if (!isLoaded || !userId) return;
   
     const loadInitialData = async () => {
       try {
@@ -58,7 +56,7 @@ export function useSessionState() {
     };
   
     loadInitialData();
-  }, [isLoaded, user]); 
+  }, [isLoaded, userId]);
   
   const updateSessionStatus = useCallback((sessionId: string, status: Partial<SearchStatus>) => {
     setSessions(prev => prev.map(session => {
@@ -72,7 +70,7 @@ export function useSessionState() {
         } as SearchStatus
       };
     }));
-  }, []);
+  }, [userId, isLoaded, isSignedIn]);
   const loadFromLocalStorage = useCallback(() => {
     const savedSessions = localStorage.getItem('icp-scout-sessions');
     const savedModels = localStorage.getItem('icp-scout-models');
@@ -105,7 +103,7 @@ export function useSessionState() {
         console.error('Error loading ICP models from localStorage:', error)
       }
     }
-  }, [])
+  }, [userId, isLoaded, isSignedIn]); 
 
   // Session management methods
   const createNewSession = useCallback(async (name: string) => {
@@ -144,7 +142,7 @@ export function useSessionState() {
       setSessions(prev => [newSession, ...prev])
       setCurrentSessionId(newSession.id)
     }
-  }, [])
+  }, [userId, isLoaded, isSignedIn]); 
 
   const setCurrentSession = useCallback((sessionId: string) => {
     setCurrentSessionId(sessionId)
@@ -208,12 +206,12 @@ export function useSessionState() {
 
       console.log('🔄 Fallback: Updated local state only');
     }
-  }, [sessions]);
+  }, [sessions, userId]);
 
   // Add a function to clear the conversation
   const clearSessionQuery = useCallback(async (sessionId: string) => {
     await updateSessionQuery(sessionId, []);
-  }, [updateSessionQuery]);
+  }, [updateSessionQuery, userId]);
 
   // Add a function to remove a specific message from conversation
   const removeQueryMessage = useCallback(async (sessionId: string, index: number) => {
@@ -222,7 +220,7 @@ export function useSessionState() {
 
     const newQueries = currentSession.query.filter((_, i) => i !== index);
     await updateSessionQuery(sessionId, newQueries);
-  }, [sessions, updateSessionQuery]);
+  }, [sessions, updateSessionQuery, userId]);
 
   const deleteSession = useCallback(async (sessionId: string) => {
     try {
@@ -248,7 +246,7 @@ export function useSessionState() {
         setCurrentSessionId(sessions[0]?.id || null)
       }
     }
-  }, [currentSessionId, sessions])
+  }, [currentSessionId, sessions, userId])
 
   // ICP Model management
   const saveIcpModel = useCallback(async (modelData: Omit<ICPModel, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -288,7 +286,7 @@ export function useSessionState() {
         return [...updatedModels, newModel]
       })
     }
-  }, [])
+  }, [userId, isLoaded, isSignedIn])
 
   const setPrimaryModel = useCallback(async (modelId: string) => {
     try {
@@ -318,7 +316,7 @@ export function useSessionState() {
         }))
       )
     }
-  }, [])
+  }, [userId, isLoaded, isSignedIn])
 
   const deleteIcpModel = useCallback(async (modelId: string) => {
     try {
@@ -333,7 +331,7 @@ export function useSessionState() {
       console.error('Error deleting ICP model:', error)
       setIcpModels(prev => prev.filter(model => model.id !== modelId))
     }
-  }, [])
+    }, [userId, isLoaded, isSignedIn])
 
   // ADD MISSING startSearch FUNCTION
   const startSearch = useCallback(async (sessionId: string, query: string, icpModelId?: string) => {
@@ -387,7 +385,7 @@ export function useSessionState() {
     } finally {
       setIsLoading(false);
     }
-  }, [sessions, updateSessionQuery]);
+  }, [sessions, updateSessionQuery, userId, isLoaded, isSignedIn]);
 
   // ADD THE NEW FUNCTIONS
   const refineSearch = useCallback(async (sessionId: string, newQuery: string, previousQuery?: string) => {
@@ -441,7 +439,7 @@ export function useSessionState() {
     } finally {
       setIsLoading(false);
     }
-  }, [sessions, updateSessionQuery]);
+  }, [sessions, updateSessionQuery, userId, isLoaded, isSignedIn]);
 
   const analyzeSignals = useCallback(async (sessionId: string, scope: string = 'general') => {
     try {
@@ -491,7 +489,7 @@ export function useSessionState() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [userId, isLoaded, isSignedIn]);
 
   const handleResultsAction = useCallback(async (sessionId: string, actionType: string) => {
     try {
@@ -521,7 +519,7 @@ export function useSessionState() {
       console.error('Error handling results action:', error);
       throw error;
     }
-  }, [sessions]);
+  }, [sessions, userId, isLoaded, isSignedIn  ]);
 
 
   // Helper functions for results actions
@@ -689,7 +687,7 @@ export function useSessionState() {
       console.error('❌ Error refreshing sessions:', error);
       throw error;
     }
-  }, [setSessions]);
+  }, [setSessions, userId, isLoaded, isSignedIn]);
 
   // RETURN ALL FUNCTIONS
   return {
