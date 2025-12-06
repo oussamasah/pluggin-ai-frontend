@@ -161,7 +161,8 @@ export async function sendOrganizationInvitation(
     organizationId,
     emailAddress,
     role: role === 'admin' ? 'org:admin' : 'org:member',
-    inviterUserId: userId
+    inviterUserId: userId,
+    redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`
   })
 
   return { 
