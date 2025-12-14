@@ -16,7 +16,7 @@ export function useWebSocketHandlers(sessionState: any) {
     currentSession,
     updateSessionQuery
   } = sessionState
-  const { user } = useUser();
+  const { user,isLoaded } = useUser();
 
   const userId = user?.id;
   // Add this ref to track previous session ID
@@ -45,7 +45,7 @@ export function useWebSocketHandlers(sessionState: any) {
      console.error('❌ Error refreshing sessions:', error);
      throw error;
    }
- }, [setSessions,user]);
+ }, [setSessions,user,isLoaded]);
   // Session switching logic
   const switchSession = useCallback(async (sessionId: string) => {
   

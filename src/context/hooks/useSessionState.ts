@@ -688,7 +688,7 @@ export function useSessionState() {
       console.error('❌ Error refreshing sessions:', error);
       throw error;
     }
-  }, [setSessions,userId]);
+  }, [setSessions,userId,isLoaded]);
 
   // RETURN ALL FUNCTIONS
   return {
