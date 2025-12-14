@@ -30,6 +30,7 @@ import { formatAIText } from '@/context/hooks/formatAIText'
 import { webSocketService } from '@/lib/services/WebSocketService'
 import { useTheme } from '@/context/ThemeContext'
 import { useUser } from '@clerk/nextjs'
+import { ActiveModelSelector } from './ActiveModelSelector'
 
 interface FormattingOptions {
   preserveLineBreaks?: boolean;
@@ -436,8 +437,7 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
   
   return (
     <div className="flex-1 flex flex-col h-full bg-white dark:bg-[#0F0F0F] min-h-screen">
-      <ConversationDebug />
-   
+
       {/***JSON.stringify(currentSession)**/}
       {hasMessages && (
         <div className={cn(
@@ -813,21 +813,7 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
 <div className='flex justify-between items-center'>
           {/* Active ICP Model Badge - KEEP ORIGINAL */}
           {primaryModel && isConnected && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-4 text-sm  justify-center"
-            >
-              <span className="text-gray-500 dark:text-[#9CA3AF] font-light tracking-wide">
-                ACTIVE MODEL:
-              </span>
-              <span className={cn(
-                "bg-white dark:bg-[#1E1E1E] text-gray-600 dark:text-[#9CA3AF]",
-                "border-gray-300 dark:border-[#2A2A2A] hover:border-green-300 hover:text-green-600 dark:hover:text-[#006239]"
-        )}>
-                {primaryModel.name}
-              </span>
-            </motion.div>
+ <ActiveModelSelector className="mt-4" />
           )}
             <div className="flex items-center gap-2 justify-center">
     <span className="text-xs text-gray-600 dark:text-[#9CA3AF] font-medium">Results:</span>

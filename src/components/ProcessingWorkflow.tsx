@@ -87,22 +87,7 @@ export default function ProcessingWorkflow() {
   const previousSessionIdRef = useRef<string | null>(null);
   
   // Refresh session data when switching sessions
-  useEffect(() => {
-    const currentSessionId = currentSession?.id;
-    
-    if (currentSessionId && currentSessionId !== previousSessionIdRef.current) {
-      console.log('🔄 Session changed, refreshing data:', currentSessionId);
-      
-      // Refresh sessions to get latest data from backend
-      refreshSessions().then(() => {
-        console.log('✅ Sessions refreshed for session:', currentSessionId);
-      }).catch(error => {
-        console.error('❌ Failed to refresh sessions:', error);
-      });
-      
-      previousSessionIdRef.current = currentSessionId;
-    }
-  }, [currentSession?.id, refreshSessions]);
+
 
   // Map backend substep status to frontend status
   const mapBackendStatus = useCallback((backendStatus: string) => {
@@ -196,9 +181,12 @@ export default function ProcessingWorkflow() {
       }))
     });
   }, [currentSession?.id, shouldShow, workflowData, backendSubsteps, workflowPhases]);
-
+  sleep(1000);
+  function sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
   if (!currentSession?.id) {
-    console.log('❌ No current session');
+    console.log('❌ No current session',currentSession);
     return null;
   }
 

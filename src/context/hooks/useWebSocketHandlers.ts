@@ -23,8 +23,8 @@ export function useWebSocketHandlers(sessionState: any) {
   const previousSessionId = useRef<string | null>(null)
  const refreshSessions = useCallback(async () => {
    try {
-     console.log('🔄 Refreshing sessions from backend...');
-     
+     console.log('🔄 Refreshing sessions from backend websocket...',user?.id);
+     if(!user?.id) return
      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sessions`, {
        headers: {
          'x-user-id':  user?.id || ''
@@ -45,7 +45,7 @@ export function useWebSocketHandlers(sessionState: any) {
      console.error('❌ Error refreshing sessions:', error);
      throw error;
    }
- }, [setSessions]);
+ }, [setSessions,user]);
   // Session switching logic
   const switchSession = useCallback(async (sessionId: string) => {
   
@@ -245,7 +245,8 @@ export function useWebSocketHandlers(sessionState: any) {
           sessionId,
           query,
           icpModelId,
-          count
+          count,
+          searchType: localStorage.getItem("searchType") ?? "search"
         })
       })
 

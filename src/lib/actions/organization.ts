@@ -261,38 +261,59 @@ export async function updateMemberRole(
 }
 
 // Remove member from organization
+// Remove member from organization
 export async function removeMember(
-  organizationId: string,
-  memberUserId: string
-) {
-  const { userId: currentUserId, orgId, orgRole } = await auth()
+    organizationId: string,
+    memberUserId: string
+  ) {
+    const { userId: currentUserId, orgId, orgRole } = await auth()
+    
+    if (!currentUserId) {
+      throw new Error('Unauthorized')
+    }
   
-  if (!currentUserId) {
-    throw new Error('Unauthorized')
+    if (orgId !== organizationId) {
+      throw new Error('Unauthorized - Not a member of this organization')
+    }
+  
+    if (orgRole !== 'org:admin') {
+      throw new Error('Unauthorized - Only admins can remove members')
+    }
+  
+    // Prevent self-removal
+    if (currentUserId === memberUserId) {
+      throw new Error('Cannot remove yourself. Use leave organization instead.')
+    }
+  
+    const client = await clerkClient()
+  
+    // ✅ CORRECT METHOD: Use the membership list to find and delete
+    try {
+      const memberships = await client.organizations.getOrganizationMembershipList({
+        organizationId
+      })
+  
+      // Find the specific membership
+      const membership = memberships.data.find(
+        m => m.publicUserData?.userId === memberUserId
+      )
+  
+      if (!membership) {
+        throw new Error('Member not found in organization')
+      }
+  
+      // Delete using the membership ID
+      await client.organizations.deleteOrganizationMembership({
+        organizationId,
+        userId: memberUserId
+      })
+  
+      return { success: true }
+    } catch (error) {
+      console.error('Error removing member:', error)
+      throw error
+    }
   }
-
-  if (orgId !== organizationId) {
-    throw new Error('Unauthorized - Not a member of this organization')
-  }
-
-  if (orgRole !== 'org:admin') {
-    throw new Error('Unauthorized - Only admins can remove members')
-  }
-
-  // Prevent self-removal
-  if (currentUserId === memberUserId) {
-    throw new Error('Cannot remove yourself. Use leave organization instead.')
-  }
-
-  const client = await clerkClient()
-
-  await client.organizations.deleteOrganizationMembership({
-    organizationId,
-    userId: memberUserId
-  })
-
-  return { success: true }
-}
 
 // Get current user's organization info
 export async function getCurrentOrganization() {

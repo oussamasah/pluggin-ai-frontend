@@ -2,13 +2,14 @@ import { useState, useEffect, useCallback } from 'react'
 import { SearchSession, ICPModel, SearchStatus } from '@/types'
 
 import { useUser } from '@clerk/nextjs';
+import { count } from 'console';
 
 
 export function useSessionState() {
   const { user, isLoaded } = useUser();
 
-  const userId = user?.id;
-  console.log(userId)
+  const [userId, setUserId] = useState<string |null| undefined>(null)
+
   const [sessions, setSessions] = useState<SearchSession[]>([])
   const [icpModels, setIcpModels] = useState<ICPModel[]>([])
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
@@ -22,6 +23,7 @@ export function useSessionState() {
   useEffect(() => {
     const loadInitialData = async () => {
       try {
+        setUserId(user?.id)
         // Load sessions
         const sessionsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sessions`, {
           headers: {
@@ -50,7 +52,7 @@ export function useSessionState() {
     }
 
     loadInitialData()
-  }, [ userId])
+  }, [user])
   const updateSessionStatus = useCallback((sessionId: string, status: Partial<SearchStatus>) => {
     setSessions(prev => prev.map(session => {
       if (session.id !== sessionId) return session;
@@ -348,7 +350,9 @@ export function useSessionState() {
         body: JSON.stringify({
           sessionId,
           query,
-          icpModelId
+          icpModelId,
+          count: localStorage.getItem("searchcount") ?? "1",
+          searchType: localStorage.getItem("searchType") ?? "search"
         })
       });
 
@@ -656,8 +660,13 @@ export function useSessionState() {
 
   // In your SessionContext or useSession hook
   const refreshSessions = useCallback(async () => {
+    console.log('🔄 Refreshing sessions from backend...>userId:',userId);
+
+    if(!userId){
+    const {user} = await useUser()
+    setUserId(user?.id)
+    }
     try {
-      console.log('🔄 Refreshing sessions from backend...');
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sessions`, {
         headers: {
@@ -679,7 +688,7 @@ export function useSessionState() {
       console.error('❌ Error refreshing sessions:', error);
       throw error;
     }
-  }, [setSessions]);
+  }, [setSessions,userId]);
 
   // RETURN ALL FUNCTIONS
   return {

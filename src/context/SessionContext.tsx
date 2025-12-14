@@ -1,7 +1,7 @@
 'use client'
 
 import React, { createContext, useContext } from 'react'
-import { SearchSession, SessionContextType } from '@/types'
+import { SearchSession, SearchStatus, SessionContextType } from '@/types'
 
 // Import hooks and types
 import { useSessionState } from './hooks/useSessionState'
@@ -22,18 +22,42 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const contextValue: SessionContextType = {
     // Session state
     ...sessionState,
-    
+
     // WebSocket handlers
     ...webSocketHandlers,
-    
+
     // ICP Configuration
     ...icpConfig,
-    
+
     // Session Updater (new)
     ...sessionUpdater,
-    
+
     // Combined loading state
-    isLoading: sessionState.isLoading || icpConfig.isICPConfigLoading
+    isLoading: sessionState.isLoading || icpConfig.isICPConfigLoading,
+    updateSession: function (sessionId: string, updates: Partial<SearchSession>): Promise<SearchSession> {
+      throw new Error('Function not implemented.')
+    },
+    updateSessionStatus: function (sessionId: string, status: Partial<SearchStatus>): void {
+      throw new Error('Function not implemented.')
+    },
+    updateMultipleSessions: function (updates: Array<{ sessionId: string; updates: Partial<SearchSession>} >): Promise<SearchSession[]> {
+      throw new Error('Function not implemented.')
+    },
+    updateAllSessions: function (updates: Partial<SearchSession>): Promise<void> {
+      throw new Error('Function not implemented.')
+    },
+    bulkUpdateSessions: function (sessionIds: string[], updates: Partial<SearchSession>): Promise<SearchSession[]> {
+      throw new Error('Function not implemented.')
+    },
+    optimisticUpdate: function (sessionId: string, updates: Partial<SearchSession>): void {
+      throw new Error('Function not implemented.')
+    },
+    optimisticBatchUpdate: function (sessionIds: string[], updates: Partial<SearchSession>): void {
+      throw new Error('Function not implemented.')
+    },
+    refreshSessions: function (): Promise<SearchSession[]> {
+      throw new Error('Function not implemented.')
+    }
   }
 
   return (

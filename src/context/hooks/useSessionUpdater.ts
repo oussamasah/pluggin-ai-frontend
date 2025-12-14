@@ -9,7 +9,7 @@ interface SessionStateProps {
   sessions: SearchSession[]
 }
 
-export function useSessionUpdater(sessionState: SessionStateProps) {
+export async function useSessionUpdater(sessionState: SessionStateProps) {
   const { setSessions, sessions } = sessionState
   const { user } = useUser();
 
@@ -52,7 +52,7 @@ export function useSessionUpdater(sessionState: SessionStateProps) {
       
       throw error
     }
-  }, [setSessions])
+  }, [setSessions,userId])
 
   // Update session status only
   const updateSessionStatus = useCallback((sessionId: string, status: Partial<SearchStatus>) => {
@@ -197,31 +197,7 @@ export function useSessionUpdater(sessionState: SessionStateProps) {
   }, [setSessions])
 
   // Refresh all sessions from backend
-  const refreshSessions = useCallback(async () => {
-    try {
-      console.log('🔄 Refreshing sessions from backend...')
-      
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sessions`, {
-        headers: {
-          'x-user-id': userId || ''
-        }
-      })
 
-      if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(`Failed to refresh sessions: ${errorText}`)
-      }
-
-      const { sessions: refreshedSessions } = await response.json()
-      setSessions(refreshedSessions || [])
-      
-      console.log('✅ Sessions refreshed:', refreshedSessions.length)
-      return refreshedSessions
-    } catch (error) {
-      console.error('❌ Error refreshing sessions:', error)
-      throw error
-    }
-  }, [setSessions])
 
   // Optimistic update - updates local state immediately without waiting for backend
   const optimisticUpdate = useCallback((
@@ -254,7 +230,6 @@ export function useSessionUpdater(sessionState: SessionStateProps) {
     bulkUpdateSessions,
     
     // Refresh
-    refreshSessions,
     
     // Optimistic updates (instant UI updates)
     optimisticUpdate,
