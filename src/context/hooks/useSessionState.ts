@@ -5,7 +5,11 @@ import { useUser } from '@clerk/nextjs';
 import { count } from 'console';
 
 
-export function useSessionState(userId: string) {
+export function useSessionState(userId?: string) {
+  if(!userId) {
+    const { user } =  useUser()
+    userId = user?.id
+  }
 
   const [sessions, setSessions] = useState<SearchSession[]>([])
   const [icpModels, setIcpModels] = useState<ICPModel[]>([])
