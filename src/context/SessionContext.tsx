@@ -11,15 +11,17 @@ import { useSessionUpdater } from './hooks/useSessionUpdater'
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined)
 
-export function SessionProvider({ children }: { children: React.ReactNode }) {
+export function SessionProvider({ children, userId }: { children: React.ReactNode, userId: string }) {
+  console.log("userIduserIduserId",userId)
   // Use custom hooks for different concerns
-  const sessionState = useSessionState()
-  const webSocketHandlers = useWebSocketHandlers(sessionState)
-  const icpConfig = useICPConfig(sessionState)
-  const sessionUpdater = useSessionUpdater(sessionState)
+  const sessionState = useSessionState(userId)
+  const webSocketHandlers = useWebSocketHandlers(sessionState, userId)
+  const icpConfig = useICPConfig(sessionState, userId)
+  const sessionUpdater = useSessionUpdater(sessionState, userId)
 
   // Combine all context values
   const contextValue: SessionContextType = {
+
     // Session state
     ...sessionState,
 

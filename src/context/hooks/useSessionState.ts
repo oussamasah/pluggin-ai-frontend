@@ -5,10 +5,7 @@ import { useUser } from '@clerk/nextjs';
 import { count } from 'console';
 
 
-export function useSessionState() {
-  const { user, isLoaded } = useUser();
-
-  const [userId, setUserId] = useState<string |null| undefined>(null)
+export function useSessionState(userId: string) {
 
   const [sessions, setSessions] = useState<SearchSession[]>([])
   const [icpModels, setIcpModels] = useState<ICPModel[]>([])
@@ -23,7 +20,7 @@ export function useSessionState() {
   useEffect(() => {
     const loadInitialData = async () => {
       try {
-        setUserId(user?.id)
+       
         // Load sessions
         const sessionsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sessions`, {
           headers: {
@@ -52,7 +49,7 @@ export function useSessionState() {
     }
 
     loadInitialData()
-  }, [user,isLoaded])
+  }, [userId])
   const updateSessionStatus = useCallback((sessionId: string, status: Partial<SearchStatus>) => {
     setSessions(prev => prev.map(session => {
       if (session.id !== sessionId) return session;
@@ -662,10 +659,7 @@ export function useSessionState() {
   const refreshSessions = useCallback(async () => {
     console.log('🔄 Refreshing sessions from backend...>userId:',userId);
 
-    if(!userId){
-    const {user} = await useUser()
-    setUserId(user?.id)
-    }
+   
     try {
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sessions`, {
@@ -688,7 +682,7 @@ export function useSessionState() {
       console.error('❌ Error refreshing sessions:', error);
       throw error;
     }
-  }, [setSessions,userId,isLoaded]);
+  }, [setSessions,userId]);
 
   // RETURN ALL FUNCTIONS
   return {

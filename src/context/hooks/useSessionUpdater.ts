@@ -9,11 +9,9 @@ interface SessionStateProps {
   sessions: SearchSession[]
 }
 
-export async function useSessionUpdater(sessionState: SessionStateProps) {
+export async function useSessionUpdater(sessionState: SessionStateProps, userId: string) {
   const { setSessions, sessions } = sessionState
-  const { user } = useUser();
-
-  const userId = user?.id; // ✅ Clerk UUID
+ // ✅ Clerk UUID
   // Update a single session
   const updateSession = useCallback(async (sessionId: string, updates: Partial<SearchSession>) => {
     try {

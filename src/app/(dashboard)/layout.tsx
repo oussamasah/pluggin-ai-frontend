@@ -20,7 +20,7 @@ export default async function DashboardLayout({
 
   return (
     <ThemeProvider>
-      <SessionProvider>
+      <SessionProvider userId={userId}>
         <div className="flex h-full min-h-screen">
           <div className="relative bg-white dark:bg-[#0F0F0F]">
             <EnhancedSidebar />

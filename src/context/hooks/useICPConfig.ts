@@ -1,9 +1,8 @@
 import { useState, useCallback } from 'react'
 import {  ICPConfig } from '@/types'
 
-const userID = "550e8400-e29b-41d4-a716-446655440000"
 
-export function useICPConfig(sessionState: any) {
+export function useICPConfig(sessionState: any, userId: string) {
   const [isICPConfigChatOpen, setIsICPConfigChatOpen] = useState(false)
   const [icpConfigConversation, setIcpConfigConversation] = useState<any[]>([])
   const [isICPConfigLoading, setIsICPConfigLoading] = useState(false)
@@ -39,13 +38,13 @@ I'll help you build the perfect Ideal Customer Profile through conversation.`
     } finally {
       setIsICPConfigLoading(false)
     }
-  }, [])
+  }, [userId])
 
   const closeICPConfigChat = useCallback(() => {
     setIsICPConfigChatOpen(false)
     setIcpConfigConversation([])
     setCurrentICPSuggestion(undefined)
-  }, [])
+  }, [userId])
 
   const sendICPConfigMessage = useCallback(async (message: string) => {
     if (!message.trim()) return
@@ -59,7 +58,7 @@ I'll help you build the perfect Ideal Customer Profile through conversation.`
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': userID
+          'x-user-id': userId
         },
         body: JSON.stringify({
           message,
@@ -128,7 +127,7 @@ I'll help you build the perfect Ideal Customer Profile through conversation.`
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': userID
+          'x-user-id': userId
         },
         body: JSON.stringify({ businessContext })
       })

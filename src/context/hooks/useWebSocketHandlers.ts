@@ -7,7 +7,7 @@ import { useSession } from '../SessionContext'
 
 import { useUser } from '@clerk/nextjs'
 
-export function useWebSocketHandlers(sessionState: any) {
+export function useWebSocketHandlers(sessionState: any, userId: string) {
   const {
     sessions,
     setSessions,
@@ -16,18 +16,16 @@ export function useWebSocketHandlers(sessionState: any) {
     currentSession,
     updateSessionQuery
   } = sessionState
-  const { user,isLoaded } = useUser();
 
-  const userId = user?.id;
   // Add this ref to track previous session ID
   const previousSessionId = useRef<string | null>(null)
  const refreshSessions = useCallback(async () => {
    try {
-     console.log('🔄 Refreshing sessions from backend websocket...',user?.id);
-     if(!user?.id) return
+     console.log('🔄 Refreshing sessions from backend websocket...',userId);
+    
      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sessions`, {
        headers: {
-         'x-user-id':  user?.id || ''
+         'x-user-id': userId || ''
        }
      });
  
@@ -45,7 +43,7 @@ export function useWebSocketHandlers(sessionState: any) {
      console.error('❌ Error refreshing sessions:', error);
      throw error;
    }
- }, [setSessions,user,isLoaded]);
+ }, [setSessions,userId]);
   // Session switching logic
   const switchSession = useCallback(async (sessionId: string) => {
   
