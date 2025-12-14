@@ -52,7 +52,7 @@ export function useSessionState() {
     }
 
     loadInitialData()
-  }, [user])
+  }, [user,isLoaded])
   const updateSessionStatus = useCallback((sessionId: string, status: Partial<SearchStatus>) => {
     setSessions(prev => prev.map(session => {
       if (session.id !== sessionId) return session;
