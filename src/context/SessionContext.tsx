@@ -20,7 +20,7 @@ export function SessionProvider({ children, userId }: { children: React.ReactNod
   const sessionUpdater = useSessionUpdater(sessionState, userId)
 
   // Combine all context values
-  const contextValue: SessionContextType = {
+  const contextValue: any = {
     // Session state
     ...sessionState,
 
@@ -35,27 +35,7 @@ export function SessionProvider({ children, userId }: { children: React.ReactNod
 
     // Combined loading state
     isLoading: sessionState.isLoading || icpConfig.isICPConfigLoading,
-    updateSession: function (sessionId: string, updates: Partial<SearchSession>): Promise<SearchSession> {
-     console.log('Function not implemented.')
-    },
-    updateSessionStatus: function (sessionId: string, status: Partial<SearchStatus>): void {
-       console.log('Function not implemented.')
-    },
-    updateMultipleSessions: function (updates: Array<{ sessionId: string; updates: Partial<SearchSession> }>): Promise<SearchSession[]> {
-       console.log('Function not implemented.')
-    },
-    updateAllSessions: function (updates: Partial<SearchSession>): Promise<void> {
-       console.log('Function not implemented.')
-    },
-    bulkUpdateSessions: function (sessionIds: string[], updates: Partial<SearchSession>): Promise<SearchSession[]> {
-       console.log('Function not implemented.')
-    },
-    optimisticUpdate: function (sessionId: string, updates: Partial<SearchSession>): void {
-       console.log('Function not implemented.')
-    },
-    optimisticBatchUpdate: function (sessionIds: string[], updates: Partial<SearchSession>): void {
-       console.log('Function not implemented.')
-    }
+   
   }
 
   return (

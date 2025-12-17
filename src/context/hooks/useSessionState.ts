@@ -132,7 +132,8 @@ export function useSessionState(userId?: string) {
         name,
         createdAt: new Date(),
         query: [],
-        resultsCount: 0
+        resultsCount: 0,
+        refinementState: undefined
       }
       setSessions(prev => [newSession, ...prev])
       setCurrentSessionId(newSession.id)

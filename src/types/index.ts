@@ -110,6 +110,7 @@ export interface Enrichment {
 
 // Frontend component usage examples
   export interface SearchSession {
+    refinementState: any;
     id: string
     name: string
     createdAt: Date
