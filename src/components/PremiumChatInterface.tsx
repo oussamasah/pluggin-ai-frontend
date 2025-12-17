@@ -57,28 +57,28 @@ export function PremiumChatInterface() {
   const [searchType, setSearchType] = useState<string>(
     localStorage.getItem("searchType") ?? "search"
   )
-  const [searchCount, setSearchCount] = useState(  localStorage.getItem("searchcount") ?? "1"); // Default to 10
+  const [searchCount, setSearchCount] = useState(localStorage.getItem("searchcount") ?? "1"); // Default to 10
 
 
- 
-// Add this handler function
-const handleSearchCountChange = (count: SetStateAction<string>) => {
-  localStorage.setItem(`searchcount`, count.toString());
 
-  setSearchCount(count);
-};
+  // Add this handler function
+  const handleSearchCountChange = (count: SetStateAction<string>) => {
+    localStorage.setItem(`searchcount`, count.toString());
+
+    setSearchCount(count);
+  };
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([])
   const [showUploadAnimation, setShowUploadAnimation] = useState(false)
   const [activeCommandCategory, setActiveCommandCategory] = useState<string | null>(null)
   const [isTyping, setIsTyping] = useState(false)
- const { theme } = useTheme()
- const { refreshSessions } = useSession()
+  const { theme } = useTheme()
+  const { refreshSessions } = useSession()
   // Context hooks - KEEP ALL ORIGINAL FUNCTIONALITY
-  const { 
-    currentSession, 
-    startSearch, 
-    icpModels, 
-    primaryModel, 
+  const {
+    currentSession,
+    startSearch,
+    icpModels,
+    primaryModel,
     isConnected,
     updateSessionQuery,
     refineSearch,
@@ -103,40 +103,40 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
     return session.query || ''
   }, [])
 
-  const [localConversation, setLocalConversation] = useState<{role: 'user' | 'assistant', content: string}[]>([]);
+  const [localConversation, setLocalConversation] = useState<{ role: 'user' | 'assistant', content: string }[]>([]);
   const conversationRef = useRef(localConversation);
 
   useEffect(() => {
     conversationRef.current = localConversation;
   }, [localConversation]);
-  
+
   const addMessageToChat = useCallback((role: 'user' | 'assistant', content: string) => {
     if (!currentSession) {
       console.log('❌ No current session available');
       return;
     }
-    
+
     const newMessage = { role, content };
     const allMessages = [...conversationRef.current, newMessage];
-    
+
     setLocalConversation(allMessages);
-    
-    const updatedQueries = allMessages.map(msg => 
+
+    const updatedQueries = allMessages.map(msg =>
       `CHAT_${msg.role.toUpperCase()}: ${msg.content}`
     );
-    
+
     console.log('💬 Sending to backend:', updatedQueries);
     updateSessionQuery(currentSession.id, updatedQueries);
   }, [currentSession, updateSessionQuery]);
 
   useEffect(() => {
-   
-    
+
+
     if (currentSession?.query) {
-      const queries = Array.isArray(currentSession.query) 
-        ? currentSession.query 
+      const queries = Array.isArray(currentSession.query)
+        ? currentSession.query
         : [currentSession.query];
-      
+
       const messages = queries.map(query => {
         if (query.startsWith('CHAT_USER: ')) {
           return { role: 'user' as const, content: query.replace('CHAT_USER: ', '') };
@@ -145,7 +145,7 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
         }
         return { role: 'user' as const, content: query };
       });
-      
+
       setLocalConversation(messages);
     }
   }, [currentSession?.id]);
@@ -215,8 +215,8 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
           break;
         case 'refine_search':
           if (typeof refineSearch === 'function') {
-          //  await refineSearch(sessionId, action.query, action.previous_query)
-          await startSearch(sessionId, action.query, primaryModel?.id)
+            //  await refineSearch(sessionId, action.query, action.previous_query)
+            await startSearch(sessionId, action.query, primaryModel?.id)
 
           } else {
             console.warn('refineSearch function not available, using startSearch instead')
@@ -243,48 +243,64 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
         default:
           console.warn('Unknown action type:', action.type)
       }
-    
-   
-      
-   
-    
+
+
+
+
+
     } catch (error) {
       console.error('Error executing action:', error)
     }
   }, [startSearch, refineSearch, analyzeSignals, handleResultsAction, primaryModel?.id])
 
+  // Updated handleSubmit for PremiumChatInterface.tsx
+
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!message.trim() || !currentSession || isLoading) return
+    e.preventDefault();
+    if (!message.trim() || !currentSession || isLoading) return;
 
     const userMessage = message.trim();
     setMessage('');
-    setIsLoading(true)
-    
+    setIsLoading(true);
+
     try {
-      console.log('👤 Adding user message:', userMessage);
-      addMessageToChat('user', userMessage)
-      
-      const lastClassification = currentSession.id ? 
-        localStorage.getItem(`conversation-context-${currentSession.id}`) : null
-      
-      const context = {
-        history: localConversation.map(msg => ({
-          role: msg.role,
-          content: msg.content,
-          timestamp: new Date()
-        })),
-        lastIntent: lastClassification ? JSON.parse(lastClassification) : null,
-        searchContext: currentSession ? {
-          currentQuery: getCurrentQuery(currentSession),
-          resultsCount: currentSession.resultsCount || 0,
-          activeFilters: {}
-        } : null
+      console.log('👤 User message:', userMessage);
+
+      // Add user message to chat immediately for better UX
+      addMessageToChat('user', userMessage);
+
+      // Extract current context from session
+      const sessionQueries = Array.isArray(currentSession.query) ? currentSession.query : [];
+
+      // Find the last refinement stage marker
+      let stage = 'initial';
+      let currentQuery = '';
+
+      for (let i = sessionQueries.length - 1; i >= 0; i--) {
+        const query = sessionQueries[i];
+        if (query.includes('REFINEMENT_STAGE:')) {
+          const match = query.match(/REFINEMENT_STAGE:(\w+):(.*)/);
+          if (match) {
+            stage = match[1];
+            currentQuery = match[2];
+            break;
+          }
+        }
       }
 
-      console.log('📤 Sending to backend with context:', context);
- 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/classify-intent`, {
+      // Use session's refinementState if available
+      if (currentSession.refinementState) {
+        stage = currentSession.refinementState.stage;
+        currentQuery = currentSession.refinementState.currentQuery || currentQuery;
+      }
+
+      console.log('📤 Context:', { stage, currentQuery: currentQuery.substring(0, 50) });
+
+      // Show typing indicator
+      setIsTyping(true);
+
+      // Call the refinement endpoint
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/refine-with-confirmation`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -294,44 +310,92 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
           message: userMessage,
           sessionId: currentSession.id,
           icpModelId: primaryModel?.id,
-          context
+          context: {
+            stage,
+            currentQuery
+          }
         })
-      })
+      });
 
-      if (!response.ok) throw new Error('Intent classification failed')
-      
-      const classificationResponse = await response.json()
-      const { classification, response: aiResponse, action } = classificationResponse
-      
-      console.log('🤖 AI Response received:', aiResponse);
-      
-      setIsTyping(true);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Refinement failed');
+      }
+
+      const refinementResponse = await response.json();
+      const { response: aiResponse, action, context: newContext } = refinementResponse;
+
+      console.log('🤖 AI response:', aiResponse.substring(0, 100));
+      console.log('🔄 Action:', action);
+      console.log('📝 New stage:', newContext?.stage);
+
+      // Remove typing indicator
       setIsTyping(false);
-      
-      await addMessageToChat('assistant', aiResponse)
-      await updateConversationContext(classification)
-      await executeAction(action, classification, currentSession.id)
-      
-    } catch (error) {
-      console.error('Error processing message:', error)
-      addMessageToChat('assistant', 'Sorry, I encountered an error processing your request. Please try again.')
+
+      // Add AI response to chat
+      await addMessageToChat('assistant', aiResponse);
+
+      // Handle the action
+      if (action?.type === 'start_search' && action.query) {
+        console.log('🚀 Starting search with query:', action.query);
+
+        // Show search starting message
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Trigger the actual search
+        await startSearch(currentSession.id, action.query, primaryModel?.id);
+
+        // Refresh sessions to get updated status
+        await refreshSessions();
+      }
+
+    } catch (error: any) {
+      console.error('❌ Error processing message:', error);
+      setIsTyping(false);
+
+      addMessageToChat('assistant',
+        `I encountered an error: ${error.message}. Let's try again - what companies are you looking for?`
+      );
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
+  };
+
+  // Helper function to extract stage from query array
+  function extractStageFromQueries(queries: string[]): {
+    stage: string;
+    currentQuery: string;
+  } {
+    for (let i = queries.length - 1; i >= 0; i--) {
+      const query = queries[i];
+      if (query.includes('REFINEMENT_STAGE:')) {
+        const match = query.match(/REFINEMENT_STAGE:(\w+):(.*)/);
+        if (match) {
+          return {
+            stage: match[1],
+            currentQuery: match[2]
+          };
+        }
+      }
+    }
+
+    return {
+      stage: 'initial',
+      currentQuery: ''
+    };
   }
 
   function parseContent(
-    content: string, 
+    content: string,
     options: FormattingOptions = {}
   ): React.ReactElement {
     const { preserveLineBreaks = false, className = '' } = options;
-    
+
     if (!content) return <></>;
-    
+
     const elements: React.ReactNode[] = [];
     const lines = content.split('\n');
-    
+
     lines.forEach((line, lineIndex) => {
       const trimmedLine = line.trim();
       if (!trimmedLine) {
@@ -340,23 +404,23 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
         }
         return;
       }
-      
+
       if (trimmedLine === '---') {
         elements.push(
-          <hr 
-            key={`hr-${lineIndex}`} 
-            className="my-6 border-gray-200 dark:border-[#2A2A2A]" 
+          <hr
+            key={`hr-${lineIndex}`}
+            className="my-6 border-gray-200 dark:border-[#2A2A2A]"
           />
         );
         return;
       }
-      
+
       if (trimmedLine.startsWith('* ')) {
         const text = trimmedLine.substring(2);
         elements.push(
           <div key={`bullet-${lineIndex}`} className="flex items-start mb-2">
-            <span 
-              className="w-1.5 h-1.5 rounded-full mt-2 mr-3 flex-shrink-0" 
+            <span
+              className="w-1.5 h-1.5 rounded-full mt-2 mr-3 flex-shrink-0"
               style={{ backgroundColor: ACTIVE_GREEN }}
             />
             <span className="text-gray-700 dark:text-[#9CA3AF] leading-relaxed">
@@ -366,17 +430,17 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
         );
         return;
       }
-      
+
       elements.push(
         <p key={`p-${lineIndex}`} className="mb-3 leading-relaxed text-gray-700 dark:text-[#9CA3AF] last:mb-0">
           {formatBoldText(trimmedLine)}
         </p>
       );
     });
-    
+
     return <div className={cn("space-y-2", className)}>{elements}</div>;
   }
-  
+
   function formatBoldText(text: string): React.ReactNode {
     const parts = text.split(/(\*\*.*?\*\*)/g);
     return parts.map((part, index) => {
@@ -390,7 +454,7 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
       return part;
     });
   }
-  
+
   const handleUploadFile = () => {
     setShowUploadAnimation(true)
     setTimeout(() => {
@@ -415,26 +479,26 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
       console.log('🔍 Has Messages:', hasMessages);
       console.log('=== END DEBUG ===');
     }, [currentSession, localConversation, chatMessages, hasMessages]);
-    
+
     return null;
   }
 
   useEffect(() => {
-    const handleSearchComplete = async(data: any) => {
-    
+    const handleSearchComplete = async (data: any) => {
+
       const { sessionId, companies, resultsCount, summary } = data;
       console.log('✅ Search complete:', { sessionId, resultsCount })
       addMessageToChat('assistant', summary);
-     
+
     };
-  
+
     webSocketService.on('search-complete', handleSearchComplete);
-  
+
     return () => {
       webSocketService.off('search-complete', handleSearchComplete);
     };
   }, [addMessageToChat]);
-  
+
   return (
     <div className="flex-1 flex flex-col h-full bg-white dark:bg-[#0F0F0F] min-h-screen">
 
@@ -447,21 +511,21 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
         )}>
           <div className="max-w-3xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div 
+              <div
                 className="w-8 h-8 rounded-lg flex items-center justify-center"
-                
+
               >
-             
-             {theme=="dark"?<img 
-  src="/plauging-ai-dark.png" 
-  alt="Crown" 
-  className=""
-/>:<img 
-  src="/plauging-ai-light.png" 
-  alt="Crown" 
-  className=""
-/>}   
-      
+
+                {theme == "dark" ? <img
+                  src="/plauging-ai-dark.png"
+                  alt="Crown"
+                  className=""
+                /> : <img
+                  src="/plauging-ai-light.png"
+                  alt="Crown"
+                  className=""
+                />}
+
               </div>
               <div>
                 <h1 className="text-sm font-medium text-gray-900 dark:text-[#EDEDED]">
@@ -473,8 +537,8 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <div 
-                className="w-2 h-2 rounded-full animate-pulse" 
+              <div
+                className="w-2 h-2 rounded-full animate-pulse"
                 style={{ backgroundColor: ACTIVE_GREEN }}
               />
               <span className="text-xs text-gray-600 dark:text-[#9CA3AF] font-medium">Live</span>
@@ -501,7 +565,7 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
               {/* Chat Messages - UPDATED STYLE */}
               {chatMessages.map((msg, index) => (
                 <motion.div
-                  key={currentSession?.id+"-"+msg.id+"-"+msg.timestamp}
+                  key={currentSession?.id + "-" + msg.id + "-" + msg.timestamp}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
@@ -516,24 +580,24 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
                       <Bot className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                     </div>
                   )}
-                  
+
                   <div className={cn(
                     "flex flex-col gap-2 max-w-[85%]",
                     msg.role === 'user' ? "items-end" : "items-start"
                   )}>
                     <div className={cn(
                       "px-4 py-3 rounded-2xl",
-                      msg.role === 'user' 
+                      msg.role === 'user'
                         ? cn(
-                            "bg-[#F3F4F6] dark:bg-[#1E1E1E] text-white text-gray-900 dark:text-[#EDEDED]  rounded-br-md"
-                          )
+                          "bg-[#F3F4F6] dark:bg-[#1E1E1E] text-white text-gray-900 dark:text-[#EDEDED]  rounded-br-md"
+                        )
                         : cn(
-                            "bg-[#F3F4F6] dark:bg-[#1E1E1E] text-gray-900 dark:text-[#EDEDED] rounded-bl-md"
-                          )
+                          "bg-[#F3F4F6] dark:bg-[#1E1E1E] text-gray-900 dark:text-[#EDEDED] rounded-bl-md"
+                        )
                     )}
-                    style={{
-                    
-                    }}
+                      style={{
+
+                      }}
                     >
                       <div className="text-sm leading-6 font-light">
                         {parseContent(msg.content)}
@@ -541,8 +605,8 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
                     </div>
                     <div className={cn(
                       "text-xs font-light tracking-wide px-1",
-                      msg.role === 'user' 
-                        ? "text-gray-500 dark:text-[#9CA3AF] text-right" 
+                      msg.role === 'user'
+                        ? "text-gray-500 dark:text-[#9CA3AF] text-right"
                         : "text-gray-500 dark:text-[#9CA3AF] text-left"
                     )}>
                       {msg.role === 'user' ? 'You' : 'Analyst'} • {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -597,29 +661,29 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
                 </motion.div>
               )}
               {/* Current Processing Status - KEEP ORIGINAL */}
-              {(currentSession?.searchStatus?.stage === "searching" || 
-  currentSession?.searchStatus?.stage === "refine_search") && (
-  <motion.div
-    key={`workflow-${currentSession?.id}`}  // Changed: Force complete re-render on session change
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    className="flex justify-start gap-4"
-  >
-    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#F3F4F6] dark:bg-[#1E1E1E] flex items-center justify-center">
-      <Bot className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-    </div>
-    <div className="px-4 py-2">
-      <div className="flex items-center gap-3 mb-4">
-        {!isConnected && (
-          <span className="text-xs bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 px-3 py-1 font-medium tracking-wide">
-            Connecting...
-          </span>
-        )}
-      </div>
-      <ProcessingWorkflow key={currentSession?.id} /> {/* Keep this key too */}
-    </div>
-  </motion.div>
-)}
+              {(currentSession?.searchStatus?.stage === "searching" ||
+                currentSession?.searchStatus?.stage === "refine_search") && (
+                  <motion.div
+                    key={`workflow-${currentSession?.id}`}  // Changed: Force complete re-render on session change
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex justify-start gap-4"
+                  >
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#F3F4F6] dark:bg-[#1E1E1E] flex items-center justify-center">
+                      <Bot className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                    </div>
+                    <div className="px-4 py-2">
+                      <div className="flex items-center gap-3 mb-4">
+                        {!isConnected && (
+                          <span className="text-xs bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 px-3 py-1 font-medium tracking-wide">
+                            Connecting...
+                          </span>
+                        )}
+                      </div>
+                      <ProcessingWorkflow key={currentSession?.id} /> {/* Keep this key too */}
+                    </div>
+                  </motion.div>
+                )}
 
               {/* Centered Empty State - UPDATED STYLE */}
               {!hasMessages && (
@@ -631,7 +695,7 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
                 >
                   <div className="space-y-8">
                     <div className="space-y-4">
-                      <div 
+                      <div
                         className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center"
                         style={{ backgroundColor: ACCENT_GREEN }}
                       >
@@ -641,11 +705,11 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
                         GTM Intelligence Platform
                       </h2>
                       <p className="text-gray-600 dark:text-[#9CA3AF] text-lg font-light leading-relaxed max-w-2xl mx-auto">
-                        Describe the companies, markets, or investment opportunities you want to explore. 
+                        Describe the companies, markets, or investment opportunities you want to explore.
                         I'll help you find the most promising targets with detailed analysis and insights.
                       </p>
                     </div>
-                    
+
                     <div className={cn(
                       "rounded-2xl p-6 text-left max-w-2xl mx-auto",
                       "bg-[#F9FAFB] dark:bg-[#1A1A1A] border border-gray-200 dark:border-[#2A2A2A]"
@@ -675,7 +739,7 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
       )}>
         <div className="max-w-3xl mx-auto px-4">
           {/* Search Type Selector - KEEP ORIGINAL FEATURE */}
-        
+
 
           {/* Uploaded Files - KEEP ORIGINAL */}
           {uploadedFiles.length > 0 && (
@@ -790,13 +854,13 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
                   "flex items-center justify-center",
                   message.trim() && isConnected && !isLoading && primaryModel
                     ? cn(
-                        "text-white",
-                        "hover:shadow-lg transform hover:scale-105"
-                      )
+                      "text-white",
+                      "hover:shadow-lg transform hover:scale-105"
+                    )
                     : cn(
-                        "text-gray-400 dark:text-[#6B7280]",
-                        "cursor-not-allowed"
-                      )
+                      "text-gray-400 dark:text-[#6B7280]",
+                      "cursor-not-allowed"
+                    )
                 )}
                 style={{
                   backgroundColor: message.trim() && isConnected && !isLoading ? ACTIVE_GREEN : undefined
@@ -810,96 +874,102 @@ const handleSearchCountChange = (count: SetStateAction<string>) => {
               </button>
             </div>
           </div>
-<div className='flex justify-between items-center'>
-          {/* Active ICP Model Badge - KEEP ORIGINAL */}
-          {primaryModel && isConnected && (
- <ActiveModelSelector className="mt-4" />
-          )}
+          <div className='flex justify-between items-center'>
+            {/* Active ICP Model Badge - KEEP ORIGINAL */}
+            {primaryModel && isConnected && (
+              <ActiveModelSelector className="mt-4" />
+            )}
             <div className="flex items-center gap-2 justify-center">
-    <span className="text-xs text-gray-600 dark:text-[#9CA3AF] font-medium">Results:</span>
-    <select
-      value={searchCount}
-      onChange={(e) => handleSearchCountChange(e.target.value)}
-      className={cn(
-        "px-2 py-1 text-xs font-medium tracking-wide transition-all duration-300 rounded-lg border",
-        "bg-white dark:bg-[#1E1E1E] text-gray-600 dark:text-[#9CA3AF]",
-        "border-gray-300 dark:border-[#2A2A2A] focus:border-green-300 focus:ring-1 focus:ring-green-300",
-        "focus:outline-none"
-      )}
-    >
-      <option value={"1"}>1</option>
-      <option value={"10"}>10</option>
-      <option value={"25"}>25</option>
-      <option value={"50"}>50</option>
-      <option value={"70"}>70</option>
-      <option value={"100"}>100</option>
-      <option value={"200"}>200</option>
-      <option value={"500"}>500</option>
-      <option value={"1000"}>1000</option>
-    </select>
-  </div>
-  <div className="flex items-center gap-2 mt-2 justify-center">
-            <button
-              onClick={() => handleSearchTypeChange("search")}
-              className={cn(
-                "flex items-center gap-2 px-3 py-1.5 text-xs font-medium tracking-wide transition-all duration-300 rounded-lg border",
-                searchType === "search"
-                  ? cn(
+              <span className="text-xs text-gray-600 dark:text-[#9CA3AF] font-medium">Results:</span>
+              <select
+                value={searchCount}
+                onChange={(e) => handleSearchCountChange(e.target.value)}
+                className={cn(
+                  "px-2 py-1 text-xs font-medium tracking-wide transition-all duration-300 rounded-lg border",
+                  "bg-white dark:bg-[#1E1E1E] text-gray-600 dark:text-[#9CA3AF]",
+                  "border-gray-300 dark:border-[#2A2A2A] focus:border-green-300 focus:ring-1 focus:ring-green-300",
+                  "focus:outline-none"
+                )}
+              >
+                <option value={"1"}>1</option>
+                <option value={"10"}>10</option>
+                <option value={"25"}>25</option>
+                <option value={"50"}>50</option>
+                <option value={"70"}>70</option>
+                <option value={"100"}>100</option>
+                <option value={"200"}>200</option>
+                <option value={"500"}>500</option>
+                <option value={"1000"}>1000</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2 mt-2 justify-center">
+              <button
+                onClick={() => handleSearchTypeChange("search")}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 text-xs font-medium tracking-wide transition-all duration-300 rounded-lg border",
+                  searchType === "search"
+                    ? cn(
                       "text-white border-transparent"
                     )
-                  : cn(
+                    : cn(
                       "bg-white dark:bg-[#1E1E1E] text-gray-600 dark:text-[#9CA3AF]",
                       "border-gray-300 dark:border-[#2A2A2A] hover:border-green-300 hover:text-green-600 dark:hover:text-[#006239]"
                     )
-              )}
-              style={{
-                backgroundColor: searchType === "search" ? ACTIVE_GREEN : undefined
-              }}
-            >
-              <Search className="w-3 h-3" />
-              <span>Search</span>
-            </button>
-            <button
-              onClick={() => handleSearchTypeChange("deepResearch")}
-              className={cn(
-                "flex items-center gap-2 px-3 py-1.5 text-xs font-medium tracking-wide transition-all duration-300 rounded-lg border",
-                searchType === "deepResearch"
-                  ? cn(
+                )}
+                style={{
+                  backgroundColor: searchType === "search" ? ACTIVE_GREEN : undefined
+                }}
+              >
+                <Search className="w-3 h-3" />
+                <span>Search</span>
+              </button>
+              <button
+                onClick={() => handleSearchTypeChange("deepResearch")}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 text-xs font-medium tracking-wide transition-all duration-300 rounded-lg border",
+                  searchType === "deepResearch"
+                    ? cn(
                       "text-white border-transparent"
                     )
-                  : cn(
+                    : cn(
                       "bg-white dark:bg-[#1E1E1E] text-gray-600 dark:text-[#9CA3AF]",
                       "border-gray-300 dark:border-[#2A2A2A] hover:border-green-300 hover:text-green-600 dark:hover:text-[#006239]"
                     )
-              )}
-              style={{
-                backgroundColor: searchType === "deepResearch" ? ACTIVE_GREEN : undefined
-              }}
-            >
-              <Target className="w-3 h-3" />
-              <span>Deep</span>
-            </button>
-            <button
-              onClick={() => handleSearchTypeChange("reasoning")}
-              className={cn(
-                "flex items-center gap-2 px-3 py-1.5 text-xs font-medium tracking-wide transition-all duration-300 rounded-lg border",
-                searchType === "reasoning"
-                  ? cn(
-                      "text-white border-transparent"
-                    )
-                  : cn(
-                      "bg-white dark:bg-[#1E1E1E] text-gray-600 dark:text-[#9CA3AF]",
-                      "border-gray-300 dark:border-[#2A2A2A] hover:border-green-300 hover:text-green-600 dark:hover:text-[#006239]"
-                    )
-              )}
-              style={{
-                backgroundColor: searchType === "reasoning" ? ACTIVE_GREEN : undefined
-              }}
-            >
-              <BrainCircuit className="w-3 h-3" />
-              <span>Reasoning</span>
-            </button>
-          </div>
+                )}
+                style={{
+                  backgroundColor: searchType === "deepResearch" ? ACTIVE_GREEN : undefined
+                }}
+              >
+                <Target className="w-3 h-3" />
+                <span>Deep</span>
+              </button>
+              <button
+                onClick={() => handleSearchTypeChange("reasoning")}
+                disabled
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 text-xs font-medium tracking-wide transition-all duration-300 rounded-lg border relative group",
+                  "bg-white dark:bg-[#1E1E1E] text-gray-400 dark:text-[#6B7280]",
+                  "border-gray-300 dark:border-[#2A2A2A]",
+                  "cursor-not-allowed opacity-70"
+                )}
+              >
+                <BrainCircuit className="w-3 h-3" />
+                <span>Reasoning</span>
+
+                {/* Tooltip for Coming Soon */}
+                <div className="absolute invisible group-hover:visible opacity-0 group-hover:opacity-100 
+                  transition-all duration-200 bottom-full left-1/2 transform -translate-x-1/2 
+                  mb-2 px-2 py-1 bg-gray-800 dark:bg-gray-900 text-white text-xs rounded-md 
+                  whitespace-nowrap pointer-events-none z-10">
+                  <div className="relative">
+                    Coming Soon
+                    {/* Tooltip arrow */}
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 
+                      border-4 border-transparent border-t-gray-800 dark:border-t-gray-900"></div>
+                  </div>
+                </div>
+              </button>
+            </div>
           </div>
           {/* Connection Warning - KEEP ORIGINAL */}
           {!isConnected && (

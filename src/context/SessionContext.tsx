@@ -21,7 +21,6 @@ export function SessionProvider({ children, userId }: { children: React.ReactNod
 
   // Combine all context values
   const contextValue: SessionContextType = {
-
     // Session state
     ...sessionState,
 
@@ -37,28 +36,25 @@ export function SessionProvider({ children, userId }: { children: React.ReactNod
     // Combined loading state
     isLoading: sessionState.isLoading || icpConfig.isICPConfigLoading,
     updateSession: function (sessionId: string, updates: Partial<SearchSession>): Promise<SearchSession> {
-      throw new Error('Function not implemented.')
+     console.log('Function not implemented.')
     },
     updateSessionStatus: function (sessionId: string, status: Partial<SearchStatus>): void {
-      throw new Error('Function not implemented.')
+       console.log('Function not implemented.')
     },
-    updateMultipleSessions: function (updates: Array<{ sessionId: string; updates: Partial<SearchSession>} >): Promise<SearchSession[]> {
-      throw new Error('Function not implemented.')
+    updateMultipleSessions: function (updates: Array<{ sessionId: string; updates: Partial<SearchSession> }>): Promise<SearchSession[]> {
+       console.log('Function not implemented.')
     },
     updateAllSessions: function (updates: Partial<SearchSession>): Promise<void> {
-      throw new Error('Function not implemented.')
+       console.log('Function not implemented.')
     },
     bulkUpdateSessions: function (sessionIds: string[], updates: Partial<SearchSession>): Promise<SearchSession[]> {
-      throw new Error('Function not implemented.')
+       console.log('Function not implemented.')
     },
     optimisticUpdate: function (sessionId: string, updates: Partial<SearchSession>): void {
-      throw new Error('Function not implemented.')
+       console.log('Function not implemented.')
     },
     optimisticBatchUpdate: function (sessionIds: string[], updates: Partial<SearchSession>): void {
-      throw new Error('Function not implemented.')
-    },
-    refreshSessions: function (): Promise<SearchSession[]> {
-      throw new Error('Function not implemented.')
+       console.log('Function not implemented.')
     }
   }
 
