@@ -33,18 +33,25 @@ export function ActiveModelSelector({ className }: ActiveModelSelectorModalProps
           ACTIVE MODEL:
         </span>
         <button
-          onClick={() => setIsModalOpen(true)}
-          className={cn(
-            "flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200",
-            "bg-white dark:bg-[#1E1E1E] text-gray-600 dark:text-[#9CA3AF]",
-            "border border-gray-300 dark:border-[#2A2A2A]",
-            "hover:border-green-300 hover:text-green-600 dark:hover:text-[#006239]",
-            "cursor-pointer hover:shadow-sm"
-          )}
-        >
-          <span className="font-medium">{primaryModel?.name || 'No model selected'}</span>
-          <ChevronDown className="w-4 h-4" />
-        </button>
+  onClick={() => setIsModalOpen(true)}
+  className={cn(
+    "flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200",
+    "bg-white dark:bg-[#1E1E1E] text-gray-600 dark:text-[#9CA3AF]",
+    "border border-gray-300 dark:border-[#2A2A2A]",
+    "hover:border-green-300 hover:text-green-600 dark:hover:text-[#006239]",
+    "cursor-pointer hover:shadow-sm",
+    "max-w-[200px]" // Set a maximum width
+  )}
+>
+  <span className="font-medium truncate" title={primaryModel?.name || 'No model selected'}>
+    {primaryModel?.name 
+      ? (primaryModel.name.length > 20 
+          ? `${primaryModel.name.substring(0, 15)}...` 
+          : primaryModel.name)
+      : 'No model selected'}
+  </span>
+  <ChevronDown className="w-4 h-4 flex-shrink-0" />
+</button>
       </motion.div>
 
       {/* Models Modal */}

@@ -1,4 +1,4 @@
-import { JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal, useState } from 'react';
+import { JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal, useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Building2, 
@@ -38,6 +38,9 @@ import { cn } from '@/lib/utils';
 import { Company } from '@/types';
 import { format } from 'date-fns';
 import { GTMIntelligenceReport } from './GTMIntelligenceReportProps ';
+import { useUser } from '@clerk/nextjs';
+import { PersonaReportSidePanel } from './PersonaReportSidePanel';
+import { useSession } from '@/context/SessionContext';
 
 // Brand Colors
 const ACCENT_GREEN = '#006239'
@@ -53,10 +56,18 @@ interface CompanyDetailProps {
 export function CompanyDetail({ company, onClose, onRefresh, onEdit }: CompanyDetailProps) {
   const [activeTab, setActiveTab] = useState('overview');
 
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape') onClose();
+  }, [onClose]);
+  
+  useEffect (() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Building2 },
     { id: 'gtmintelligence', label: 'GTM Intelligence', icon: Target }, // Fixed typo and changed icon
-    { id: 'employees', label: 'Employees', icon: Users },
+    { id: 'employees', label: 'Persona', icon: Users },
     { id: 'financials', label: 'Financials', icon: DollarSign },
     { id: 'technologies', label: 'Technologies', icon: Code },
     { id: 'intent', label: 'Intent Signals', icon: TrendingUp },
@@ -137,13 +148,7 @@ export function CompanyDetail({ company, onClose, onRefresh, onEdit }: CompanyDe
                 <Edit3 className="w-5 h-5" />
               </button>
             )}
-            <button
-              onClick={onRefresh}
-              className="p-2 text-gray-400 dark:text-[#9CA3AF] hover:text-[#006239] transition-colors hover:bg-gray-100 dark:hover:bg-[#2A2A2A] rounded-xl"
-              title="Refresh"
-            >
-              <Download className="w-5 h-5" />
-            </button>
+ 
             <button
               onClick={onClose}
               className="p-2 text-gray-400 dark:text-[#9CA3AF] hover:text-gray-600 dark:hover:text-[#EDEDED] transition-colors hover:bg-gray-100 dark:hover:bg-[#2A2A2A] rounded-xl"
@@ -285,7 +290,7 @@ function EmployeesTab({ company }: { company: Company }) {
   return (
     <div className="space-y-8">
       {/* Employee Summary */}
-      <DetailSection icon={Users} title="Employee Summary">
+      <DetailSection icon={Users} title="Persona Summary">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <StatCard
             value={company.employees.length.toString()}
@@ -304,14 +309,14 @@ function EmployeesTab({ company }: { company: Company }) {
           />
           <StatCard
             value={Math.round(company.employees.reduce((acc, emp) => acc + (emp.connectionsCount || 0), 0) / company.employees.length).toString()}
-            label="Avg Connections"
+            label="Avg LinkedIn Connections"
             color="orange"
           />
         </div>
       </DetailSection>
 
       {/* Employee List */}
-      <DetailSection icon={User} title="Employee Profiles">
+      <DetailSection icon={User} title="Profiles">
         <div className="space-y-4">
           {company.employees.map((employee, index) => (
             <EmployeeCard key={employee.coresignalEmployeeId || employee._id || index} employee={employee} />
@@ -342,7 +347,28 @@ function EmployeesTab({ company }: { company: Company }) {
 // Updated Employee Card Component with better error handling
 function EmployeeCard({ employee }: { employee: any }) {
   const [expanded, setExpanded] = useState(false);
-
+  const { user } = useUser();
+  const {
+    currentSession,
+    startSearch,
+    icpModels,
+    primaryModel,
+    isConnected,
+    updateSessionQuery,
+    refineSearch,
+    analyzeSignals,
+    handleResultsAction
+  } = useSession()
+  const userId = user?.id;
+  const [showPersonaReport, setShowPersonaReport] = useState(false);
+  const [isLoadingPersona, setIsLoadingPersona] = useState(false);
+  const [personaData, setPersonaData] = useState<{
+    markdownContent?: string;
+    employeeName?: string;
+    companyName?: string;
+    employeeRole?: string;
+  } | null>(null);
+  
   // Safely access employee properties with fallbacks
   const fullName = employee.fullName || `${employee.firstName || ''} ${employee.lastName || ''}`.trim();
   const isDecisionMaker = employee.isDecisionMaker === true;
@@ -353,6 +379,70 @@ function EmployeeCard({ employee }: { employee: any }) {
   const followers = employee.followersCount || 0;
   const experienceYears = employee.totalExperienceDurationMonths ? Math.round(employee.totalExperienceDurationMonths / 12) : null;
 
+  const handleCardClick = async (e: React.MouseEvent) => {
+    // Don't trigger if clicking on links or expand button
+    if ((e.target as HTMLElement).closest('a, button')) {
+      return;
+    }
+    
+    // Open the side panel immediately with loading state
+    setShowPersonaReport(true);
+    setIsLoadingPersona(true);
+    
+    try {
+      if (!userId) {
+        throw new Error('userId is required');
+      }
+      
+      const req = {
+        employeeId: employee?._id,
+        icpModelId: primaryModel?.id,
+        companyId: employee?.companyId
+      };
+      
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/employees/gtm_persona`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-user-id': userId,
+          },
+          body: JSON.stringify(req),
+        }
+      );
+      
+      const data = await response.json();
+      
+      setPersonaData({
+        markdownContent: data?.data?.personaIntelligence?.overview,
+        employeeName: fullName,
+        employeeRole: title,
+        companyName: employee.companyName || 'Unknown Company',
+      });
+      
+      console.log("response data", data?.data?.personaIntelligence?.overview);
+      
+    } catch (e) {
+      console.log(e);
+      setPersonaData({
+        markdownContent: undefined,
+        employeeName: fullName,
+        employeeRole: title,
+        companyName: employee.companyName || 'Unknown Company'
+      });
+    } finally {
+      setIsLoadingPersona(false);
+    }
+  };
+
+  const handleClosePanel = () => {
+    setShowPersonaReport(false);
+    // Clear data after animation completes
+    setTimeout(() => {
+      setPersonaData(null);
+    }, 300);
+  };
   // Safely handle professionalEmails data structure
   const getProfessionalEmails = () => {
     if (!employee.professionalEmails) return [];
@@ -369,8 +459,20 @@ function EmployeeCard({ employee }: { employee: any }) {
   const professionalEmails = getProfessionalEmails();
 
   return (
-    <div className="bg-gray-50 dark:bg-[#1A1A1A] border border-gray-300 dark:border-[#2A2A2A] rounded-2xl overflow-hidden">
-      <div className="p-4">
+    <>
+      {/* Persona Report Side Panel - Outside of card to prevent click bubbling */}
+      <PersonaReportSidePanel
+        isOpen={showPersonaReport}
+        onClose={handleClosePanel}
+        isLoading={isLoadingPersona}
+        employeeData={personaData}
+      />
+      
+      <div 
+        className="bg-gray-50 dark:bg-[#1A1A1A] border border-gray-300 dark:border-[#2A2A2A] rounded-2xl overflow-hidden cursor-pointer hover:border-[#006239] hover:shadow-md transition-all duration-200"  
+        onClick={handleCardClick}
+      >
+        <div className="p-4">
         <div className="flex items-start gap-4">
           {/* Profile Image */}
           {employee.pictureUrl ? (
@@ -580,12 +682,16 @@ function EmployeeCard({ employee }: { employee: any }) {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+      </div>
+    </>
   );
 }
 
 // Update the OverviewTab to include employee summary
 function OverviewTab({ company }: { company: Company }) {
+  
+  const currentEmployees = company.employees.filter(emp => emp.isWorking !== false);
+  const decisionMakers = company.employees.filter(emp => emp.isDecisionMaker === true);
   return (
     <div className="space-y-8">
       {/* Company Description */}
@@ -598,32 +704,31 @@ function OverviewTab({ company }: { company: Company }) {
       )}
 
       {/* Employee Summary */}
-      {company.employees && company.employees.length > 0 && (
-        <DetailSection icon={Users} title="Employee Insights">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard
-              value={company.employees.length.toString()}
-              label="Profiles"
-              color="green"
-            />
-            <StatCard
-              value={company.employees.filter(emp => emp.is_decision_maker).length.toString()}
-              label="Decision Makers"
-              color="blue"
-            />
-            <StatCard
-              value={Math.round(company.employees.reduce((acc, emp) => acc + (emp.connections_count || 0), 0) / company.employees.length).toLocaleString()}
-              label="Avg Connections"
-              color="purple"
-            />
-            <StatCard
-              value={Array.from(new Set(company.employees.map(emp => emp.active_experience_department).filter(Boolean))).length.toString()}
-              label="Departments"
-              color="orange"
-            />
-          </div>
-        </DetailSection>
-      )}
+      <DetailSection icon={Users} title="Persona Summary">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <StatCard
+            value={company.employees.length.toString()}
+            label="Total Profiles"
+            color="green"
+          />
+          <StatCard
+            value={currentEmployees.length.toString()}
+            label="Current Employees"
+            color="blue"
+          />
+          <StatCard
+            value={decisionMakers.length.toString()}
+            label="Decision Makers"
+            color="purple"
+          />
+          <StatCard
+            value={Math.round(company.employees.reduce((acc, emp) => acc + (emp.connectionsCount || 0), 0) / company.employees.length).toString()}
+            label="Avg LinkedIn Connections"
+            color="orange"
+          />
+        </div>
+      </DetailSection>
+
 
       {/* Key Information */}
       <DetailSection icon={Target} title="Key Information">

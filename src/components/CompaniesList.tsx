@@ -322,6 +322,7 @@ const fetchCompanies = useCallback(async (page = 1, resetFilters = false) => {
     
     if (data.success) {
       setCompanies(data.companies);
+     
       setPagination(data.pagination);
       if (data.filters) {
         setAvailableFilters({
@@ -1108,7 +1109,7 @@ const fetchCompanies = useCallback(async (page = 1, resetFilters = false) => {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => handlePageChange(pagination.page - 1)}
+                  onClick={() => handlePageChange(Number(pagination.page) - 1)}
                   disabled={!pagination.hasPrev || loading}
                   className={cn(
                     "px-4 py-2 text-sm transition-colors rounded-xl",
@@ -1120,7 +1121,7 @@ const fetchCompanies = useCallback(async (page = 1, resetFilters = false) => {
                   Previous
                 </button>
                 <button
-                  onClick={() => handlePageChange(pagination.page + 1)}
+                  onClick={() => handlePageChange(Number(pagination.page) + 1)}
                   disabled={!pagination.hasNext || loading}
                   className={cn(
                     "px-4 py-2 text-sm transition-colors rounded-xl",

@@ -35,6 +35,7 @@ export function SessionProvider({ children, userId }: { children: React.ReactNod
 
     // Combined loading state
     isLoading: sessionState.isLoading || icpConfig.isICPConfigLoading,
+  
    
   }
 
