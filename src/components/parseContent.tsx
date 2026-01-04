@@ -270,7 +270,7 @@ export function parseContent(
       if (match) {
         const level = match[1].length
         const headingText = match[2]
-        const HeadingTag = `h${level}` as keyof JSX.IntrinsicElements
+        const HeadingTag = `h${level}` as React.ElementType;
         
         const headingClasses = {
           1: "text-2xl font-bold text-gray-900 dark:text-[#EDEDED] mb-4 mt-6",
