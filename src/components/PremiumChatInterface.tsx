@@ -976,7 +976,7 @@ GTM Intelligence
                     msg.role === 'user' ? "items-end" : "items-start"
                   )}>
                     <div className={cn(
-                      "px-4 py-3 rounded-2xl",
+                      "px-5 py-4 rounded-2xl",
                       msg.role === 'user'
                         ? cn(
                           "bg-[#F3F4F6] dark:bg-[#1E1E1E] text-white text-gray-900 dark:text-[#EDEDED]  rounded-br-md"
@@ -986,7 +986,7 @@ GTM Intelligence
                         )
                     )}>
                   
-                     <div className="text-sm leading-6 font-light">
+                     <div className="text-sm leading-relaxed font-light tracking-wide">
   {/* Use ReasoningVisualization component for messages with metadata */}
   {/* For streaming messages, use streamingText directly to avoid flickering */}
   {isStreaming && index === chatMessages.length - 1 && msg.role === 'assistant' ? (
@@ -1004,7 +1004,7 @@ GTM Intelligence
         metadata={streamingMetadata || msg.metadata}
       />
       {streamingText && (
-        <span className="inline-block w-2 h-4 ml-1 bg-[#006239] animate-pulse" />
+        <span className="inline-block w-0.5 h-4 ml-1.5 bg-[#006239] animate-pulse rounded-full" />
       )}
     </>
   ) : (

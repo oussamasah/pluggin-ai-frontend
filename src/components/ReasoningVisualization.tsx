@@ -36,17 +36,21 @@ export function ReasoningVisualization({
   // If no metadata or metadata type is 'none', just render the content
   if (!metadata || metadata.type === 'none' || !metadata.data || metadata.data.length === 0) {
     return (
-      <div className={cn('space-y-2', className)}>
-        {parseContent(content)}
+      <div className={cn('space-y-3', className)}>
+        <div className="text-sm leading-relaxed text-gray-700 dark:text-[#D1D5DB] font-light tracking-wide">
+          {parseContent(content)}
+        </div>
       </div>
     )
   }
 
   return (
-    <div className={cn('space-y-4', className)}>
+    <div className={cn('space-y-5', className)}>
       {/* Render the narrative content */}
-      <div className="space-y-2">
-        {parseContent(content)}
+      <div className="space-y-3">
+        <div className="text-sm leading-relaxed text-gray-700 dark:text-[#D1D5DB] font-light tracking-wide">
+          {parseContent(content)}
+        </div>
       </div>
 
       {/* Render visualization based on metadata type */}
