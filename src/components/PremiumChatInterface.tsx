@@ -31,6 +31,8 @@ import { webSocketService } from '@/lib/services/WebSocketService'
 import { useTheme } from '@/context/ThemeContext'
 import { useUser } from '@clerk/nextjs'
 import { ActiveModelSelector } from './ActiveModelSelector'
+import { ReasoningVisualization } from './ReasoningVisualization'
+import ReasoningWorkflow from './ReasoningWorkflow'
 
 interface FormattingOptions {
   preserveLineBreaks?: boolean;
@@ -42,7 +44,19 @@ interface ChatMessage {
   content: string;
   role: 'user' | 'assistant';
   timestamp: Date;
+  metadata?: {
+    type: 'table' | 'bar_chart' | 'line_chart' | 'pie_chart' | 'none';
+    config?: {
+      xAxisKey?: string;
+      yAxisKey?: string;
+      title?: string;
+      [key: string]: any; // Allow other config properties
+    };
+    data: any[];
+    [key: string]: any; // Allow other metadata properties
+  };
 }
+
 
 // Brand Colors
 const ACCENT_GREEN = '#006239' // Primary brand green
@@ -71,6 +85,23 @@ export function PremiumChatInterface() {
   const [showUploadAnimation, setShowUploadAnimation] = useState(false)
   const [activeCommandCategory, setActiveCommandCategory] = useState<string | null>(null)
   const [isTyping, setIsTyping] = useState(false)
+  // Streaming state for reasoning mode
+  const [streamingText, setStreamingText] = useState('')
+  const [streamingProgress, setStreamingProgress] = useState(0)
+  const [streamingStatus, setStreamingStatus] = useState<string>('')
+  const [streamingMetadata, setStreamingMetadata] = useState<any>(null)
+  const [isStreaming, setIsStreaming] = useState(false)
+  const streamingMessageIdRef = useRef<string | null>(null)
+  const isUpdatingFromStreamRef = useRef(false)
+  // Track workflow steps for reasoning mode visualization
+  const [workflowSteps, setWorkflowSteps] = useState<Array<{
+    id: string
+    node: string
+    name: string
+    description: string
+    status: 'pending' | 'in-progress' | 'completed'
+    progress?: number
+  }>>([])
   const { theme } = useTheme()
   const { refreshSessions } = useSession()
   // Context hooks - KEEP ALL ORIGINAL FUNCTIONALITY
@@ -103,67 +134,167 @@ export function PremiumChatInterface() {
     return session.query || ''
   }, [])
 
-  const [localConversation, setLocalConversation] = useState<{ role: 'user' | 'assistant', content: string }[]>([]);
+  const [localConversation, setLocalConversation] = useState<{
+    metadata: any ,role: 'user' | 'assistant', content: string 
+}[]>([]);
   const conversationRef = useRef(localConversation);
 
   useEffect(() => {
     conversationRef.current = localConversation;
   }, [localConversation]);
 
-  const addMessageToChat = useCallback((role: 'user' | 'assistant', content: string) => {
+  const addMessageToChat = useCallback(async (role: 'user' | 'assistant', content: string, metadata?: any) => {
     if (!currentSession) {
       console.log('❌ No current session available');
       return;
     }
-
-    const newMessage = { role, content };
+  
+    if (!content || !content.trim()) {
+      console.log('⚠️ Attempted to add empty message, skipping');
+      return;
+    }
+  
+    const newMessage = {
+      role,
+      content: content.trim(),
+      metadata: metadata || undefined // Ensure it's undefined, not null
+    };
+  
     const allMessages = [...conversationRef.current, newMessage];
-
     setLocalConversation(allMessages);
-
-    const updatedQueries = allMessages.map(msg =>
-      `CHAT_${msg.role.toUpperCase()}: ${msg.content}`
-    );
-
-    console.log('💬 Sending to backend:', updatedQueries);
-    updateSessionQuery(currentSession.id, updatedQueries);
+  
+    // Store in session query format WITH METADATA
+    const updatedQueries = allMessages.map(msg => {
+      if (msg.metadata) {
+        // Store metadata as a separate JSON string
+        return `CHAT_${msg.role.toUpperCase()}_WITH_METADATA: ${msg.content}|||METADATA:${JSON.stringify(msg.metadata)}`;
+      }
+      return `CHAT_${msg.role.toUpperCase()}: ${msg.content}`;
+    });
+  
+    console.log('💬 Adding message to chat:', {
+      role,
+      contentLength: content.length,
+      hasMetadata: !!metadata,
+      totalMessages: allMessages.length,
+      updatedQueries: updatedQueries.length
+    });
+    
+    // Mark that we're updating to prevent reload
+    isUpdatingFromStreamRef.current = true;
+    
+    // Await the update to ensure it's saved before continuing
+    await updateSessionQuery(currentSession.id, updatedQueries);
+    
+    // Reset flag after a short delay to allow state to settle
+    setTimeout(() => {
+      isUpdatingFromStreamRef.current = false;
+    }, 100);
   }, [currentSession, updateSessionQuery]);
-
   useEffect(() => {
-
-
+    // Don't reload conversation if we're currently streaming or updating from stream - it will overwrite the streaming message
+    if (isStreaming || isUpdatingFromStreamRef.current) {
+      console.log('⏸️ Skipping conversation reload during streaming');
+      return;
+    }
+    
+    // Check if session has query data
     if (currentSession?.query) {
       const queries = Array.isArray(currentSession.query)
         ? currentSession.query
         : [currentSession.query];
-
-      const messages = queries.map(query => {
-        if (query.startsWith('CHAT_USER: ')) {
-          return { role: 'user' as const, content: query.replace('CHAT_USER: ', '') };
-        } else if (query.startsWith('CHAT_ASSISTANT: ')) {
-          return { role: 'assistant' as const, content: query.replace('CHAT_ASSISTANT: ', '') };
+  
+      // Only process if we have actual queries (not empty array)
+      if (queries.length > 0 && queries.some(q => q && q.trim())) {
+        const messages: Array<{ role: 'user' | 'assistant'; content: string; metadata: any }> = [];
+        
+        for (const query of queries) {
+          if (!query || !query.trim()) continue;
+          
+          // Check for messages with metadata
+          if (query.startsWith('CHAT_USER_WITH_METADATA: ')) {
+            const [content, metadataStr] = query.replace('CHAT_USER_WITH_METADATA: ', '').split('|||METADATA:');
+            let metadata;
+            try {
+              metadata = JSON.parse(metadataStr);
+            } catch (e) {
+              metadata = undefined;
+            }
+            messages.push({ 
+              role: 'user' as const, 
+              content: content.trim(),
+              metadata 
+            });
+          } else if (query.startsWith('CHAT_ASSISTANT_WITH_METADATA: ')) {
+            const [content, metadataStr] = query.replace('CHAT_ASSISTANT_WITH_METADATA: ', '').split('|||METADATA:');
+            let metadata;
+            try {
+              metadata = JSON.parse(metadataStr);
+            } catch (e) {
+              metadata = undefined;
+            }
+            messages.push({ 
+              role: 'assistant' as const, 
+              content: content.trim(),
+              metadata 
+            });
+          } else if (query.startsWith('CHAT_USER: ')) {
+            messages.push({ 
+              role: 'user' as const, 
+              content: query.replace('CHAT_USER: ', '').trim(),
+              metadata: undefined as any
+            });
+          } else if (query.startsWith('CHAT_ASSISTANT: ')) {
+            messages.push({ 
+              role: 'assistant' as const, 
+              content: query.replace('CHAT_ASSISTANT: ', '').trim(),
+              metadata: undefined as any
+            });
+          } else if (query.trim()) {
+            // Fallback: treat as user message if it doesn't match any pattern
+            messages.push({ 
+              role: 'user' as const, 
+              content: query.trim(),
+              metadata: undefined as any
+            });
+          }
         }
-        return { role: 'user' as const, content: query };
-      });
-
-      setLocalConversation(messages);
+  
+        if (messages.length > 0) {
+          setLocalConversation(messages);
+          console.log('📱 Loaded messages from session:', {
+            sessionId: currentSession.id,
+            messageCount: messages.length,
+            userMessages: messages.filter(m => m.role === 'user').length,
+            assistantMessages: messages.filter(m => m.role === 'assistant').length,
+            messages: messages.map(m => ({ role: m.role, contentLength: m.content.length }))
+          });
+        } else {
+          console.log('⚠️ No valid messages found in session query:', queries);
+        }
+      } else {
+        console.log('⚠️ Session query is empty:', currentSession.id);
+        // Don't clear existing conversation if query is empty - might be a new session
+      }
+    } else {
+      console.log('⚠️ No query found in session:', currentSession?.id);
+      // Don't clear conversation if no query - preserve existing state
     }
-  }, [currentSession?.id]);
-
+  }, [currentSession?.id, currentSession?.query, isStreaming]);
   const updateConversationContext = useCallback((classification: any) => {
     if (currentSession?.id) {
       localStorage.setItem(`conversation-context-${currentSession.id}`, JSON.stringify(classification));
     }
   }, [currentSession?.id])
-
   const chatMessages: ChatMessage[] = useMemo(() => {
     return localConversation.map((msg, index) => ({
-      id: `chat-${currentSession?.id || 'no-session'}-${index}-${Date.now()}`,
+      id: `chat-${currentSession?.id || 'no-session'}-${index}`,
       content: msg.content,
       role: msg.role,
-      timestamp: new Date()
+      timestamp: new Date(),
+      metadata: msg.metadata // Make sure this is included
     }));
-  }, [localConversation, currentSession?.id])
+  }, [localConversation, currentSession?.id]);
 
   const hasMessages = chatMessages.length > 0
   const placeholderText = hasMessages ? "Continue conversation..." : "Describe your ideal investment targets..."
@@ -255,6 +386,304 @@ export function PremiumChatInterface() {
 
   // Updated handleSubmit for PremiumChatInterface.tsx
 
+  // Streaming handler for reasoning mode
+  const handleStreamingQuery = useCallback(async (query: string, sessionId: string) => {
+    // Reset streaming state
+    setStreamingText('')
+    setStreamingProgress(0)
+    setStreamingStatus('')
+    setStreamingMetadata(null)
+    setIsStreaming(true)
+    setIsTyping(false) // Don't show typing indicator, we'll show streaming text instead
+    setWorkflowSteps([]) // Reset workflow steps
+
+    // Create a temporary message ID for streaming
+    const tempMessageId = `streaming-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    streamingMessageIdRef.current = tempMessageId
+
+    // Add empty assistant message that we'll update as we stream
+    const streamingMessage = {
+      role: 'assistant' as const,
+      content: '',
+      metadata: undefined as any
+    }
+    const allMessages = [...conversationRef.current, streamingMessage]
+    setLocalConversation(allMessages)
+
+    let accumulatedText = ''
+    let finalMetadata: any = null
+    let lastMessageContent = ''
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_RIO_URL}/query/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': userId ?? ''
+        },
+        body: JSON.stringify({
+          query,
+          sessionId,
+          userId: userId,
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error(`Streaming request failed: ${response.statusText}`)
+      }
+
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let chunkCount = 0
+      let lastChunkTime = Date.now()
+
+      if (!reader) {
+        throw new Error('No response body reader available')
+      }
+
+      console.log('🚀 Starting to read stream...')
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) {
+          console.log('✅ Stream reading complete. Total chunks processed:', chunkCount)
+          break
+        }
+
+        // Log when we receive raw data from the stream
+        const now = Date.now()
+        const timeSinceLastChunk = now - lastChunkTime
+        if (timeSinceLastChunk > 100) {
+          console.log('⏱️ Time gap detected:', timeSinceLastChunk, 'ms since last chunk')
+        }
+        lastChunkTime = now
+
+        buffer += decoder.decode(value, { stream: true })
+        
+        // SSE format: each event is separated by \n\n
+        // Each line starting with "data: " contains the JSON
+        const parts = buffer.split('\n\n')
+        buffer = parts.pop() || '' // Keep incomplete event in buffer
+
+        for (const part of parts) {
+          if (!part.trim()) continue
+          
+          // Find "data: " line in this event block
+          const lines = part.split('\n')
+          for (const line of lines) {
+            const trimmedLine = line.trim()
+            if (trimmedLine.startsWith('data: ')) {
+              try {
+                const jsonStr = trimmedLine.slice(6).trim()
+                if (!jsonStr) continue
+                
+                const data = JSON.parse(jsonStr)
+                
+                // Log chunk events more concisely
+                if (data.type === 'chunk') {
+                  chunkCount++
+                  console.log(`📝 Chunk #${chunkCount}:`, data.text?.substring(0, 30) || 'empty', `(total: ${accumulatedText.length + (data.text || '').length} chars)`)
+                } else {
+                  console.log('📨 SSE Event:', data.type, data.message || data.node || '')
+                }
+              
+                switch (data.type) {
+                case 'start':
+                  console.log('🚀 Streaming started:', data.message)
+                  setStreamingStatus(data.message || 'Processing your query...')
+                  break
+
+                case 'progress':
+                  console.log(`📊 Progress: ${data.progress}% - ${data.message}`, data)
+                  setStreamingProgress(data.progress || 0)
+                  setStreamingStatus(data.message || `Processing ${data.node || 'request'}...`)
+                  
+                  // Update workflow steps for reasoning visualization
+                  if (data.node) {
+                    setWorkflowSteps(prevSteps => {
+                      const nodeNameMap: Record<string, string> = {
+                        planner: 'Planning Query',
+                        retriever: 'Retrieving Data',
+                        analyzer: 'Analyzing Data',
+                        responder: 'Generating Response'
+                      }
+                      
+                      const stepName = nodeNameMap[data.node] || data.node.charAt(0).toUpperCase() + data.node.slice(1)
+                      
+                      // Find existing step
+                      const existingIndex = prevSteps.findIndex(s => s.node === data.node)
+                      
+                      if (existingIndex >= 0) {
+                        // Update existing step
+                        const updated = [...prevSteps]
+                        updated[existingIndex] = {
+                          ...updated[existingIndex],
+                          description: data.message || updated[existingIndex].description,
+                          status: 'in-progress',
+                          progress: data.progress
+                        }
+                        return updated
+                      } else {
+                        // Mark previous in-progress steps as completed
+                        const updated = prevSteps.map(step => 
+                          step.status === 'in-progress' 
+                            ? { ...step, status: 'completed' as const }
+                            : step
+                        )
+                        
+                        // Add new step
+                        updated.push({
+                          id: `reasoning-${data.node}-${Date.now()}`,
+                          node: data.node,
+                          name: stepName,
+                          description: data.message || `Processing ${data.node}...`,
+                          status: 'in-progress',
+                          progress: data.progress
+                        })
+                        
+                        return updated
+                      }
+                    })
+                  }
+                  break
+
+                case 'chunk':
+                  // Append chunk to accumulated text
+                  const chunkText = data.text || ''
+                  if (chunkText) {
+                    accumulatedText += chunkText
+                    
+                    // Log chunk reception with timestamp for debugging
+                    console.log('📝 Chunk received:', {
+                      text: chunkText.substring(0, 30),
+                      accumulatedLength: accumulatedText.length,
+                      timestamp: new Date().toISOString()
+                    })
+                    
+                    // Only update streaming text state - don't update conversation array
+                    // This prevents flickering by avoiding full re-renders
+                    setStreamingText(accumulatedText)
+                    
+                    // Smooth scroll to bottom (throttled to avoid excessive scrolling)
+                    if (messagesEndRef.current) {
+                      messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+                    }
+                  }
+                  break
+
+                case 'complete':
+                  console.log('✅ Streaming complete:', data)
+                  
+                  // Use complete event data or accumulated text
+                  const finalContent = data.answer || accumulatedText
+                  finalMetadata = data.metadata || null
+                  
+                  setStreamingText(finalContent)
+                  setStreamingMetadata(finalMetadata)
+                  setStreamingProgress(100)
+                  setStreamingStatus('Complete')
+                  
+                  // Mark all workflow steps as completed
+                  setWorkflowSteps(prevSteps => 
+                    prevSteps.map(step => ({
+                      ...step,
+                      status: 'completed' as const,
+                      progress: 100
+                    }))
+                  )
+                  
+                  // Update the final message with complete content and metadata
+                  setLocalConversation(prevMessages => {
+                    const lastIndex = prevMessages.length - 1
+                    const updated = prevMessages.map((msg, idx) => 
+                      idx === lastIndex
+                        ? { 
+                            ...msg, 
+                            content: finalContent,
+                            metadata: finalMetadata
+                          }
+                        : msg
+                    )
+                    
+                    // Update session query with final messages
+                    const updatedQueries = updated.map(msg => {
+                      if (msg.metadata) {
+                        return `CHAT_${msg.role.toUpperCase()}_WITH_METADATA: ${msg.content}|||METADATA:${JSON.stringify(msg.metadata)}`
+                      }
+                      return `CHAT_${msg.role.toUpperCase()}: ${msg.content}`
+                    })
+                    
+                    // Mark that we're updating from stream to prevent reload
+                    isUpdatingFromStreamRef.current = true
+                    
+                    // Update session query - this will trigger useEffect but isUpdatingFromStreamRef check will prevent reload
+                    updateSessionQuery(sessionId, updatedQueries)
+                    
+                    // Reset flags after a short delay to allow the update to complete
+                    setTimeout(() => {
+                      isUpdatingFromStreamRef.current = false
+                      setIsStreaming(false)
+                      streamingMessageIdRef.current = null
+                    }, 200)
+                    
+                    return updated
+                  })
+                  
+                  break
+
+                case 'error':
+                  console.error('❌ Streaming error:', data.message)
+                  setStreamingStatus(`Error: ${data.message}`)
+                  
+                  // Update message with error
+                  setLocalConversation(prevMessages => {
+                    const lastIndex = prevMessages.length - 1
+                    return prevMessages.map((msg, idx) => 
+                      idx === lastIndex
+                        ? { 
+                            ...msg, 
+                            content: `I encountered an error: ${data.message || 'Unknown error'}. Please try again.`
+                          }
+                        : msg
+                    )
+                  })
+                  
+                  throw new Error(data.message || 'Streaming error occurred')
+                }
+              } catch (parseError) {
+                console.error('❌ Error parsing SSE data:', parseError, 'Line:', trimmedLine)
+              }
+            }
+          }
+        }
+      }
+    } catch (error: any) {
+      console.error('❌ Streaming error:', error)
+      setStreamingStatus(`Error: ${error.message}`)
+      
+      // Update message with error
+      setLocalConversation(prevMessages => {
+        const lastIndex = prevMessages.length - 1
+        return prevMessages.map((msg, idx) => 
+          idx === lastIndex
+            ? { 
+                ...msg, 
+                content: `I encountered an error: ${error.message}. Please try again.`
+              }
+            : msg
+        )
+      })
+    } finally {
+      // Only reset if we haven't already done so in the complete handler
+      if (isStreaming) {
+        setIsStreaming(false)
+        streamingMessageIdRef.current = null
+      }
+    }
+  }, [userId, updateSessionQuery, isStreaming])
+
+  // Updated handleSubmit function in PremiumChatInterface.tsx
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim() || !currentSession || isLoading) return;
@@ -265,101 +694,117 @@ export function PremiumChatInterface() {
 
     try {
       console.log('👤 User message:', userMessage);
+      console.log('🔍 Search type:', searchType);
 
       // Add user message to chat immediately for better UX
-      addMessageToChat('user', userMessage);
+      // Await to ensure it's saved before streaming starts
+      await addMessageToChat('user', userMessage);
 
-      // Extract current context from session
-      const sessionQueries = Array.isArray(currentSession.query) ? currentSession.query : [];
+      // Choose API endpoint based on search type
+      if (searchType === 'reasoning') {
+        // Use Agentic Streaming API for reasoning mode
+        console.log('🧠 Using Agentic Streaming API for reasoning mode');
+        
+        // Use streaming handler
+        await handleStreamingQuery(userMessage, currentSession.id);
+        
+        setIsLoading(false);
+        return;
 
-      // Find the last refinement stage marker
-      let stage = 'initial';
-      let currentQuery = '';
+      } else {
+        // Use regular refinement API for search and deep research modes
+        console.log('🔍 Using regular refinement API');
 
-      for (let i = sessionQueries.length - 1; i >= 0; i--) {
-        const query = sessionQueries[i];
-        if (query.includes('REFINEMENT_STAGE:')) {
-          const match = query.match(/REFINEMENT_STAGE:(\w+):(.*)/);
-          if (match) {
-            stage = match[1];
-            currentQuery = match[2];
-            break;
+        // Extract current context from session
+        const sessionQueries = Array.isArray(currentSession.query) ? currentSession.query : [];
+
+        // Find the last refinement stage marker
+        let stage = 'initial';
+        let currentQuery = '';
+
+        for (let i = sessionQueries.length - 1; i >= 0; i--) {
+          const query = sessionQueries[i];
+          if (query.includes('REFINEMENT_STAGE:')) {
+            const match = query.match(/REFINEMENT_STAGE:(\w+):(.*)/);
+            if (match) {
+              stage = match[1];
+              currentQuery = match[2];
+              break;
+            }
           }
         }
-      }
 
-      // Use session's refinementState if available
-      if (currentSession.refinementState) {
-        stage = currentSession.refinementState.stage;
-        currentQuery = currentSession.refinementState.currentQuery || currentQuery;
-      }
+        // Use session's refinementState if available
+        if (currentSession.refinementState) {
+          stage = currentSession.refinementState.stage;
+          currentQuery = currentSession.refinementState.currentQuery || currentQuery;
+        }
 
-      console.log('📤 Context:', { stage, currentQuery: currentQuery.substring(0, 50) });
+        console.log('📤 Context:', { stage, currentQuery: currentQuery.substring(0, 50) });
 
-      // Show typing indicator
-      setIsTyping(true);
+        // Call the refinement endpoint
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/refine-with-confirmation`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-user-id': userId ?? ''
+          },
+          body: JSON.stringify({
+            message: userMessage,
+            sessionId: currentSession.id,
+            icpModelId: primaryModel?.id,
+            context: {
+              stage,
+              currentQuery
+            }
+          })
+        });
 
-      // Call the refinement endpoint
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/refine-with-confirmation`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': userId ?? ''
-        },
-        body: JSON.stringify({
-          message: userMessage,
-          sessionId: currentSession.id,
-          icpModelId: primaryModel?.id,
-          context: {
-            stage,
-            currentQuery
-          }
-        })
-      });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Refinement failed');
+        }
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Refinement failed');
-      }
+        const refinementResponse = await response.json();
+        const { response: aiResponse, action, context: newContext } = refinementResponse;
 
-      const refinementResponse = await response.json();
-      const { response: aiResponse, action, context: newContext } = refinementResponse;
+        console.log('🤖 AI response:', aiResponse.substring(0, 100));
+        console.log('🔄 Action:', action);
+        console.log('📝 New stage:', newContext?.stage);
 
-      console.log('🤖 AI response:', aiResponse.substring(0, 100));
-      console.log('🔄 Action:', action);
-      console.log('📝 New stage:', newContext?.stage);
+        // Remove typing indicator
+        setIsTyping(false);
 
-      // Remove typing indicator
-      setIsTyping(false);
+        // Add AI response to chat
+        await addMessageToChat('assistant', aiResponse);
 
-      // Add AI response to chat
-      await addMessageToChat('assistant', aiResponse);
+        // Handle the action
+        if (action?.type === 'start_search' && action.query) {
+          console.log('🚀 Starting search with query:', action.query);
 
-      // Handle the action
-      if (action?.type === 'start_search' && action.query) {
-        console.log('🚀 Starting search with query:', action.query);
+          // Show search starting message
+          await new Promise(resolve => setTimeout(resolve, 500));
 
-        // Show search starting message
-        await new Promise(resolve => setTimeout(resolve, 500));
+          // Trigger the actual search
+          await startSearch(currentSession.id, action.query, primaryModel?.id);
 
-        // Trigger the actual search
-        await startSearch(currentSession.id, action.query, primaryModel?.id);
-
-        // Refresh sessions to get updated status
-        await refreshSessions();
+          // Refresh sessions to get updated status
+          await refreshSessions();
+        }
       }
 
     } catch (error: any) {
       console.error('❌ Error processing message:', error);
       setIsTyping(false);
 
-      addMessageToChat('assistant',
-        `I encountered an error: ${error.message}. Let's try again - what companies are you looking for?`
+      await addMessageToChat('assistant',
+        `I encountered an error: ${error.message}. Let's try again.`
       );
     } finally {
       setIsLoading(false);
     }
   };
+
 
   // Helper function to extract stage from query array
   function extractStageFromQueries(queries: string[]): {
@@ -385,61 +830,6 @@ export function PremiumChatInterface() {
     };
   }
 
-  function parseContent(
-    content: string,
-    options: FormattingOptions = {}
-  ): React.ReactElement {
-    const { preserveLineBreaks = false, className = '' } = options;
-
-    if (!content) return <></>;
-
-    const elements: React.ReactNode[] = [];
-    const lines = content.split('\n');
-
-    lines.forEach((line, lineIndex) => {
-      const trimmedLine = line.trim();
-      if (!trimmedLine) {
-        if (preserveLineBreaks) {
-          elements.push(<br key={`br-${lineIndex}`} />);
-        }
-        return;
-      }
-
-      if (trimmedLine === '---') {
-        elements.push(
-          <hr
-            key={`hr-${lineIndex}`}
-            className="my-6 border-gray-200 dark:border-[#2A2A2A]"
-          />
-        );
-        return;
-      }
-
-      if (trimmedLine.startsWith('* ')) {
-        const text = trimmedLine.substring(2);
-        elements.push(
-          <div key={`bullet-${lineIndex}`} className="flex items-start mb-2">
-            <span
-              className="w-1.5 h-1.5 rounded-full mt-2 mr-3 flex-shrink-0"
-              style={{ backgroundColor: ACTIVE_GREEN }}
-            />
-            <span className="text-gray-700 dark:text-[#9CA3AF] leading-relaxed">
-              {formatBoldText(text)}
-            </span>
-          </div>
-        );
-        return;
-      }
-
-      elements.push(
-        <p key={`p-${lineIndex}`} className="mb-3 leading-relaxed text-gray-700 dark:text-[#9CA3AF] last:mb-0">
-          {formatBoldText(trimmedLine)}
-        </p>
-      );
-    });
-
-    return <div className={cn("space-y-2", className)}>{elements}</div>;
-  }
 
   function formatBoldText(text: string): React.ReactNode {
     const parts = text.split(/(\*\*.*?\*\*)/g);
@@ -488,7 +878,7 @@ export function PremiumChatInterface() {
 
       const { sessionId, companies, resultsCount, summary } = data;
       console.log('✅ Search complete:', { sessionId, resultsCount })
-      addMessageToChat('assistant', summary);
+      await addMessageToChat('assistant', summary);
 
     };
 
@@ -501,7 +891,6 @@ export function PremiumChatInterface() {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-white dark:bg-[#0F0F0F] min-h-screen">
-
       {/***JSON.stringify(currentSession)**/}
       {hasMessages && (
         <div className={cn(
@@ -529,7 +918,8 @@ export function PremiumChatInterface() {
               </div>
               <div>
                 <h1 className="text-sm font-medium text-gray-900 dark:text-[#EDEDED]">
-                  GTM Intelligence
+-------------------------------------------------------------------
+GTM Intelligence 
                 </h1>
                 <p className="text-xs text-gray-500 dark:text-[#9CA3AF] font-light">
                   {chatMessages.filter(m => m.role === 'user').length} messages • Active session
@@ -594,15 +984,39 @@ export function PremiumChatInterface() {
                         : cn(
                           "bg-[#F3F4F6] dark:bg-[#1E1E1E] text-gray-900 dark:text-[#EDEDED] rounded-bl-md"
                         )
-                    )}
-                      style={{
-
-                      }}
-                    >
-                      <div className="text-sm leading-6 font-light">
-                        {parseContent(msg.content)}
-                      </div>
+                    )}>
+                  
+                     <div className="text-sm leading-6 font-light">
+  {/* Use ReasoningVisualization component for messages with metadata */}
+  {/* For streaming messages, use streamingText directly to avoid flickering */}
+  {isStreaming && index === chatMessages.length - 1 && msg.role === 'assistant' ? (
+    <>
+      {/* Show current workflow step as title/description above the content */}
+      {searchType === 'reasoning' && workflowSteps.length > 0 && (
+        <ReasoningWorkflow 
+          steps={workflowSteps} 
+          currentProgress={streamingProgress}
+          className="mb-4"
+        />
+      )}
+      <ReasoningVisualization 
+        content={streamingText || msg.content} 
+        metadata={streamingMetadata || msg.metadata}
+      />
+      {streamingText && (
+        <span className="inline-block w-2 h-4 ml-1 bg-[#006239] animate-pulse" />
+      )}
+    </>
+  ) : (
+    <ReasoningVisualization 
+      content={msg.content} 
+      metadata={msg.metadata}
+    />
+  )}
+</div>
                     </div>
+
+                    {/* Message footer */}
                     <div className={cn(
                       "text-xs font-light tracking-wide px-1",
                       msg.role === 'user'
@@ -610,6 +1024,7 @@ export function PremiumChatInterface() {
                         : "text-gray-500 dark:text-[#9CA3AF] text-left"
                     )}>
                       {msg.role === 'user' ? 'You' : 'Analyst'} • {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      
                     </div>
                   </div>
 
@@ -622,7 +1037,7 @@ export function PremiumChatInterface() {
               ))}
 
               {/* Typing Animation - UPDATED STYLE */}
-              {isTyping && (
+              {isTyping && !isStreaming && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -656,6 +1071,47 @@ export function PremiumChatInterface() {
                       <span className="text-sm text-gray-500 dark:text-[#9CA3AF] font-light">
                         Analyzing your request...
                       </span>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+
+              {/* Streaming Progress Indicator (fallback for non-reasoning modes) */}
+              {isStreaming && streamingStatus && searchType !== 'reasoning' && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex justify-start gap-4 mb-4"
+                >
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#F3F4F6] dark:bg-[#1E1E1E] flex items-center justify-center">
+                    <Bot className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  </div>
+                  <div className={cn(
+                    "px-4 py-3 rounded-2xl rounded-bl-md",
+                    "bg-[#F3F4F6] dark:bg-[#1E1E1E] w-full max-w-md"
+                  )}>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs text-gray-600 dark:text-[#9CA3AF] mb-2">
+                        <span className="font-medium">{streamingStatus}</span>
+                        {streamingProgress > 0 && (
+                          <span className="font-light">{streamingProgress}%</span>
+                        )}
+                      </div>
+                      {streamingProgress > 0 && (
+                        <div className="w-full bg-gray-200 dark:bg-[#2A2A2A] rounded-full h-1.5">
+                          <motion.div
+                            className="h-1.5 rounded-full"
+                            style={{ 
+                              backgroundColor: ACTIVE_GREEN,
+                              width: `${streamingProgress}%`
+                            }}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${streamingProgress}%` }}
+                            transition={{ duration: 0.3 }}
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </motion.div>
@@ -943,31 +1399,26 @@ export function PremiumChatInterface() {
                 <Target className="w-3 h-3" />
                 <span>Deep</span>
               </button>
+
               <button
                 onClick={() => handleSearchTypeChange("reasoning")}
-                disabled
                 className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 text-xs font-medium tracking-wide transition-all duration-300 rounded-lg border relative group",
-                  "bg-white dark:bg-[#1E1E1E] text-gray-400 dark:text-[#6B7280]",
-                  "border-gray-300 dark:border-[#2A2A2A]",
-                  "cursor-not-allowed opacity-70"
+                  "flex items-center gap-2 px-3 py-1.5 text-xs font-medium tracking-wide transition-all duration-300 rounded-lg border",
+                  searchType === "reasoning"
+                    ? cn(
+                      "text-white border-transparent"
+                    )
+                    : cn(
+                      "bg-white dark:bg-[#1E1E1E] text-gray-600 dark:text-[#9CA3AF]",
+                      "border-gray-300 dark:border-[#2A2A2A] hover:border-green-300 hover:text-green-600 dark:hover:text-[#006239]"
+                    )
                 )}
+                style={{
+                  backgroundColor: searchType === "reasoning" ? ACTIVE_GREEN : undefined
+                }}
               >
                 <BrainCircuit className="w-3 h-3" />
                 <span>Reasoning</span>
-
-                {/* Tooltip for Coming Soon */}
-                <div className="absolute invisible group-hover:visible opacity-0 group-hover:opacity-100 
-                  transition-all duration-200 bottom-full left-1/2 transform -translate-x-1/2 
-                  mb-2 px-2 py-1 bg-gray-800 dark:bg-gray-900 text-white text-xs rounded-md 
-                  whitespace-nowrap pointer-events-none z-10">
-                  <div className="relative">
-                    Coming Soon
-                    {/* Tooltip arrow */}
-                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 
-                      border-4 border-transparent border-t-gray-800 dark:border-t-gray-900"></div>
-                  </div>
-                </div>
               </button>
             </div>
           </div>
