@@ -83,7 +83,7 @@ interface CompanyStats {
 }
 
 interface ColumnConfig {
-  key: keyof Company | 'actions';
+  key: keyof Company | 'actions' | 'intent_score';
   label: string;
   sortable: boolean;
   visible: boolean;
@@ -123,9 +123,12 @@ export  function CompaniesList() {
     hasIntentSignals: false,
     technologies: [] as string[]
   });
-  const [sortConfig, setSortConfig] = useState({
-    field: 'created_at' as keyof Company,
-    direction: 'desc' as 'asc' | 'desc'
+  const [sortConfig, setSortConfig] = useState<{
+    field: keyof Company | 'intent_score';
+    direction: 'asc' | 'desc';
+  }>({
+    field: 'created_at',
+    direction: 'desc'
   })
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table')
   const [showFilters, setShowFilters] = useState(false)
@@ -419,7 +422,7 @@ const fetchCompanies = useCallback(async (page = 1, resetFilters = false) => {
   }, [pagination.limit, fetchCompanies])
 
   // Handle sort
-  const handleSort = (field: keyof Company) => {
+  const handleSort = (field: keyof Company | 'intent_score') => {
     setSortConfig(prev => ({
       field,
       direction: prev.field === field && prev.direction === 'desc' ? 'asc' : 'desc'
@@ -941,7 +944,7 @@ const fetchCompanies = useCallback(async (page = 1, resetFilters = false) => {
                         {column.label}
                         {column.sortable && (
                           <button
-                            onClick={() => column.key !== 'actions' && handleSort(column.key as keyof Company)}
+                            onClick={() => column.key !== 'actions' && handleSort(column.key as keyof Company | 'intent_score')}
                             disabled={loading}
                             className={cn(
                               "transition-colors",
