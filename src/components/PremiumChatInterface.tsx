@@ -138,6 +138,7 @@ export function PremiumChatInterface() {
     metadata: any ,role: 'user' | 'assistant', content: string 
 }[]>([]);
   const conversationRef = useRef(localConversation);
+  const lastProcessedQueryRef = useRef<string>(''); // Track last processed query to avoid reprocessing
 
   useEffect(() => {
     conversationRef.current = localConversation;
@@ -204,6 +205,15 @@ export function PremiumChatInterface() {
         ? currentSession.query
         : [currentSession.query];
   
+      // Create a stable string representation of queries to compare
+      const queriesString = JSON.stringify(queries);
+      
+      // Skip if we've already processed this exact query set
+      if (queriesString === lastProcessedQueryRef.current) {
+        console.log('⏸️ Skipping conversation reload - query unchanged');
+        return;
+      }
+      
       // Only process if we have actual queries (not empty array)
       if (queries.length > 0 && queries.some(q => q && q.trim())) {
         const messages: Array<{ role: 'user' | 'assistant'; content: string; metadata: any }> = [];
@@ -261,6 +271,8 @@ export function PremiumChatInterface() {
         }
   
         if (messages.length > 0) {
+          // Update the ref to track what we've processed
+          lastProcessedQueryRef.current = queriesString;
           setLocalConversation(messages);
           console.log('📱 Loaded messages from session:', {
             sessionId: currentSession.id,
@@ -286,6 +298,8 @@ export function PremiumChatInterface() {
       localStorage.setItem(`conversation-context-${currentSession.id}`, JSON.stringify(classification));
     }
   }, [currentSession?.id])
+  // Memoize chatMessages to prevent unnecessary recalculations
+  // Only recalculate when conversation or session ID actually changes
   const chatMessages: ChatMessage[] = useMemo(() => {
     return localConversation.map((msg, index) => ({
       id: `chat-${currentSession?.id || 'no-session'}-${index}`,
@@ -875,11 +889,9 @@ export function PremiumChatInterface() {
 
   useEffect(() => {
     const handleSearchComplete = async (data: any) => {
-
       const { sessionId, companies, resultsCount, summary } = data;
       console.log('✅ Search complete:', { sessionId, resultsCount })
       await addMessageToChat('assistant', summary);
-
     };
 
     webSocketService.on('search-complete', handleSearchComplete);
@@ -888,6 +900,11 @@ export function PremiumChatInterface() {
       webSocketService.off('search-complete', handleSearchComplete);
     };
   }, [addMessageToChat]);
+  
+  // Reset lastProcessedQueryRef when session changes
+  useEffect(() => {
+    lastProcessedQueryRef.current = '';
+  }, [currentSession?.id]);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-white dark:bg-[#0F0F0F] min-h-screen">

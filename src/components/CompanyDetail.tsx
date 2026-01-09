@@ -32,7 +32,11 @@ import {
   Award,
   ChevronRight,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Zap,
+  MessageSquare,
+  UsersIcon,
+  Lightbulb
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Company } from '@/types';
@@ -41,6 +45,7 @@ import { GTMIntelligenceReport } from './GTMIntelligenceReportProps ';
 import { useUser } from '@clerk/nextjs';
 import { PersonaReportSidePanel } from './PersonaReportSidePanel';
 import { useSession } from '@/context/SessionContext';
+import { SignalAccordion } from './SignalAccordion';
 
 // Brand Colors
 const ACCENT_GREEN = '#006239'
@@ -55,6 +60,54 @@ interface CompanyDetailProps {
 
 export function CompanyDetail({ company, onClose, onRefresh, onEdit }: CompanyDetailProps) {
   const [activeTab, setActiveTab] = useState('overview');
+  const [currentCompany, setCurrentCompany] = useState<Company>(company);
+  const [isLoadingCompany, setIsLoadingCompany] = useState(false);
+  const { user } = useUser();
+  const userId = user?.id;
+
+  // Fetch fresh company data when component mounts or company ID changes
+  useEffect(() => {
+    const fetchCompanyData = async () => {
+      if (!company?.company_id || !userId) return;
+      
+      setIsLoadingCompany(true);
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/companies/${company.company_id}`,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'x-user-id': userId,
+            },
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.company) {
+            // Merge overview if provided separately
+            const updatedCompany = data.overview 
+              ? { ...data.company, overview: data.overview }
+              : data.company;
+            setCurrentCompany(updatedCompany);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching company data:', error);
+        // Fallback to prop company if fetch fails
+        setCurrentCompany(company);
+      } finally {
+        setIsLoadingCompany(false);
+      }
+    };
+
+    fetchCompanyData();
+  }, [company?.company_id, userId]);
+
+  // Update currentCompany when prop changes
+  useEffect(() => {
+    setCurrentCompany(company);
+  }, [company]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape') onClose();
@@ -81,10 +134,10 @@ export function CompanyDetail({ company, onClose, onRefresh, onEdit }: CompanyDe
       <div className="p-6 border-b border-gray-200 dark:border-[#2A2A2A] bg-white dark:bg-[#0F0F0F]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            {company.logo_url ? (
+            {currentCompany.logo_url ? (
               <img 
-                src={company.logo_url} 
-                alt={company.name}
+                src={currentCompany.logo_url} 
+                alt={currentCompany.name}
                 className="w-16 h-16 rounded-2xl border border-gray-300 dark:border-[#3A3A3A]"
               />
             ) : (
@@ -95,44 +148,44 @@ export function CompanyDetail({ company, onClose, onRefresh, onEdit }: CompanyDe
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 mb-1">
                 <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#EDEDED] truncate">
-                  {company.name}
+                  {currentCompany.name}
                 </h1>
-                {company.scoring_metrics?.fit_score?.score && (
+                {currentCompany.scoring_metrics?.fit_score?.score && (
                   <div className={cn(
                     "px-3 py-1 text-sm font-medium rounded-xl",
-                    company.scoring_metrics.fit_score.score >= 80
+                    currentCompany.scoring_metrics.fit_score.score >= 80
                       ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300"
-                      : company.scoring_metrics.fit_score.score >= 60
+                      : currentCompany.scoring_metrics.fit_score.score >= 60
                       ? "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300"
                       : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300"
                   )}>
-                    {company.scoring_metrics.fit_score.score}% Fit Score
+                    {currentCompany.scoring_metrics.fit_score.score}% Fit Score
                   </div>
                 )}
               </div>
               <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-[#9CA3AF]">
-                {company.domain && (
+                {currentCompany.domain && (
                   <div className="flex items-center gap-1">
                     <Globe className="w-4 h-4 text-[#006239]" />
-                    <span>{company.domain}</span>
+                    <span>{currentCompany.domain}</span>
                   </div>
                 )}
-                {company.country && (
+                {currentCompany.country && (
                   <div className="flex items-center gap-1">
                     <MapPin className="w-4 h-4 text-[#006239]" />
-                    <span>{company.country}</span>
+                    <span>{currentCompany.country}</span>
                   </div>
                 )}
-                {company.employee_count && (
+                {currentCompany.employee_count && (
                   <div className="flex items-center gap-1">
                     <Users className="w-4 h-4 text-[#006239]" />
-                    <span>{company.employee_count.toLocaleString()} employees</span>
+                    <span>{currentCompany.employee_count.toLocaleString()} employees</span>
                   </div>
                 )}
-                {company.employees && company.employees.length > 0 && (
+                {currentCompany.employees && currentCompany.employees.length > 0 && (
                   <div className="flex items-center gap-1 text-[#006239]">
                     <User className="w-4 h-4" />
-                    <span>{company.employees.length} profiles loaded</span>
+                    <span>{currentCompany.employees.length} profiles loaded</span>
                   </div>
                 )}
               </div>
@@ -141,7 +194,7 @@ export function CompanyDetail({ company, onClose, onRefresh, onEdit }: CompanyDe
           <div className="flex items-center gap-2">
             {onEdit && (
               <button
-                onClick={() => onEdit(company)}
+                onClick={() => onEdit(currentCompany)}
                 className="p-2 text-gray-400 dark:text-[#9CA3AF] hover:text-[#006239] transition-colors hover:bg-gray-100 dark:hover:bg-[#2A2A2A] rounded-xl"
                 title="Edit Company"
               >
@@ -160,9 +213,9 @@ export function CompanyDetail({ company, onClose, onRefresh, onEdit }: CompanyDe
 
         {/* Social Links */}
         <div className="flex items-center gap-3 mt-4">
-          {company.website && (
+          {currentCompany.website && (
             <a
-              href={company.website.startsWith('http') ? company.website : `https://${company.website}`}
+              href={currentCompany.website.startsWith('http') ? currentCompany.website : `https://${currentCompany.website}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-[#2A2A2A] text-gray-700 dark:text-[#9CA3AF] text-sm hover:bg-gray-100 dark:hover:bg-[#3A3A3A] transition-colors border border-gray-300 dark:border-[#3A3A3A] rounded-xl"
@@ -225,20 +278,29 @@ export function CompanyDetail({ company, onClose, onRefresh, onEdit }: CompanyDe
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
         <div className="p-6">
-        <AnimatedTabContent activeTab={activeTab}>
-  {activeTab === 'overview' && <OverviewTab company={company} />}
-  {activeTab === 'gtmintelligence' && (
-    <GTMIntelligenceReport 
-      markdownContent={company.overview?.overview || company.description || 'No GTM intelligence report available.'} 
-      companyName={company.name} 
-    />
-  )}
-  {activeTab === 'employees' && <EmployeesTab company={company} />}
-  {activeTab === 'financials' && <FinancialsTab company={company} />}
-  {activeTab === 'technologies' && <TechnologiesTab company={company} />}
-  {activeTab === 'intent' && <IntentTab company={company} />}
-  {activeTab === 'relationships' && <RelationshipsTab company={company} />}
-</AnimatedTabContent>
+        {isLoadingCompany ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="w-8 h-8 border-4 border-[#006239] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-600 dark:text-[#9CA3AF]">Loading company data...</p>
+            </div>
+          </div>
+        ) : (
+          <AnimatedTabContent activeTab={activeTab}>
+            {activeTab === 'overview' && <OverviewTab company={currentCompany} />}
+            {activeTab === 'gtmintelligence' && (
+              <GTMIntelligenceReport 
+                markdownContent={currentCompany.overview?.overview || currentCompany.description || 'No GTM intelligence report available.'} 
+                companyName={currentCompany.name} 
+              />
+            )}
+            {activeTab === 'employees' && <EmployeesTab company={currentCompany} />}
+            {activeTab === 'financials' && <FinancialsTab company={currentCompany} />}
+            {activeTab === 'technologies' && <TechnologiesTab company={currentCompany} />}
+            {activeTab === 'intent' && <IntentTab company={currentCompany} />}
+            {activeTab === 'relationships' && <RelationshipsTab company={currentCompany} />}
+          </AnimatedTabContent>
+        )}
         </div>
       </div>
     </div>
@@ -802,7 +864,11 @@ function OverviewTab({ company }: { company: Company }) {
             {company.scoring_metrics.intent_score && (
               <ScoreField 
                 label="Intent Score" 
-                score={company.scoring_metrics.intent_score} 
+                score={{
+                  score: company.scoring_metrics.intent_score?.analysis_metadata?.final_intent_score || 0,
+                  reason: company.scoring_metrics.intent_score?.gtm_intelligence?.overall_buying_readiness?.reasoning || '',
+                  confidence: company.scoring_metrics.intent_score?.analysis_metadata?.overall_confidence || 'LOW'
+                }}
                 color="blue"
               />
             )}
@@ -976,93 +1042,409 @@ function TechnologiesTab({ company }: { company: Company }) {
     );
   }
 
-function IntentTab({ company }: { company: Company }) {
-  if (!company.intent_signals || (typeof company.intent_signals === 'object' && Object.keys(company.intent_signals).length === 0)) {
+  function IntentTab({ company }: { company: Company }) {
+    const intentData = company.scoring_metrics?.intent_score;
+    
+    // Check if we have the new Explorium-based intent score structure
+    if (!intentData || !intentData.analysis_metadata) {
+      // Fallback to old intent_signals if available
+      if (company.intent_signals && (typeof company.intent_signals === 'object' && Object.keys(company.intent_signals).length > 0)) {
+        const intentSignals = Array.isArray(company.intent_signals) 
+          ? company.intent_signals 
+          : [company.intent_signals];
+  
+        return (
+          <div className="space-y-6">
+            <DetailSection icon={TrendingUp} title="Buying Intent Signals">
+              <div className="space-y-4">
+                {intentSignals.map((signal: any, index: number) => (
+                  <div key={index} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#1A1A1A] border border-gray-300 dark:border-[#2A2A2A] rounded-2xl">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="font-medium text-gray-900 dark:text-[#EDEDED]">
+                          {signal.name || 'Intent Signal'}
+                        </span>
+                        {signal.confidence && (
+                          <span className={cn(
+                            "px-2 py-1 text-xs font-medium rounded-lg",
+                            signal.confidence >= 80
+                              ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300"
+                              : signal.confidence >= 60
+                              ? "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300"
+                              : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300"
+                          )}>
+                            {signal.confidence}% confidence
+                          </span>
+                        )}
+                      </div>
+                      {signal.detected_date && (
+                        <p className="text-sm text-gray-500 dark:text-[#6A6A6A]">
+                          Detected {format(new Date(signal.detected_date), 'MMM d, yyyy')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </DetailSection>
+          </div>
+        );
+      }
+  
+      return (
+        <div className="text-center py-12">
+          <TrendingUp className="w-12 h-12 text-gray-400 dark:text-[#6A6A6A] mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-[#EDEDED] mb-2">
+            No Intent Signals
+          </h3>
+          <p className="text-gray-600 dark:text-[#9CA3AF]">
+            No buying intent signals detected for this company yet.
+          </p>
+        </div>
+      );
+    }
+  
+    const metadata = intentData.analysis_metadata || {};
+    const signalBreakdown = intentData.signal_breakdown || [];
+    const gtmIntelligence = intentData.gtm_intelligence || {};
+    const offerAlignment = intentData.offer_alignment_playbook || {};
+    const finalScore = metadata.final_intent_score || 0;
+    const confidence = metadata.overall_confidence || 'LOW';
+    const signalsDetected = signalBreakdown.filter((s: any) => s.events_detected?.count > 0).length;
+    const totalEvents = metadata.total_events_detected || 0;
+  
     return (
-      <div className="text-center py-12">
-        <TrendingUp className="w-12 h-12 text-gray-400 dark:text-[#6A6A6A] mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-[#EDEDED] mb-2">
-          No Intent Signals
-        </h3>
-        <p className="text-gray-600 dark:text-[#9CA3AF]">
-          No buying intent signals detected for this company yet.
-        </p>
+      <div className="space-y-6">
+        {/* Header Section */}
+        <div className="bg-white dark:bg-[#0F0F0F] border border-gray-300 dark:border-[#2A2A2A] rounded-2xl p-6">
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Main Content */}
+            <div className="flex-1">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-[#EDEDED]">{company.name || metadata.target_company}</h1>
+                  <div className="flex flex-wrap items-center gap-4 mt-2">
+                    <span className="text-sm text-gray-500 dark:text-[#6A6A6A]">
+                      Business ID: {metadata.business_id}
+                    </span>
+                    <span className="text-sm text-gray-500 dark:text-[#6A6A6A]">
+                      Analysis: {format(new Date(metadata.analysis_date), 'MMM d, yyyy')}
+                    </span>
+                    <span className="text-sm text-gray-500 dark:text-[#6A6A6A]">
+                      Period: {metadata.timeframe_analyzed}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <div className="text-sm text-gray-500 dark:text-[#6A6A6A]">ACTIVE SIGNALS</div>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-[#EDEDED]">{signalsDetected}</div>
+                  </div>
+                  <div className="h-8 w-px bg-gray-300 dark:bg-[#2A2A2A]" />
+                  <div className="text-right">
+                    <div className="text-sm text-gray-500 dark:text-[#6A6A6A]">EVENTS DETECTED</div>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-[#EDEDED]">{totalEvents}</div>
+                  </div>
+                </div>
+              </div>
+  
+              {/* Final Intent Score Card */}
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-6 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-[#EDEDED] mb-1">FINAL INTENT SCORE</h3>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-5xl font-bold text-blue-600 dark:text-blue-400">{finalScore}</span>
+                      <span className="text-2xl text-gray-500 dark:text-[#6A6A6A]">/ 100</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm text-gray-500 dark:text-[#6A6A6A] mb-1">DATA SOURCE</div>
+                    <div className="font-medium text-gray-900 dark:text-[#EDEDED]">
+                      {metadata.data_sources}
+                    </div>
+                    <div className="mt-2">
+                      <span className={cn(
+                        "px-3 py-1.5 text-sm font-medium rounded-lg",
+                        confidence === 'HIGH'
+                          ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300"
+                          : confidence === 'MEDIUM'
+                          ? "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300"
+                          : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300"
+                      )}>
+                        {confidence} CONFIDENCE
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Progress Bar */}
+                <div className="w-full bg-gray-200 dark:bg-[#2A2A2A] h-3 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500 rounded-full"
+                    style={{ width: `${finalScore}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+  
+            {/* Sidebar GTM Intelligence */}
+            <div className="lg:w-1/3 space-y-4">
+              {/* Buying Readiness Card */}
+              {gtmIntelligence.overall_buying_readiness && (
+                <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border border-green-200 dark:border-green-800 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Award className="w-4 h-4 text-green-600 dark:text-green-400" />
+                    <h4 className="font-semibold text-gray-900 dark:text-[#EDEDED]">Buying Readiness</h4>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600 dark:text-[#9CA3AF]">Level</span>
+                      <span className={cn(
+                        "px-2 py-1 text-xs font-medium rounded-lg",
+                        gtmIntelligence.overall_buying_readiness.readiness_level === 'HIGH'
+                          ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300"
+                          : gtmIntelligence.overall_buying_readiness.readiness_level === 'MEDIUM'
+                          ? "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300"
+                          : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300"
+                      )}>
+                        {gtmIntelligence.overall_buying_readiness.readiness_level}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600 dark:text-[#9CA3AF]">Stage</span>
+                      <span className="font-medium text-gray-900 dark:text-[#EDEDED] capitalize">
+                        {gtmIntelligence.overall_buying_readiness.stage_in_buyers_journey}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600 dark:text-[#9CA3AF]">Timeline</span>
+                      <span className="font-medium text-gray-900 dark:text-[#EDEDED]">
+                        {gtmIntelligence.overall_buying_readiness.estimated_decision_timeline}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+  
+              {/* Timing Recommendation Card */}
+              {gtmIntelligence.timing_recommendation && (
+                <div className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Zap className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                    <h4 className="font-semibold text-gray-900 dark:text-[#EDEDED]">Timing</h4>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600 dark:text-[#9CA3AF]">Window</span>
+                      <span className="font-medium text-gray-900 dark:text-[#EDEDED]">
+                        {gtmIntelligence.timing_recommendation.optimal_outreach_window}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600 dark:text-[#9CA3AF]">Urgency</span>
+                      <span className={cn(
+                        "px-2 py-1 text-xs font-medium rounded-lg",
+                        gtmIntelligence.timing_recommendation.urgency_level === 'HIGH'
+                          ? "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300"
+                          : gtmIntelligence.timing_recommendation.urgency_level === 'MEDIUM'
+                          ? "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300"
+                          : "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300"
+                      )}>
+                        {gtmIntelligence.timing_recommendation.urgency_level}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+  
+              {/* Offer Alignment Card */}
+              {offerAlignment && Object.keys(offerAlignment).length > 0 && (
+                <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border border-purple-200 dark:border-purple-800 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Star className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                    <h4 className="font-semibold text-gray-900 dark:text-[#EDEDED]">Positioning</h4>
+                  </div>
+                  <p className="text-sm text-gray-700 dark:text-[#9CA3AF] mb-2 line-clamp-2">
+                    {offerAlignment.positioning_strategy}
+                  </p>
+                  <div className="text-xs text-gray-500 dark:text-[#6A6A6A]">
+                    Use case: {offerAlignment.relevant_use_case}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+  
+        {/* Main Content Area */}
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Left Column - Signal Breakdown */}
+          <div className="lg:w-2/3">
+            <DetailSection icon={BarChart3} title="SIGNAL BREAKDOWN">
+              <div className="space-y-4">
+                {signalBreakdown.map((signal: any, index: number) => (
+                  <SignalAccordion key={index} signal={signal} index={index} />
+                ))}
+              </div>
+            </DetailSection>
+          </div>
+  
+          {/* Right Column - GTM Intelligence Details */}
+          <div className="lg:w-1/3 space-y-6">
+            {/* Messaging Strategy */}
+            {gtmIntelligence.messaging_strategy && (
+              <DetailSection icon={MessageSquare} title="Messaging Strategy">
+                <div className="space-y-4">
+                  <div>
+                    <h5 className="text-sm font-semibold text-gray-700 dark:text-[#9CA3AF] mb-2">Recommended Angle</h5>
+                    <p className="text-sm text-gray-900 dark:text-[#EDEDED]">
+                      {gtmIntelligence.messaging_strategy.recommended_messaging_angle}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h5 className="text-sm font-semibold text-gray-700 dark:text-[#9CA3AF] mb-2">Pain Points</h5>
+                    <ul className="space-y-1">
+                      {gtmIntelligence.messaging_strategy.primary_pain_points_detected?.map((point: string, idx: number) => (
+                        <li key={idx} className="text-sm text-gray-900 dark:text-[#EDEDED] flex items-start gap-2">
+                          <span className="mt-1">•</span>
+                          <span>{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  
+                  <div>
+                    <h5 className="text-sm font-semibold text-gray-700 dark:text-[#9CA3AF] mb-2">Value Props</h5>
+                    <ul className="space-y-1">
+                      {gtmIntelligence.messaging_strategy.relevant_value_props_to_emphasize?.map((prop: string, idx: number) => (
+                        <li key={idx} className="text-sm text-gray-900 dark:text-[#EDEDED] flex items-start gap-2">
+                          <span className="mt-1">•</span>
+                          <span>{prop}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </DetailSection>
+            )}
+  
+            {/* Stakeholder Targeting */}
+            {gtmIntelligence.stakeholder_targeting && (
+              <DetailSection icon={UsersIcon} title="Stakeholder Targeting">
+                <div className="space-y-4">
+                  <div>
+                    <h5 className="text-sm font-semibold text-gray-700 dark:text-[#9CA3AF] mb-2">Buyer Personas</h5>
+                    <div className="flex flex-wrap gap-2">
+                      {gtmIntelligence.stakeholder_targeting.recommended_buyer_personas?.map((persona: string, idx: number) => (
+                        <span key={idx} className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs font-medium rounded-lg">
+                          {persona}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h5 className="text-sm font-semibold text-gray-700 dark:text-[#9CA3AF] mb-2">Active Departments</h5>
+                    <div className="flex flex-wrap gap-2">
+                      {gtmIntelligence.stakeholder_targeting.departments_showing_activity?.map((dept: string, idx: number) => (
+                        <span key={idx} className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs font-medium rounded-lg">
+                          {dept}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {gtmIntelligence.stakeholder_targeting.decision_maker_signals && (
+                    <div>
+                      <h5 className="text-sm font-semibold text-gray-700 dark:text-[#9CA3AF] mb-2">Decision Maker Signals</h5>
+                      <ul className="space-y-1">
+                        {gtmIntelligence.stakeholder_targeting.decision_maker_signals.map((signal: string, idx: number) => (
+                          <li key={idx} className="text-sm text-gray-900 dark:text-[#EDEDED] flex items-start gap-2">
+                            <span className="mt-1">•</span>
+                            <span>{signal}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </DetailSection>
+            )}
+  
+            {/* Risk Assessment */}
+            {gtmIntelligence.risk_assessment && (
+              <DetailSection icon={Shield} title="Risk Assessment">
+                <div className="space-y-4">
+                  {gtmIntelligence.risk_assessment.potential_blockers && (
+                    <div>
+                      <h5 className="text-sm font-semibold text-red-700 dark:text-red-300 mb-2">Potential Blockers</h5>
+                      <ul className="space-y-1">
+                        {gtmIntelligence.risk_assessment.potential_blockers.map((blocker: string, idx: number) => (
+                          <li key={idx} className="text-sm text-gray-900 dark:text-[#EDEDED] flex items-start gap-2">
+                            <span className="mt-1">•</span>
+                            <span>{blocker}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {gtmIntelligence.risk_assessment.negative_signals_detected && (
+                    <div>
+                      <h5 className="text-sm font-semibold text-amber-700 dark:text-amber-300 mb-2">Negative Signals</h5>
+                      <ul className="space-y-1">
+                        {gtmIntelligence.risk_assessment.negative_signals_detected.map((signal: string, idx: number) => (
+                          <li key={idx} className="text-sm text-gray-900 dark:text-[#EDEDED] flex items-start gap-2">
+                            <span className="mt-1">•</span>
+                            <span>{signal}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </DetailSection>
+            )}
+  
+            {/* Offer Alignment Details */}
+            {offerAlignment && Object.keys(offerAlignment).length > 0 && (
+              <DetailSection icon={Lightbulb} title="Offer Alignment">
+                <div className="space-y-4">
+                  {offerAlignment.key_features_to_emphasize && (
+                    <div>
+                      <h5 className="text-sm font-semibold text-gray-700 dark:text-[#9CA3AF] mb-2">Key Features</h5>
+                      <div className="flex flex-wrap gap-2">
+                        {offerAlignment.key_features_to_emphasize.map((feature: string, idx: number) => (
+                          <span key={idx} className="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 text-xs font-medium rounded-lg">
+                            {feature}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {offerAlignment.objection_handling && (
+                    <div>
+                      <h5 className="text-sm font-semibold text-gray-700 dark:text-[#9CA3AF] mb-2">Objection Handling</h5>
+                      <ul className="space-y-2">
+                        {offerAlignment.objection_handling.map((objection: string, idx: number) => (
+                          <li key={idx} className="text-sm text-gray-900 dark:text-[#EDEDED]">
+                            {objection}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </DetailSection>
+            )}
+          </div>
+        </div>
       </div>
     );
   }
-
-  const intentSignals = Array.isArray(company.intent_signals) 
-    ? company.intent_signals 
-    : [company.intent_signals];
-
-  return (
-    <div className="space-y-6">
-      <DetailSection icon={TrendingUp} title="Buying Intent Signals">
-        <div className="space-y-4">
-          {intentSignals.map((signal, index) => (
-            <div key={index} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#1A1A1A] border border-gray-300 dark:border-[#2A2A2A] rounded-2xl">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="font-medium text-gray-900 dark:text-[#EDEDED]">
-                    {signal.name || 'Intent Signal'}
-                  </span>
-                  {signal.confidence && (
-                    <span className={cn(
-                      "px-2 py-1 text-xs font-medium rounded-lg",
-                      signal.confidence >= 80
-                        ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300"
-                        : signal.confidence >= 60
-                        ? "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300"
-                        : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300"
-                    )}>
-                      {signal.confidence}% confidence
-                    </span>
-                  )}
-                </div>
-                {signal.detected_date && (
-                  <p className="text-sm text-gray-500 dark:text-[#6A6A6A]">
-                    Detected {format(new Date(signal.detected_date), 'MMM d, yyyy')}
-                  </p>
-                )}
-                {signal.description && (
-                  <p className="text-sm text-gray-600 dark:text-[#9CA3AF] mt-1">
-                    {signal.description}
-                  </p>
-                )}
-              </div>
-              <div className="text-right">
-                <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg">
-                  Active
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </DetailSection>
-
-      {/* Intent Summary */}
-      <DetailSection icon={Star} title="Intent Summary">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <StatCard
-            value={intentSignals.length.toString()}
-            label="Total Signals"
-            color="green"
-          />
-          <StatCard
-            value={`${Math.round(intentSignals.reduce((acc, signal) => acc + (signal.confidence || 0), 0) / intentSignals.length)}%`}
-            label="Avg Confidence"
-            color="blue"
-          />
-          <StatCard
-            value={intentSignals.filter(s => s.confidence && s.confidence >= 80).length.toString()}
-            label="High Confidence"
-            color="orange"
-          />
-        </div>
-      </DetailSection>
-    </div>
-  );
-}
 
 function RelationshipsTab({ company }: { company: Company }) {
     if (!company.relationships || (typeof company.relationships === 'object' && Object.keys(company.relationships).length === 0)) {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { SearchSession, ICPModel, SearchStatus } from '@/types'
 
 import { useUser } from '@clerk/nextjs';
@@ -17,7 +17,11 @@ export function useSessionState(userId?: string) {
   const [isLoading, setIsLoading] = useState(false)
   const [isConnected, setIsConnected] = useState(false)
 
-  const currentSession = sessions.find(s => s.id === currentSessionId) || null
+  // Memoize currentSession to prevent unnecessary re-renders when sessions array reference changes
+  // but the actual session data hasn't changed
+  const currentSession = useMemo(() => {
+    return sessions.find(s => s.id === currentSessionId) || null;
+  }, [sessions, currentSessionId]);
   const primaryModel = icpModels.find(model => model.isPrimary) || null
 
   // Load initial data

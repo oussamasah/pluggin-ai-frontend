@@ -1,7 +1,7 @@
 // components/ProcessingWorkflow.tsx
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import React, { useEffect, useMemo, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import { useSession } from '@/context/SessionContext';
 import { CheckCircle2, Circle, XCircle, Loader2, ChevronRight, Zap, Target, Users, TrendingUp } from 'lucide-react';
@@ -181,10 +181,15 @@ export default function ProcessingWorkflow() {
       }))
     });
   }, [currentSession?.id, shouldShow, workflowData, backendSubsteps, workflowPhases]);
-  sleep(1000);
-  function sleep(ms: number) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
+  
+  // Refresh session data when session ID changes or component mounts
+  useEffect(() => {
+    if (currentSession?.id && previousSessionIdRef.current !== currentSession.id) {
+      console.log('🔄 Session changed, refreshing data...');
+      previousSessionIdRef.current = currentSession.id;
+      refreshSessions();
+    }
+  }, [currentSession?.id, refreshSessions]);
   if (!currentSession?.id) {
     console.log('❌ No current session',currentSession);
     return null;

@@ -46,9 +46,10 @@ export function useWebSocketHandlers(sessionState: any, userId: string) {
  }, [setSessions,userId]);
   // Session switching logic
   const switchSession = useCallback(async (sessionId: string) => {
-  
-    
-    if (!webSocketService.isConnected) return
+    if (!webSocketService.isConnected) {
+      console.log('⏸️ WebSocket not connected, cannot switch session');
+      return;
+    }
 
     // Leave previous session if it exists and is different
     if (previousSessionId.current && previousSessionId.current !== sessionId) {
@@ -68,7 +69,7 @@ export function useWebSocketHandlers(sessionState: any, userId: string) {
     })
     
     previousSessionId.current = sessionId
-  }, [])
+  }, [userId])
 
   // WebSocket connection and session joining
   useEffect(() => {
@@ -143,7 +144,33 @@ export function useWebSocketHandlers(sessionState: any, userId: string) {
       console.log('⏭️ Ignoring substep update for inactive session:', sessionId);
       return;
     }
-    refreshSessions()
+    
+    // Update only the searchStatus locally instead of refreshing all sessions
+    // This prevents unnecessary re-renders of the entire component tree
+    setSessions((prev: any[]) => prev.map((session: { id: any; searchStatus: SearchStatus }) => {
+      if (session.id !== sessionId) return session;
+      
+      // Merge substep data into existing searchStatus
+      const currentSubsteps = session.searchStatus?.substeps || [];
+      const updatedSubsteps = substepData?.substeps 
+        ? substepData.substeps 
+        : currentSubsteps.map((step: any) => {
+            // If this substep update contains a specific step, update it
+            if (substepData?.id && step.id === substepData.id) {
+              return { ...step, ...substepData };
+            }
+            return step;
+          });
+      
+      return {
+        ...session,
+        searchStatus: {
+          ...session.searchStatus,
+          ...substepData,
+          substeps: updatedSubsteps
+        } as SearchStatus
+      };
+    }));
   }, [currentSession?.id, setSessions]);
   
   const handleSearchComplete = useCallback(async(data: any) => {
@@ -177,6 +204,24 @@ export function useWebSocketHandlers(sessionState: any, userId: string) {
     toast.error(`WebSocket error: ${data.message || data.error}`)
   }, [])
 
+  // Handle WebSocket reconnection - refresh sessions and re-join current session
+  const handleReconnect = useCallback(async () => {
+    console.log('🔄 WebSocket reconnected, refreshing sessions and re-joining...');
+    
+    // Refresh sessions to get latest state
+    try {
+      await refreshSessions();
+      
+      // Re-join the current session if it exists
+      if (currentSession?.id && webSocketService.isConnected) {
+        console.log('🔗 Re-joining session after reconnect:', currentSession.id);
+        await switchSession(currentSession.id);
+      }
+    } catch (error) {
+      console.error('❌ Error refreshing sessions after reconnect:', error);
+    }
+  }, [currentSession?.id, refreshSessions, switchSession]);
+
   // Subscribe to WebSocket events
   useEffect(() => {
     webSocketService.on('workflow-status', handleWorkflowStatusUpdate)
@@ -185,6 +230,8 @@ export function useWebSocketHandlers(sessionState: any, userId: string) {
     webSocketService.on('session-joined', handleSessionJoined)
     webSocketService.on('connected', handleConnected)
     webSocketService.on('error', handleError)
+    // Subscribe to reconnect event
+    webSocketService.onReconnect(handleReconnect)
 
     return () => {
       webSocketService.off('workflow-status', handleWorkflowStatusUpdate)
@@ -193,6 +240,7 @@ export function useWebSocketHandlers(sessionState: any, userId: string) {
       webSocketService.off('session-joined', handleSessionJoined)
       webSocketService.off('connected', handleConnected)
       webSocketService.off('error', handleError)
+      webSocketService.offReconnect(handleReconnect)
     }
   }, [
     handleWorkflowStatusUpdate, 
@@ -200,7 +248,8 @@ export function useWebSocketHandlers(sessionState: any, userId: string) {
     handleSearchComplete,
     handleSessionJoined,
     handleConnected,
-    handleError
+    handleError,
+    handleReconnect
   ])
 
   const startSearch = useCallback(async (sessionId: string, query: string, icpModelId?: string) => {

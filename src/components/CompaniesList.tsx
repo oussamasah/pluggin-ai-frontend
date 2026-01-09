@@ -137,13 +137,14 @@ export  function CompaniesList() {
 
   // Table Configuration
   const [columnConfig, setColumnConfig] = useState<ColumnConfig[]>([
-    { key: 'name', label: 'Company', sortable: true, visible: true, width: '25%' },
-    { key: 'industry', label: 'Industry', sortable: true, visible: true, width: '15%' },
-    { key: 'employee_count', label: 'Employees', sortable: true, visible: true, width: '10%' },
-    { key: 'annual_revenue', label: 'Revenue', sortable: true, visible: true, width: '12%' },
-    { key: 'country', label: 'Location', sortable: true, visible: true, width: '10%' },
-    { key: 'scoring_metrics', label: 'ICP Score', sortable: true, visible: true, width: '10%' },
-    { key: 'technologies', label: 'Tech Stack', sortable: false, visible: true, width: '13%' },
+    { key: 'name', label: 'Company', sortable: true, visible: true, width: '22%' },
+    { key: 'industry', label: 'Industry', sortable: true, visible: true, width: '13%' },
+    { key: 'employee_count', label: 'Employees', sortable: true, visible: true, width: '9%' },
+    { key: 'annual_revenue', label: 'Revenue', sortable: true, visible: true, width: '10%' },
+    { key: 'country', label: 'Location', sortable: true, visible: true, width: '9%' },
+    { key: 'scoring_metrics', label: 'ICP Score', sortable: true, visible: true, width: '9%' },
+    { key: 'intent_score', label: 'Intent Score', sortable: true, visible: true, width: '9%' },
+    { key: 'technologies', label: 'Tech Stack', sortable: false, visible: true, width: '12%' },
     { key: 'actions', label: '', sortable: false, visible: true, width: '5%' }
   ])
 
@@ -1030,6 +1031,27 @@ const fetchCompanies = useCallback(async (page = 1, resetFilters = false) => {
                           getScoreColor(company.scoring_metrics.fit_score.score)
                         )}>
                           {company.scoring_metrics.fit_score.score}%
+                        </div>
+                      ) : (
+                        <span className="text-sm text-gray-400 dark:text-[#6A6A6A]">-</span>
+                      )}
+                    </td>
+
+                    {/* Intent Score */}
+                    <td className="px-4 py-3">
+                      {company.scoring_metrics?.intent_score?.analysis_metadata?.final_intent_score !== undefined ? (
+                        <div className={cn(
+                          "text-sm font-semibold",
+                          getScoreColor(company.scoring_metrics.intent_score.analysis_metadata.final_intent_score)
+                        )}>
+                          {company.scoring_metrics.intent_score.analysis_metadata.final_intent_score}%
+                        </div>
+                      ) : company.scoring_metrics?.intent_score?.score !== undefined ? (
+                        <div className={cn(
+                          "text-sm font-semibold",
+                          getScoreColor(company.scoring_metrics.intent_score.score)
+                        )}>
+                          {company.scoring_metrics.intent_score.score}%
                         </div>
                       ) : (
                         <span className="text-sm text-gray-400 dark:text-[#6A6A6A]">-</span>

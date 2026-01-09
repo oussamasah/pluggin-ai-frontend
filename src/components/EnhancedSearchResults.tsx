@@ -288,10 +288,18 @@ function CompanyCard({ company, onViewDetails, onSaveCompany, isSaved }: Company
         {company.scoring_metrics?.intent_score && (
           <ScorePill 
             label="Intent" 
-            score={company.scoring_metrics.intent_score.score} 
+            score={
+              company.scoring_metrics.intent_score?.analysis_metadata?.final_intent_score !== undefined
+                ? company.scoring_metrics.intent_score.analysis_metadata.final_intent_score
+                : company.scoring_metrics.intent_score?.score || 0
+            } 
             color={
-              company.scoring_metrics.intent_score.score >= 80 ? 'green' :
-              company.scoring_metrics.intent_score.score >= 60 ? 'yellow' : 'red'
+              (() => {
+                const score = company.scoring_metrics.intent_score?.analysis_metadata?.final_intent_score !== undefined
+                  ? company.scoring_metrics.intent_score.analysis_metadata.final_intent_score
+                  : company.scoring_metrics.intent_score?.score || 0;
+                return score >= 80 ? 'green' : score >= 60 ? 'yellow' : 'red';
+              })()
             }
           />
         )}
@@ -615,59 +623,417 @@ function CompanyDetailsModal({ company, onClose, onSaveCompany, isSaved }: Compa
             {company?.scoring_metrics && (
               <Section title="Scoring Metrics" icon={<BarChart3 className="w-5 h-5" />}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* ICP Fit Score Card */}
                   {company?.scoring_metrics?.fit_score && (
                     <div className={cn(
-                      "p-4 border rounded-2xl",
-                      "bg-[#F9FAFB] dark:bg-[#1A1A1A] border-gray-200 dark:border-[#2A2A2A]"
+                      "p-6 border rounded-2xl transition-all duration-200",
+                      "bg-gradient-to-br from-white to-gray-50 dark:from-[#1A1A1A] dark:to-[#0F0F0F]",
+                      "border-gray-200 dark:border-[#2A2A2A]",
+                      "hover:shadow-lg hover:border-[#006239]/30"
                     )}>
-                      <h4 className="text-gray-900 dark:text-[#EDEDED] font-semibold mb-3">ICP Fit Score</h4>
-                      <div className="space-y-2">
-                        <InfoRow label="Score" value={`${company?.scoring_metrics?.fit_score?.score}%`} />
-                        <InfoRow label="Reason" value={company?.scoring_metrics?.fit_score?.reason} />
-                        <InfoRow label="Confidence" value={`${company?.scoring_metrics?.fit_score?.confidence}%`} />
-                        <InfoRow label="Factors" value={company?.scoring_metrics?.fit_score?.factors} />
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                            <Target className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                          </div>
+                          <div>
+                            <h4 className="text-gray-900 dark:text-[#EDEDED] font-semibold text-base">ICP Fit Score</h4>
+                            <p className="text-xs text-gray-500 dark:text-[#9CA3AF]">Profile alignment</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="mb-4">
+                        <ScoreDisplay 
+                          score={company.scoring_metrics.fit_score.score || 0}
+                          label="Overall Fit"
+                          size="large"
+                        />
+                      </div>
+
+                      <div className="space-y-3 pt-4 border-t border-gray-200 dark:border-[#2A2A2A]">
+                        {company.scoring_metrics.fit_score.reason && (
+                          <div>
+                            <p className="text-xs font-medium text-gray-500 dark:text-[#9CA3AF] mb-1">Reasoning</p>
+                            <p className="text-sm text-gray-700 dark:text-[#EDEDED] leading-relaxed">
+                              {company.scoring_metrics.fit_score.reason}
+                            </p>
+                          </div>
+                        )}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <p className="text-xs font-medium text-gray-500 dark:text-[#9CA3AF] mb-1">Confidence</p>
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-2 bg-gray-200 dark:bg-[#2A2A2A] rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                                  style={{ width: `${company.scoring_metrics.fit_score.confidence || 0}%` }}
+                                />
+                              </div>
+                              <span className="text-sm font-semibold text-gray-900 dark:text-[#EDEDED] min-w-[3rem] text-right">
+                                {company.scoring_metrics.fit_score.confidence || 0}%
+                              </span>
+                            </div>
+                          </div>
+                          {company.scoring_metrics.fit_score.factors && (
+                            <div>
+                              <p className="text-xs font-medium text-gray-500 dark:text-[#9CA3AF] mb-1">Key Factors</p>
+                              {typeof company.scoring_metrics.fit_score.factors === 'string' ? (
+                                <p className="text-sm text-gray-700 dark:text-[#EDEDED] font-medium">
+                                  {company.scoring_metrics.fit_score.factors}
+                                </p>
+                              ) : Array.isArray(company.scoring_metrics.fit_score.factors) ? (
+                                <ul className="text-sm text-gray-700 dark:text-[#EDEDED] space-y-1">
+                                  {company.scoring_metrics.fit_score.factors.map((factor: string, idx: number) => (
+                                    <li key={idx} className="flex items-start gap-2">
+                                      <span className="text-[#006239] mt-1">•</span>
+                                      <span>{factor}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : typeof company.scoring_metrics.fit_score.factors === 'object' ? (
+                                <div className="space-y-2">
+                                  {Object.entries(company.scoring_metrics.fit_score.factors).map(([key, value]: [string, any]) => {
+                                    // Handle nested objects (e.g., {match: true, score: 85, details: "..."})
+                                    let displayValue: string;
+                                    if (value === null || value === undefined) {
+                                      displayValue = 'N/A';
+                                    } else if (typeof value === 'boolean') {
+                                      displayValue = value ? '✓ Match' : '✗ No Match';
+                                    } else if (typeof value === 'object') {
+                                      // If it's an object, try to extract meaningful info
+                                      if (value.points !== undefined) {
+                                        // Handle objects with points and details
+                                        displayValue = `${value.points} points`;
+                                        if (value.details) {
+                                          displayValue += ` - ${value.details}`;
+                                        } else if (value.description) {
+                                          displayValue += ` - ${value.description}`;
+                                        }
+                                      } else if (value.match !== undefined) {
+                                        displayValue = value.match ? '✓ Match' : '✗ No Match';
+                                        if (value.score !== undefined) {
+                                          displayValue += ` (${value.score}%)`;
+                                        }
+                                        if (value.details) {
+                                          displayValue += ` - ${value.details}`;
+                                        }
+                                      } else if (value.score !== undefined) {
+                                        displayValue = `${value.score}%`;
+                                        if (value.details) {
+                                          displayValue += ` - ${value.details}`;
+                                        }
+                                      } else if (value.percentage !== undefined) {
+                                        displayValue = `${value.percentage}%`;
+                                        if (value.details) {
+                                          displayValue += ` - ${value.details}`;
+                                        }
+                                      } else if (value.earned !== undefined && value.max !== undefined) {
+                                        displayValue = `${value.earned}/${value.max} pts`;
+                                        if (value.details) {
+                                          displayValue += ` - ${value.details}`;
+                                        }
+                                      } else if (value.details) {
+                                        displayValue = value.details;
+                                      } else if (value.description) {
+                                        displayValue = value.description;
+                                      } else {
+                                        displayValue = JSON.stringify(value);
+                                      }
+                                    } else {
+                                      displayValue = String(value);
+                                    }
+                                    
+                                    return (
+                                      <div key={key} className="flex items-start justify-between text-xs gap-2">
+                                        <span className="text-gray-600 dark:text-[#9CA3AF] capitalize flex-shrink-0">
+                                          {key.replace(/([A-Z])/g, ' $1').trim()}:
+                                        </span>
+                                        <span className="text-gray-900 dark:text-[#EDEDED] font-medium text-right flex-1">
+                                          {displayValue}
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <p className="text-sm text-gray-700 dark:text-[#EDEDED] font-medium">
+                                  {String(company.scoring_metrics.fit_score.factors)}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}
+
+                  {/* Intent Score Card */}
                   {company?.scoring_metrics?.intent_score && (
                     <div className={cn(
-                      "p-4 border rounded-2xl",
-                      "bg-[#F9FAFB] dark:bg-[#1A1A1A] border-gray-200 dark:border-[#2A2A2A]"
+                      "p-6 border rounded-2xl transition-all duration-200",
+                      "bg-gradient-to-br from-white to-gray-50 dark:from-[#1A1A1A] dark:to-[#0F0F0F]",
+                      "border-gray-200 dark:border-[#2A2A2A]",
+                      "hover:shadow-lg hover:border-[#006239]/30"
                     )}>
-                      <h4 className="text-gray-900 dark:text-[#EDEDED] font-semibold mb-3">Intent Score</h4>
-                      <div className="space-y-2">
-                        <InfoRow label="Score" value={`${company?.scoring_metrics?.intent_score?.score}%`} />
-                        <InfoRow label="Reason" value={company?.scoring_metrics?.intent_score?.reason} />
-                        <InfoRow label="Confidence" value={`${company?.scoring_metrics?.intent_score?.confidence}%`} />
-                        <InfoRow label="Factors" value={company?.scoring_metrics?.intent_score?.factors} />
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                            <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400" />
+                          </div>
+                          <div>
+                            <h4 className="text-gray-900 dark:text-[#EDEDED] font-semibold text-base">Intent Score</h4>
+                            <p className="text-xs text-gray-500 dark:text-[#9CA3AF]">Buying readiness</p>
+                          </div>
+                        </div>
                       </div>
+
+                      {/* Handle both old and new intent_score structures */}
+                      {company.scoring_metrics.intent_score?.analysis_metadata ? (
+                        <>
+                          <div className="mb-4">
+                            <ScoreDisplay 
+                              score={company.scoring_metrics.intent_score.analysis_metadata.final_intent_score || 0}
+                              label="Final Intent Score"
+                              size="large"
+                            />
+                          </div>
+
+                          <div className="space-y-3 pt-4 border-t border-gray-200 dark:border-[#2A2A2A]">
+                            {/* Reasoning from GTM Intelligence */}
+                            {company.scoring_metrics.intent_score.gtm_intelligence?.overall_buying_readiness?.reasoning && (
+                              <div>
+                                <p className="text-xs font-medium text-gray-500 dark:text-[#9CA3AF] mb-1">Reasoning</p>
+                                <p className="text-sm text-gray-700 dark:text-[#EDEDED] leading-relaxed">
+                                  {company.scoring_metrics.intent_score.gtm_intelligence.overall_buying_readiness.reasoning}
+                                </p>
+                              </div>
+                            )}
+                            
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <p className="text-xs font-medium text-gray-500 dark:text-[#9CA3AF] mb-1">Confidence</p>
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 h-2 bg-gray-200 dark:bg-[#2A2A2A] rounded-full overflow-hidden">
+                                    <div 
+                                      className={cn(
+                                        "h-full rounded-full transition-all duration-500",
+                                        company.scoring_metrics.intent_score.analysis_metadata.overall_confidence === 'HIGH'
+                                          ? "bg-green-500"
+                                          : company.scoring_metrics.intent_score.analysis_metadata.overall_confidence === 'MEDIUM'
+                                          ? "bg-yellow-500"
+                                          : "bg-gray-500"
+                                      )}
+                                      style={{ 
+                                        width: `${company.scoring_metrics.intent_score.analysis_metadata.overall_confidence === 'HIGH' ? 85 : company.scoring_metrics.intent_score.analysis_metadata.overall_confidence === 'MEDIUM' ? 60 : 40}%` 
+                                      }}
+                                    />
+                                  </div>
+                                  <span className="text-sm font-semibold text-gray-900 dark:text-[#EDEDED] min-w-[3rem] text-right">
+                                    {company.scoring_metrics.intent_score.analysis_metadata.overall_confidence || 'N/A'}
+                                  </span>
+                                </div>
+                              </div>
+                              <div>
+                                <p className="text-xs font-medium text-gray-500 dark:text-[#9CA3AF] mb-1">Events Detected</p>
+                                <div className="flex items-center gap-2">
+                                  <Zap className="w-4 h-4 text-[#006239]" />
+                                  <span className="text-sm font-semibold text-gray-900 dark:text-[#EDEDED]">
+                                    {company.scoring_metrics.intent_score.analysis_metadata.total_events_detected || 0}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Key Factors from signal_breakdown */}
+                            {company.scoring_metrics.intent_score.signal_breakdown && Array.isArray(company.scoring_metrics.intent_score.signal_breakdown) && company.scoring_metrics.intent_score.signal_breakdown.length > 0 && (
+                              <div>
+                                <p className="text-xs font-medium text-gray-500 dark:text-[#9CA3AF] mb-1">Key Factors</p>
+                                <ul className="text-sm text-gray-700 dark:text-[#EDEDED] space-y-1">
+                                  {company.scoring_metrics.intent_score.signal_breakdown
+                                    .filter((signal: any) => signal.events_detected?.count > 0)
+                                    .slice(0, 3)
+                                    .map((signal: any, idx: number) => (
+                                      <li key={idx} className="flex items-start gap-2">
+                                        <span className="text-[#006239] mt-1">•</span>
+                                        <span>
+                                          <span className="font-medium">{signal.signal_name || signal.event_type}:</span>{' '}
+                                          {signal.events_detected.count} event{signal.events_detected.count !== 1 ? 's' : ''} detected
+                                          {signal.signal_analysis?.buying_intent_interpretation && (
+                                            <span className="text-gray-600 dark:text-[#9CA3AF]"> - {signal.signal_analysis.buying_intent_interpretation}</span>
+                                          )}
+                                        </span>
+                                      </li>
+                                    ))}
+                                </ul>
+                              </div>
+                            )}
+                            
+                            {company.scoring_metrics.intent_score.analysis_metadata.analysis_date && (
+                              <div>
+                                <p className="text-xs font-medium text-gray-500 dark:text-[#9CA3AF] mb-1">Analysis Date</p>
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="w-4 h-4 text-gray-400 dark:text-[#6A6A6A]" />
+                                  <span className="text-sm text-gray-700 dark:text-[#EDEDED]">
+                                    {new Date(company.scoring_metrics.intent_score.analysis_metadata.analysis_date).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric',
+                                      year: 'numeric'
+                                    })}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="mb-4">
+                            <ScoreDisplay 
+                              score={company.scoring_metrics.intent_score.score || 0}
+                              label="Intent Score"
+                              size="large"
+                            />
+                          </div>
+
+                          <div className="space-y-3 pt-4 border-t border-gray-200 dark:border-[#2A2A2A]">
+                            {company.scoring_metrics.intent_score.reason && (
+                              <div>
+                                <p className="text-xs font-medium text-gray-500 dark:text-[#9CA3AF] mb-1">Reasoning</p>
+                                <p className="text-sm text-gray-700 dark:text-[#EDEDED] leading-relaxed">
+                                  {company.scoring_metrics.intent_score.reason}
+                                </p>
+                              </div>
+                            )}
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <p className="text-xs font-medium text-gray-500 dark:text-[#9CA3AF] mb-1">Confidence</p>
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 h-2 bg-gray-200 dark:bg-[#2A2A2A] rounded-full overflow-hidden">
+                                    <div 
+                                      className="h-full bg-green-500 rounded-full transition-all duration-500"
+                                      style={{ width: `${company.scoring_metrics.intent_score.confidence || 0}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-sm font-semibold text-gray-900 dark:text-[#EDEDED] min-w-[3rem] text-right">
+                                    {company.scoring_metrics.intent_score.confidence || 0}%
+                                  </span>
+                                </div>
+                              </div>
+                              {company.scoring_metrics.intent_score.factors && (
+                                <div>
+                                  <p className="text-xs font-medium text-gray-500 dark:text-[#9CA3AF] mb-1">Key Factors</p>
+                                  {typeof company.scoring_metrics.intent_score.factors === 'string' ? (
+                                    <p className="text-sm text-gray-700 dark:text-[#EDEDED] font-medium">
+                                      {company.scoring_metrics.intent_score.factors}
+                                    </p>
+                                  ) : Array.isArray(company.scoring_metrics.intent_score.factors) ? (
+                                    <ul className="text-sm text-gray-700 dark:text-[#EDEDED] space-y-1">
+                                      {company.scoring_metrics.intent_score.factors.map((factor: string, idx: number) => (
+                                        <li key={idx} className="flex items-start gap-2">
+                                          <span className="text-[#006239] mt-1">•</span>
+                                          <span>{factor}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  ) : typeof company.scoring_metrics.intent_score.factors === 'object' ? (
+                                    <div className="space-y-2">
+                                      {Object.entries(company.scoring_metrics.intent_score.factors).map(([key, value]: [string, any]) => {
+                                        // Handle nested objects (e.g., {match: true, score: 85, details: "..."})
+                                        let displayValue: string;
+                                        if (value === null || value === undefined) {
+                                          displayValue = 'N/A';
+                                        } else if (typeof value === 'boolean') {
+                                          displayValue = value ? '✓ Match' : '✗ No Match';
+                                        } else if (typeof value === 'object') {
+                                          // If it's an object, try to extract meaningful info
+                                          if (value.points !== undefined) {
+                                            // Handle objects with points and details
+                                            displayValue = `${value.points} points`;
+                                            if (value.details) {
+                                              displayValue += ` - ${value.details}`;
+                                            } else if (value.description) {
+                                              displayValue += ` - ${value.description}`;
+                                            }
+                                          } else if (value.match !== undefined) {
+                                            displayValue = value.match ? '✓ Match' : '✗ No Match';
+                                            if (value.score !== undefined) {
+                                              displayValue += ` (${value.score}%)`;
+                                            }
+                                            if (value.details) {
+                                              displayValue += ` - ${value.details}`;
+                                            }
+                                          } else if (value.score !== undefined) {
+                                            displayValue = `${value.score}%`;
+                                            if (value.details) {
+                                              displayValue += ` - ${value.details}`;
+                                            }
+                                          } else if (value.percentage !== undefined) {
+                                            displayValue = `${value.percentage}%`;
+                                            if (value.details) {
+                                              displayValue += ` - ${value.details}`;
+                                            }
+                                          } else if (value.earned !== undefined && value.max !== undefined) {
+                                            displayValue = `${value.earned}/${value.max} pts`;
+                                            if (value.details) {
+                                              displayValue += ` - ${value.details}`;
+                                            }
+                                          } else if (value.details) {
+                                            displayValue = value.details;
+                                          } else if (value.description) {
+                                            displayValue = value.description;
+                                          } else {
+                                            displayValue = JSON.stringify(value);
+                                          }
+                                        } else {
+                                          displayValue = String(value);
+                                        }
+                                        
+                                        return (
+                                          <div key={key} className="flex items-start justify-between text-xs gap-2">
+                                            <span className="text-gray-600 dark:text-[#9CA3AF] capitalize flex-shrink-0">
+                                              {key.replace(/([A-Z])/g, ' $1').trim()}:
+                                            </span>
+                                            <span className="text-gray-900 dark:text-[#EDEDED] font-medium text-right flex-1">
+                                              {displayValue}
+                                            </span>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm text-gray-700 dark:text-[#EDEDED] font-medium">
+                                      {String(company.scoring_metrics.intent_score.factors)}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
               </Section>
             )}
 
-            {/* Intent Signals */}
-            {company?.intent_signals && (
+            {/* Intent Signals - From Explorium signal_breakdown */}
+            {company?.scoring_metrics?.intent_score?.signal_breakdown && 
+             company.scoring_metrics.intent_score.signal_breakdown.some((signal: any) => 
+               signal.events_detected?.count > 0
+             ) && (
               <Section title="Intent Signals" icon={<Crosshair className="w-5 h-5" />}>
-                <pre className={cn(
-                  "p-4 text-xs font-mono overflow-x-auto border rounded-2xl",
-                  "bg-[#F9FAFB] dark:bg-[#1A1A1A] border-gray-200 dark:border-[#2A2A2A] text-gray-600 dark:text-[#9CA3AF]"
-                )}>
-                  {formatJSON(company?.intent_signals)}
-                </pre>
+                <IntentSignalsDisplay 
+                  signalBreakdown={company.scoring_metrics.intent_score.signal_breakdown} 
+                />
               </Section>
             )}
 
             {/* Relationships */}
-            {company?.relationships && (
+            {company?.relationships && Object.keys(company.relationships).length > 0 && (
               <Section title="Relationships" icon={<Users2 className="w-5 h-5" />}>
-                <pre className={cn(
-                  "p-4 text-xs font-mono overflow-x-auto border rounded-2xl",
-                  "bg-[#F9FAFB] dark:bg-[#1A1A1A] border-gray-200 dark:border-[#2A2A2A] text-gray-600 dark:text-[#9CA3AF]"
-                )}>
-                  {formatJSON(company?.relationships)}
-                </pre>
+                <RelationshipsDisplay relationships={company.relationships} />
               </Section>
             )}
 
@@ -780,4 +1146,375 @@ function ScorePill({
       {label}: {score}%
     </div>
   )
+}
+
+// Enhanced Score Display Component
+function ScoreDisplay({ 
+  score, 
+  label, 
+  size = 'medium' 
+}: { 
+  score: number
+  label?: string
+  size?: 'small' | 'medium' | 'large'
+}) {
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return {
+      bg: 'bg-green-500',
+      text: 'text-green-600 dark:text-green-400',
+      ring: 'ring-green-200 dark:ring-green-800',
+      bgLight: 'bg-green-50 dark:bg-green-900/20'
+    };
+    if (score >= 60) return {
+      bg: 'bg-yellow-500',
+      text: 'text-yellow-600 dark:text-yellow-400',
+      ring: 'ring-yellow-200 dark:ring-yellow-800',
+      bgLight: 'bg-yellow-50 dark:bg-yellow-900/20'
+    };
+    if (score >= 40) return {
+      bg: 'bg-orange-500',
+      text: 'text-orange-600 dark:text-orange-400',
+      ring: 'ring-orange-200 dark:ring-orange-800',
+      bgLight: 'bg-orange-50 dark:bg-orange-900/20'
+    };
+    return {
+      bg: 'bg-red-500',
+      text: 'text-red-600 dark:text-red-400',
+      ring: 'ring-red-200 dark:ring-red-800',
+      bgLight: 'bg-red-50 dark:bg-red-900/20'
+    };
+  };
+
+  const colors = getScoreColor(score);
+  const sizeClasses = {
+    small: { text: 'text-lg', svg: 50, radius: 18, stroke: 4 },
+    medium: { text: 'text-xl', svg: 60, radius: 22, stroke: 5 },
+    large: { text: 'text-2xl', svg: 70, radius: 26, stroke: 5 }
+  };
+
+  const sizeConfig = sizeClasses[size];
+  // Calculate circumference for circular progress
+  const circumference = 2 * Math.PI * sizeConfig.radius;
+  const offset = circumference - (score / 100) * circumference;
+
+  return (
+    <div className="relative">
+      <div className="flex items-center gap-4">
+        {/* Circular Progress Indicator */}
+        <div className="relative flex-shrink-0">
+          <svg className="transform -rotate-90" width={sizeConfig.svg} height={sizeConfig.svg}>
+            <circle
+              cx={sizeConfig.svg / 2}
+              cy={sizeConfig.svg / 2}
+              r={sizeConfig.radius}
+              stroke="currentColor"
+              strokeWidth={sizeConfig.stroke}
+              fill="none"
+              className="text-gray-200 dark:text-[#2A2A2A]"
+            />
+            <circle
+              cx={sizeConfig.svg / 2}
+              cy={sizeConfig.svg / 2}
+              r={sizeConfig.radius}
+              stroke="currentColor"
+              strokeWidth={sizeConfig.stroke}
+              fill="none"
+              strokeDasharray={circumference}
+              strokeDashoffset={offset}
+              strokeLinecap="round"
+              className={cn(colors.text, "transition-all duration-1000 ease-out")}
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className={cn("font-bold", colors.text, sizeConfig.text)}>
+              {score}
+            </span>
+          </div>
+        </div>
+
+        {/* Score Details */}
+        <div className="flex-1">
+          {label && (
+            <p className="text-sm font-medium text-gray-500 dark:text-[#9CA3AF] mb-1">
+              {label}
+            </p>
+          )}
+          <div className="flex items-center gap-2 mb-2">
+            <div className="flex-1 h-2 bg-gray-200 dark:bg-[#2A2A2A] rounded-full overflow-hidden">
+              <div 
+                className={cn("h-full rounded-full transition-all duration-1000 ease-out", colors.bg)}
+                style={{ width: `${score}%` }}
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className={cn("w-2 h-2 rounded-full", colors.bg)} />
+            <span className="text-xs text-gray-500 dark:text-[#9CA3AF]">
+              {score >= 80 ? 'Excellent' : score >= 60 ? 'Good' : score >= 40 ? 'Fair' : 'Low'}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Intent Signals Display Component - From Explorium signal_breakdown
+function IntentSignalsDisplay({ signalBreakdown }: { signalBreakdown: any[] }) {
+  // Filter signals that have events detected (count > 0)
+  const signalsWithEvents = (signalBreakdown || []).filter((signal: any) => 
+    signal.events_detected?.count > 0
+  );
+
+  if (signalsWithEvents.length === 0) {
+    return (
+      <div className="text-sm text-gray-500 dark:text-[#9CA3AF] text-center py-4">
+        No intent signals with detected events
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {signalsWithEvents.map((signal: any, index: number) => {
+        const eventsCount = signal.events_detected?.count || 0;
+        const rawScore = signal.raw_score || signal.scoring_breakdown?.total_raw_score || 0;
+        const confidenceLevel = signal.confidence_level || 'MEDIUM';
+        const mostRecentEvent = signal.events_detected?.events?.[0];
+        const eventDate = mostRecentEvent?.event_time || mostRecentEvent?.event_date;
+        
+        // Get confidence color based on confidence level
+        const getConfidenceColor = (level: string) => {
+          switch (level.toUpperCase()) {
+            case 'HIGH':
+              return 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300';
+            case 'MEDIUM':
+              return 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300';
+            case 'LOW':
+              return 'bg-gray-50 dark:bg-gray-900/20 text-gray-700 dark:text-gray-300';
+            default:
+              return 'bg-gray-50 dark:bg-gray-900/20 text-gray-700 dark:text-gray-300';
+          }
+        };
+
+        // Get raw score color
+        const getScoreColor = (score: number) => {
+          if (score >= 70) return 'text-green-600 dark:text-green-400';
+          if (score >= 40) return 'text-yellow-600 dark:text-yellow-400';
+          return 'text-gray-600 dark:text-gray-400';
+        };
+
+        return (
+          <div
+            key={signal.signal_id || index}
+            className={cn(
+              "p-4 rounded-xl border transition-all duration-200",
+              "bg-white dark:bg-[#1E1E1E] border-gray-200 dark:border-[#2A2A2A]",
+              "hover:border-[#006239] hover:shadow-sm"
+            )}
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex-1">
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-[#EDEDED] mb-1">
+                  {signal.signal_name || signal.event_type?.replace(/_/g, ' ') || 'Intent Signal'}
+                </h4>
+                <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300">
+                  {signal.event_type?.replace(/_/g, ' ') || 'Unknown Type'}
+                </span>
+              </div>
+              <div className="text-right ml-3">
+                <div className={cn("text-lg font-bold", getScoreColor(rawScore))}>
+                  {rawScore}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-[#9CA3AF]">Raw Score</div>
+              </div>
+            </div>
+
+            {/* Event Count and Confidence */}
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex items-center gap-1.5">
+                <TrendingUp className="w-3.5 h-3.5 text-[#006239]" />
+                <span className="text-xs text-gray-600 dark:text-[#9CA3AF]">
+                  {eventsCount} {eventsCount === 1 ? 'event' : 'events'} detected
+                </span>
+              </div>
+              <div className={cn(
+                "px-2 py-0.5 text-xs font-medium rounded-lg",
+                getConfidenceColor(confidenceLevel)
+              )}>
+                {confidenceLevel}
+              </div>
+            </div>
+
+            {/* Signal Analysis */}
+            {signal.signal_analysis?.what_detected && (
+              <p className="text-xs text-gray-600 dark:text-[#9CA3AF] mb-2 line-clamp-2">
+                {signal.signal_analysis.what_detected}
+              </p>
+            )}
+
+            {/* Buying Intent Interpretation */}
+            {signal.signal_analysis?.buying_intent_interpretation && (
+              <div className="mt-2 p-2 bg-[#006239]/5 dark:bg-[#006239]/10 rounded-lg border border-[#006239]/20">
+                <p className="text-xs text-gray-700 dark:text-[#EDEDED] font-medium mb-1">
+                  Buying Intent:
+                </p>
+                <p className="text-xs text-gray-600 dark:text-[#9CA3AF]">
+                  {signal.signal_analysis.buying_intent_interpretation}
+                </p>
+              </div>
+            )}
+
+            {/* Most Recent Event Date */}
+            {eventDate && (
+              <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-[#9CA3AF] mt-3 pt-3 border-t border-gray-200 dark:border-[#2A2A2A]">
+                <Calendar className="w-3 h-3" />
+                <span>
+                  Most recent: {new Date(eventDate).toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    year: 'numeric' 
+                  })}
+                </span>
+              </div>
+            )}
+
+            {/* Weight Percentage */}
+            {signal.weight_percentage !== undefined && (
+              <div className="mt-2 text-xs text-gray-500 dark:text-[#9CA3AF]">
+                Weight: {signal.weight_percentage}%
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Relationships Display Component
+function RelationshipsDisplay({ relationships }: { relationships: any }) {
+  const competitors: string[] = [];
+  const partners: string[] = [];
+  const customers: string[] = [];
+
+  // Extract relationships from various possible structures
+  if (typeof relationships === 'object' && relationships !== null) {
+    if (Array.isArray(relationships.competitors)) {
+      competitors.push(...relationships.competitors.map((c: any) => 
+        typeof c === 'string' ? c : (c.name || c.company_name || String(c))
+      ));
+    }
+    if (Array.isArray(relationships.partners)) {
+      partners.push(...relationships.partners.map((p: any) => 
+        typeof p === 'string' ? p : (p.name || p.company_name || String(p))
+      ));
+    }
+    if (Array.isArray(relationships.customers)) {
+      customers.push(...relationships.customers.map((c: any) => 
+        typeof c === 'string' ? c : (c.name || c.company_name || String(c))
+      ));
+    }
+  }
+
+  const hasData = competitors.length > 0 || partners.length > 0 || customers.length > 0;
+
+  if (!hasData) {
+    return (
+      <div className="text-sm text-gray-500 dark:text-[#9CA3AF] text-center py-4">
+        No relationship data available
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Competitors */}
+      {competitors.length > 0 && (
+        <div>
+          <h4 className="text-sm font-semibold text-gray-900 dark:text-[#EDEDED] mb-3 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-[#006239]" />
+            Competitors ({competitors.length})
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            {competitors.map((competitor, index) => (
+              <div
+                key={index}
+                className={cn(
+                  "p-3 rounded-lg border transition-all duration-200",
+                  "bg-white dark:bg-[#1E1E1E] border-gray-200 dark:border-[#2A2A2A]",
+                  "hover:border-red-300 dark:hover:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/10"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-red-500" />
+                  <span className="text-sm text-gray-900 dark:text-[#EDEDED] font-medium">
+                    {competitor}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Partners */}
+      {partners.length > 0 && (
+        <div>
+          <h4 className="text-sm font-semibold text-gray-900 dark:text-[#EDEDED] mb-3 flex items-center gap-2">
+            <Users2 className="w-4 h-4 text-[#006239]" />
+            Partners ({partners.length})
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            {partners.map((partner, index) => (
+              <div
+                key={index}
+                className={cn(
+                  "p-3 rounded-lg border transition-all duration-200",
+                  "bg-white dark:bg-[#1E1E1E] border-gray-200 dark:border-[#2A2A2A]",
+                  "hover:border-blue-300 dark:hover:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/10"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-blue-500" />
+                  <span className="text-sm text-gray-900 dark:text-[#EDEDED] font-medium">
+                    {partner}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Customers */}
+      {customers.length > 0 && (
+        <div>
+          <h4 className="text-sm font-semibold text-gray-900 dark:text-[#EDEDED] mb-3 flex items-center gap-2">
+            <Users2 className="w-4 h-4 text-[#006239]" />
+            Customers ({customers.length})
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            {customers.map((customer, index) => (
+              <div
+                key={index}
+                className={cn(
+                  "p-3 rounded-lg border transition-all duration-200",
+                  "bg-white dark:bg-[#1E1E1E] border-gray-200 dark:border-[#2A2A2A]",
+                  "hover:border-green-300 dark:hover:border-green-700 hover:bg-green-50 dark:hover:bg-green-900/10"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500" />
+                  <span className="text-sm text-gray-900 dark:text-[#EDEDED] font-medium">
+                    {customer}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }

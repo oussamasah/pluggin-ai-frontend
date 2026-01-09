@@ -48,10 +48,16 @@ class WebSocketService {
   }
 
   async connect(userId?: string): Promise<void> {
-    // Check backend health before attempting connection
-    if (!this.isBackendAvailable && this.reconnectAttempts > 0) {
+    // Check backend health before attempting connection (only if we've already tried)
+    if (!this.isBackendAvailable && this.reconnectAttempts > 0 && this.reconnectAttempts < this.maxReconnectAttempts) {
       console.log('⏸️ Backend unavailable, skipping connection attempt');
       return;
+    }
+    
+    // If max attempts reached but backend is now available, reset and try again
+    if (this.reconnectAttempts >= this.maxReconnectAttempts && this.isBackendAvailable) {
+      console.log('🔄 Backend is available again, resetting reconnect attempts');
+      this.reconnectAttempts = 0;
     }
   
     if (this.connectionPromise) {
@@ -305,30 +311,42 @@ class WebSocketService {
 
   private async checkBackendHealth(): Promise<boolean> {
     try {
-      // Try to fetch a simple health endpoint
-      const response = await fetch(process.env.NEXT_PUBLIC_API_URL+'/api/health', {
+      // Try to fetch the root endpoint or sessions endpoint to check if backend is up
+      // Use root endpoint as it's always available
+      const healthUrl = `${process.env.NEXT_PUBLIC_API_URL}/`;
+      const response = await fetch(healthUrl, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
+        // Add timeout to prevent hanging (5 seconds)
+        signal: AbortSignal.timeout(5000)
       });
       
       const isHealthy = response.ok;
       this.isBackendAvailable = isHealthy;
       
-      console.log(`🔍 Backend health check: ${isHealthy ? '✅ Healthy' : '❌ Unhealthy'}`);
+      console.log(`🔍 Backend health check: ${isHealthy ? '✅ Healthy' : '❌ Unhealthy'} (${response.status})`);
       return isHealthy;
-    } catch (error) {
-      console.log('🔴 Backend health check failed:', error);
+    } catch (error: any) {
+      // If it's a timeout or network error, backend is likely down
+      if (error.name === 'TimeoutError' || error.name === 'TypeError' || error.message?.includes('fetch')) {
+        console.log('🔴 Backend health check failed (network/timeout):', error.message || error);
+      } else {
+        console.log('🔴 Backend health check failed:', error);
+      }
       this.isBackendAvailable = false;
       return false;
     }
   }
 
   private handleReconnection(): void {
+    // If we've reached max attempts, start health monitoring
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('❌ Max reconnection attempts reached');
+      console.warn(`⚠️ Max reconnection attempts (${this.maxReconnectAttempts}) reached. Starting backend health monitoring...`);
       
       // Start periodic backend health checks
-      this.startBackendHealthMonitoring();
+      if (!this.backendCheckInterval) {
+        this.startBackendHealthMonitoring();
+      }
       return;
     }
 
@@ -350,12 +368,17 @@ class WebSocketService {
       // Check backend health before reconnecting
       this.checkBackendHealth().then(isHealthy => {
         if (isHealthy) {
+          console.log('✅ Backend is healthy, attempting connection...');
           this.connect(this.userId);
         } else {
           console.log('⏸️ Backend still unavailable, will retry later');
           // Continue with normal reconnection flow which will check again
           this.handleReconnection();
         }
+      }).catch(error => {
+        console.error('❌ Error checking backend health:', error);
+        // Continue with reconnection attempt anyway
+        this.handleReconnection();
       });
     }, delay);
   }
@@ -365,12 +388,22 @@ class WebSocketService {
       clearInterval(this.backendCheckInterval);
     }
 
-    console.log('🔍 Starting backend health monitoring');
+    console.log('🔍 Starting backend health monitoring (checking every 10s)');
+    
+    // Do an immediate check first
+    this.checkBackendHealth().then(isHealthy => {
+      if (isHealthy) {
+        console.log('✅ Backend is already healthy, attempting immediate reconnect');
+        this.isBackendAvailable = true;
+        this.reconnectAttempts = 0;
+        this.connect(this.userId);
+      }
+    });
     
     this.backendCheckInterval = setInterval(async () => {
       const isHealthy = await this.checkBackendHealth();
       
-      if (isHealthy) {
+      if (isHealthy && !this.isConnected) {
         console.log('✅ Backend is healthy again, resuming normal operation');
         this.isBackendAvailable = true;
         this.reconnectAttempts = 0; // Reset attempts
@@ -382,7 +415,15 @@ class WebSocketService {
         }
         
         // Attempt to reconnect
-        this.connect(this.userId);
+        await this.connect(this.userId);
+      } else if (isHealthy && this.isConnected) {
+        // Backend is healthy and we're connected, stop monitoring
+        console.log('✅ Backend healthy and connected, stopping health monitoring');
+        if (this.backendCheckInterval) {
+          clearInterval(this.backendCheckInterval);
+          this.backendCheckInterval = null;
+        }
+        this.reconnectAttempts = 0;
       }
     }, this.backendCheckCooldown);
   }

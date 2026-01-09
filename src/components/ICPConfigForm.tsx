@@ -100,8 +100,11 @@ const buyingTriggerOptions = {
     { label: 'Closing Office', value: 'closing_office' },
     { label: 'Merger and Acquisitions', value: 'merger_and_acquisitions' },
   ],
+  productAndPartnershipUpdates: [
+    { label: 'New Product', value: 'new_product' },
+    { label: 'New Partnership', value: 'new_partnership' },
+  ],
   workforceTrends: [
-    { label: 'Employee Joined Company', value: 'employee_joined_company' },
     { label: 'Increase in Engineering Department', value: 'increase_in_engineering_department' },
     { label: 'Increase in Sales Department', value: 'increase_in_sales_department' },
     { label: 'Increase in Marketing Department', value: 'increase_in_marketing_department' },
@@ -114,6 +117,7 @@ const buyingTriggerOptions = {
     { label: 'Decrease in Operations Department', value: 'decrease_in_operations_department' },
     { label: 'Decrease in Customer Service Department', value: 'decrease_in_customer_service_department' },
     { label: 'Decrease in All Departments', value: 'decrease_in_all_departments' },
+    { label: 'Employee Joined Company', value: 'employee_joined_company' },
     { label: 'Hiring in Creative Department', value: 'hiring_in_creative_department' },
     { label: 'Hiring in Education Department', value: 'hiring_in_education_department' },
     { label: 'Hiring in Engineering Department', value: 'hiring_in_engineering_department' },
@@ -128,10 +132,6 @@ const buyingTriggerOptions = {
     { label: 'Hiring in Support Department', value: 'hiring_in_support_department' },
     { label: 'Hiring in Trade Department', value: 'hiring_in_trade_department' },
     { label: 'Hiring in Unknown Department', value: 'hiring_in_unknown_department' },
-  ],
-  productAndPartnershipUpdates: [
-    { label: 'New Product', value: 'new_product' },
-    { label: 'New Partnership', value: 'new_partnership' },
   ],
   otherSignificantEvents: [
     { label: 'Company Award', value: 'company_award' },
